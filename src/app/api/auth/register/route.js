@@ -1,3 +1,5 @@
+// src/app/api/auth/register/route.js
+
 import { NextResponse } from 'next/server';
 import { query, getConnection } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
@@ -81,6 +83,13 @@ export async function POST(request) {
       email: normalizedEmail,
     });
 
+    // FIX: same as login — must pass options object, not a bare boolean.
+    // Register happens over the same protocol as login, so derive isSecure
+    // from X-Forwarded-Proto set by nginx.
+    const isSecure =
+      process.env.NODE_ENV === 'production' &&
+      request.headers.get('x-forwarded-proto') === 'https';
+
     const safeUser = {
       id:          userId,
       name:        name.trim(),
@@ -94,7 +103,7 @@ export async function POST(request) {
       { message: 'Registration successful.', user: safeUser },
       { status: 201 }
     );
-    response.headers.set('Set-Cookie', buildAuthCookie(token));
+    response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 
   } catch (err) {

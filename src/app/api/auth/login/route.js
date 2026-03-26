@@ -5,16 +5,6 @@ import { query } from '@/lib/db';
 import { comparePassword } from '@/lib/password';
 import { signToken, buildAuthCookie } from '@/lib/jwt';
 
-/**
- * POST /api/auth/login
- *
- * Body: { email, password }
- *
- * - Looks up user by email
- * - Compares password
- * - Issues JWT in httpOnly cookie
- * - Returns safe user object (no password)
- */
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -60,10 +50,11 @@ export async function POST(request) {
       email:     user.email,
     });
 
-    const forwardedProto = request.headers.get('x-forwarded-proto');
-    const protocol = request.nextUrl.protocol;
-    const isSecure = process.env.NODE_ENV === 'production' &&(request.headers.get('x-forwarded-proto') === 'https');
-    console.log({ forwardedProto, protocol, isSecure });
+    // isSecure = true only when request actually arrived over HTTPS.
+    // nginx sets X-Forwarded-Proto so this works correctly behind the proxy.
+    const isSecure =
+      process.env.NODE_ENV === 'production' &&
+      request.headers.get('x-forwarded-proto') === 'https';
 
     const safeUser = {
       id:          user.id,
@@ -79,7 +70,11 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    response.headers.set('Set-Cookie', buildAuthCookie(token, isSecure));
+    // FIX: was buildAuthCookie(token, isSecure) — passing a boolean instead of
+    // an options object, so destructuring { isSecure = false } = false silently
+    // fell back to false, but the cookie still got Secure because NODE_ENV is
+    // 'production'.  Always pass the options object.
+    response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 
   } catch (err) {
