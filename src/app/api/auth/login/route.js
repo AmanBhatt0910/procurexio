@@ -1,3 +1,5 @@
+// src/app/api/auth/login/route.js
+
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { comparePassword } from '@/lib/password';
@@ -38,7 +40,6 @@ export async function POST(request) {
     );
 
     if (!rows.length) {
-      // Use generic message to prevent user enumeration
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
@@ -58,13 +59,18 @@ export async function POST(request) {
 
     // --- Sign JWT ---
     const token = await signToken({
-      userId:      user.id,
-      companyId:   user.company_id,
-      role:        user.role,
-      email:       user.email,
+      userId:    user.id,
+      companyId: user.company_id,
+      role:      user.role,
+      email:     user.email,
     });
 
-    // --- Build response ---
+    // --- Determine if the connection is secure ---
+    // x-forwarded-proto is set by reverse proxies (like nginx, Vercel) to indicate original protocol.
+    const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '');
+    const isSecure = proto === 'https';
+
+    // --- Build response with cookie ---
     const safeUser = {
       id:          user.id,
       name:        user.name,
@@ -79,7 +85,7 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    response.headers.set('Set-Cookie', buildAuthCookie(token));
+    response.headers.set('Set-Cookie', buildAuthCookie(token, isSecure));
     return response;
 
   } catch (err) {

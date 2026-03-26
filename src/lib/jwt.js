@@ -1,3 +1,5 @@
+// src/lib/jwt.js
+
 import { SignJWT, jwtVerify } from 'jose';
 
 /**
@@ -51,14 +53,15 @@ export async function verifyToken(token) {
  * @param {string} token
  * @returns {string}
  */
-export function buildAuthCookie(token) {
-  const isProd = process.env.NODE_ENV === 'production';
+// src/lib/jwt.js
+
+export function buildAuthCookie(token, secure = false) {
   return [
     `auth_token=${token}`,
     'HttpOnly',
     'Path=/',
     `Max-Age=${7 * 24 * 60 * 60}`, // 7 days in seconds
-    isProd ? 'Secure' : '',
+    secure ? 'Secure' : '',
     'SameSite=Lax',
   ]
     .filter(Boolean)
