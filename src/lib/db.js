@@ -1,3 +1,5 @@
+// src/lib/db.js
+
 import mysql from 'mysql2/promise';
 
 // Single shared connection pool for the entire app

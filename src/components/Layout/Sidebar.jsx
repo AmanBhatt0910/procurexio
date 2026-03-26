@@ -5,6 +5,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+// ------------------------------------------------------------------
+// Navigation items with role‑based visibility
+// ------------------------------------------------------------------
 const NAV_ITEMS = [
   {
     label: 'Overview',
@@ -12,12 +15,13 @@ const NAV_ITEMS = [
     exact: true,
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
+    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
   },
   {
     section: 'Company',
@@ -27,54 +31,59 @@ const NAV_ITEMS = [
         href: '/dashboard/company',
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="8" cy="6" r="2" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M3.5 13c.8-2 2.5-3 4.5-3s3.7 1 4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8" cy="6" r="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M3.5 13c.8-2 2.5-3 4.5-3s3.7 1 4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
+        allowedRoles: ['super_admin', 'company_admin'],
       },
       {
         label: 'Users',
         href: '/dashboard/company/users',
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
+        allowedRoles: ['super_admin', 'company_admin'],
       },
     ],
+  },
+  // New Vendors item (top‑level, after Company section)
+  {
+    label: 'Vendors',
+    href: '/dashboard/vendors',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M5 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M1 7h14" stroke="currentColor" strokeWidth="1.4" />
+        <circle cx="5.5" cy="10" r="1" fill="currentColor" />
+      </svg>
+    ),
+    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
   },
   {
     section: 'Procurement',
     items: [
-      {
-        label: 'Vendors',
-        href: '/dashboard/vendors',
-        disabled: true,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 4h12l-1.5 7H3.5L2 4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            <circle cx="5.5" cy="13.5" r="1" stroke="currentColor" strokeWidth="1.2"/>
-            <circle cx="11" cy="13.5" r="1" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M2 4l-.8-2H.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        ),
-      },
+      // Vendors item removed (now top‑level)
       {
         label: 'RFQs',
         href: '/dashboard/rfqs',
         disabled: true,
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
         ),
+        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
       },
       {
         label: 'Bids',
@@ -82,17 +91,41 @@ const NAV_ITEMS = [
         disabled: true,
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
           </svg>
         ),
+        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
       },
     ],
   },
 ];
 
-export default function Sidebar({ company }) {
+// Helper to filter items based on user role
+function filterNavItems(items, userRole) {
+  if (!userRole) return items; // No filtering if no user
+
+  return items
+    .map(item => {
+      if (item.section) {
+        // Section: filter its items
+        const filteredItems = filterNavItems(item.items, userRole);
+        if (filteredItems.length === 0) return null; // Hide empty sections
+        return { ...item, items: filteredItems };
+      } else {
+        // Single item: check allowedRoles
+        const allowed = item.allowedRoles ? item.allowedRoles.includes(userRole) : true;
+        return allowed ? item : null;
+      }
+    })
+    .filter(Boolean);
+}
+
+export default function Sidebar({ company, user }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+
+  const userRole = user?.role; // e.g., 'super_admin', 'company_admin', etc.
+  const filteredItems = filterNavItems(NAV_ITEMS, userRole);
 
   function isActive(href, exact = false) {
     if (exact) return pathname === href;
@@ -271,18 +304,30 @@ export default function Sidebar({ company }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item, i) => {
+          {filteredItems.map((item, i) => {
             if (item.section) {
               return (
                 <div key={i}>
                   <div className="nav-section-label">{item.section}</div>
                   {item.items.map((sub) => (
-                    <NavLink key={sub.href} item={sub} active={isActive(sub.href, sub.exact)} collapsed={collapsed} />
+                    <NavLink
+                      key={sub.href}
+                      item={sub}
+                      active={isActive(sub.href, sub.exact)}
+                      collapsed={collapsed}
+                    />
                   ))}
                 </div>
               );
             }
-            return <NavLink key={item.href} item={item} active={isActive(item.href, item.exact)} collapsed={collapsed} />;
+            return (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={isActive(item.href, item.exact)}
+                collapsed={collapsed}
+              />
+            );
           })}
         </nav>
 
@@ -290,7 +335,7 @@ export default function Sidebar({ company }) {
           <span className="sidebar-company-name">{company?.name ?? 'Your Company'}</span>
           <button className="collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>

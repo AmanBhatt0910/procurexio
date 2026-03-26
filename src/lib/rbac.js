@@ -1,3 +1,5 @@
+// src/lib/rbac.js
+
 /**
  * RBAC — Role-Based Access Control
  *
