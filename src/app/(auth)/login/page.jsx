@@ -1,20 +1,23 @@
+// src/app/login/page.jsx
+
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthInput from '@/components/auth/AuthInput';
 import AuthButton from '@/components/auth/AuthButton';
 
-export default function LoginPage() {
-  const router       = useRouter();
+// Separate component that uses useSearchParams
+function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect     = searchParams.get('redirect') || '/dashboard';
+  const redirect = searchParams.get('redirect') || '/dashboard';
 
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -23,9 +26,9 @@ export default function LoginPage() {
 
     try {
       const res = await fetch('/api/auth/login', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
 
@@ -43,6 +46,64 @@ export default function LoginPage() {
     }
   }
 
+  return (
+    <form className="auth-form" onSubmit={handleSubmit}>
+      {error && (
+        <div className="form-error">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {error}
+        </div>
+      )}
+
+      <AuthInput
+        label="Work email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@company.com"
+        required
+        autoComplete="email"
+        icon={
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+        }
+      />
+
+      <div>
+        <div className="form-row" style={{ marginBottom: 6 }}>
+          <label className="auth-input-label">Password <span className="auth-input-required">*</span></label>
+          <Link href="/forgot-password" className="forgot-link">
+            Forgot password?
+          </Link>
+        </div>
+        <AuthInput
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+          autoComplete="current-password"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          }
+        />
+      </div>
+
+      <AuthButton loading={loading}>Sign in</AuthButton>
+    </form>
+  );
+}
+
+export default function LoginPage() {
   return (
     <>
       <style>{`
@@ -354,7 +415,7 @@ export default function LoginPage() {
 
         {/* ── Form panel ── */}
         <div className="panel-right">
-          <a href="/" className="logo">
+          <Link href="/" className="logo">
             <div className="logo-mark">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -362,54 +423,17 @@ export default function LoginPage() {
               </svg>
             </div>
             <span className="logo-name">Procure<span>IQ</span></span>
-          </a>
+          </Link>
 
           <div className="form-header">
             <h1 className="form-title">Welcome back</h1>
             <p className="form-subtitle">Sign in to your workspace to continue.</p>
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {error && (
-              <div className="form-error">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                {error}
-              </div>
-            )}
-
-            <AuthInput
-              label="Work email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              required
-              autoComplete="email"
-              icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              }
-            />
-
-            <div>
-              <div className="form-row" style={{ marginBottom: 6 }}>
-                <label className="auth-input-label">Password <span className="auth-input-required">*</span></label>
-                <a href="/forgot-password" className="forgot-link">Forgot password?</a>
-              </div>
-              <AuthInput
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                }
-              />
-            </div>
-
-            <AuthButton loading={loading}>Sign in</AuthButton>
-          </form>
+          {/* Wrap LoginForm in Suspense to handle useSearchParams during static generation */}
+          <Suspense fallback={<div className="auth-form">Loading...</div>}>
+            <LoginForm />
+          </Suspense>
 
           <div className="form-footer">
             Don&apos;t have an account?{' '}

@@ -162,3 +162,7 @@ export function requirePermission(user, requiredPermissions = []) {
 
   return true;
 }
+
+export function requireRole(role, allowedRoles = []) {
+  return allowedRoles.includes(role);
+}
