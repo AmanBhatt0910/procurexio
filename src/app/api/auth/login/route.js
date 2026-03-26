@@ -20,7 +20,6 @@ export async function POST(request) {
     const body = await request.json();
     const { email, password } = body;
 
-    // --- Input validation ---
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required.' },
@@ -28,7 +27,6 @@ export async function POST(request) {
       );
     }
 
-    // --- Fetch user from DB ---
     const rows = await query(
       `SELECT u.id, u.name, u.email, u.password, u.role, u.company_id,
               c.name AS company_name
@@ -47,8 +45,6 @@ export async function POST(request) {
     }
 
     const user = rows[0];
-
-    // --- Compare password ---
     const valid = await comparePassword(password, user.password);
     if (!valid) {
       return NextResponse.json(
@@ -57,7 +53,6 @@ export async function POST(request) {
       );
     }
 
-    // --- Sign JWT ---
     const token = await signToken({
       userId:    user.id,
       companyId: user.company_id,
@@ -65,12 +60,9 @@ export async function POST(request) {
       email:     user.email,
     });
 
-    // --- Determine if the connection is secure ---
-    // x-forwarded-proto is set by reverse proxies (like nginx, Vercel) to indicate original protocol.
-    const proto = request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '');
-    const isSecure = proto === 'https';
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const isSecure = forwardedProto === 'https' || request.nextUrl.protocol === 'https:';
 
-    // --- Build response with cookie ---
     const safeUser = {
       id:          user.id,
       name:        user.name,
