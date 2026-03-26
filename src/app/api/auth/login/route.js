@@ -61,7 +61,9 @@ export async function POST(request) {
     });
 
     const forwardedProto = request.headers.get('x-forwarded-proto');
+    const protocol = request.nextUrl.protocol;
     const isSecure = forwardedProto === 'https' || request.nextUrl.protocol === 'https:';
+    console.log({ forwardedProto, protocol, isSecure });
 
     const safeUser = {
       id:          user.id,

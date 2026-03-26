@@ -1,3 +1,5 @@
+// src/components/auth/AuthInput.jsx
+
 'use client';
 
 import { useState } from 'react';
