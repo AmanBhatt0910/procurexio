@@ -1,0 +1,173 @@
+'use client';
+// src/components/layout/TopBar.jsx
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function TopBar({ user, title }) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+  }
+
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
+  return (
+    <>
+      <style>{`
+        .topbar {
+          height: 64px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          padding: 0 28px;
+          background: var(--white);
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          gap: 16px;
+        }
+        .topbar-title {
+          font-family: 'Syne', sans-serif;
+          font-weight: 600;
+          font-size: 1rem;
+          color: var(--ink);
+          letter-spacing: -.02em;
+          flex: 1;
+        }
+        .topbar-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          position: relative;
+        }
+        .topbar-user-btn {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          background: none;
+          border: 1px solid var(--border);
+          border-radius: 40px;
+          padding: 5px 12px 5px 5px;
+          cursor: pointer;
+          transition: border-color .15s, background .15s;
+        }
+        .topbar-user-btn:hover {
+          background: var(--surface);
+          border-color: #d1ccc7;
+        }
+        .topbar-avatar {
+          width: 28px;
+          height: 28px;
+          background: var(--accent);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Syne', sans-serif;
+          font-weight: 700;
+          font-size: .65rem;
+          color: #fff;
+          letter-spacing: .02em;
+        }
+        .topbar-user-name {
+          font-family: 'DM Sans', sans-serif;
+          font-size: .82rem;
+          font-weight: 500;
+          color: var(--ink);
+        }
+        .topbar-user-role {
+          font-size: .7rem;
+          color: var(--ink-faint);
+          font-family: 'DM Sans', sans-serif;
+        }
+        .topbar-chevron {
+          color: var(--ink-faint);
+          transition: transform .15s;
+        }
+        .topbar-chevron--open { transform: rotate(180deg); }
+        .topbar-menu {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 8px);
+          background: var(--white);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          min-width: 180px;
+          padding: 6px;
+          animation: fadeDown .12s ease;
+        }
+        @keyframes fadeDown {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .topbar-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-family: 'DM Sans', sans-serif;
+          font-size: .84rem;
+          color: var(--ink);
+          transition: background .12s;
+          text-decoration: none;
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+        }
+        .topbar-menu-item:hover { background: var(--surface); }
+        .topbar-menu-item--danger { color: #c0392b; }
+        .topbar-menu-item--danger:hover { background: #fdf2f1; }
+        .topbar-menu-divider {
+          height: 1px;
+          background: var(--border);
+          margin: 4px 0;
+        }
+      `}</style>
+
+      <header className="topbar">
+        <span className="topbar-title">{title}</span>
+
+        <div className="topbar-right">
+          <button className="topbar-user-btn" onClick={() => setMenuOpen(o => !o)}>
+            <div className="topbar-avatar">{initials}</div>
+            <div>
+              <div className="topbar-user-name">{user?.name ?? 'User'}</div>
+              <div className="topbar-user-role">{user?.role?.replace('_', ' ')}</div>
+            </div>
+            <svg className={`topbar-chevron${menuOpen ? ' topbar-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {menuOpen && (
+            <div className="topbar-menu">
+              <div className="topbar-menu-item" style={{ cursor: 'default', pointerEvents: 'none' }}>
+                <div>
+                  <div style={{ fontWeight: 500 }}>{user?.name}</div>
+                  <div style={{ fontSize: '.74rem', color: 'var(--ink-soft)', marginTop: 1 }}>{user?.email}</div>
+                </div>
+              </div>
+              <div className="topbar-menu-divider" />
+              <button className="topbar-menu-item topbar-menu-item--danger" onClick={handleLogout}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M5 2H2.5A1.5 1.5 0 0 0 1 3.5v7A1.5 1.5 0 0 0 2.5 12H5M9.5 10l3-3-3-3M13 7H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+    </>
+  );
+}

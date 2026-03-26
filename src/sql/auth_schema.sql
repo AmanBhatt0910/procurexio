@@ -55,3 +55,52 @@ VALUES (
   '$2b$12$K7rdBF2oMQUCJFHFkYiH7OAfXZe5G9RkPkFNq4OHkGHqJhVRU3.Hy',
   'super_admin'
 );
+
+
+-- ================================================================
+-- MODULE 2: Tenant (Company) Management — MySQL Schema
+-- Run this against your procurement_db database
+-- ================================================================
+
+-- ── Company Settings ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS company_settings (
+  id          BIGINT        NOT NULL AUTO_INCREMENT,
+  company_id  BIGINT        NOT NULL,
+  timezone    VARCHAR(64)   NOT NULL DEFAULT 'UTC',
+  currency    VARCHAR(8)    NOT NULL DEFAULT 'USD',
+  logo_url    VARCHAR(512)  DEFAULT NULL,
+  updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY  uq_company_settings (company_id),
+  CONSTRAINT  fk_settings_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ── Invitations ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS invitations (
+  id          BIGINT        NOT NULL AUTO_INCREMENT,
+  company_id  BIGINT        NOT NULL,
+  email       VARCHAR(255)  NOT NULL,
+  role        ENUM(
+                'company_admin',
+                'manager',
+                'employee',
+                'vendor_user'
+              )              NOT NULL DEFAULT 'employee',
+  token       VARCHAR(255)  NOT NULL,
+  expires_at  TIMESTAMP     NOT NULL,
+  accepted_at TIMESTAMP     DEFAULT NULL,
+  created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY  uq_invitations_token  (token),
+  INDEX       idx_invitations_email (email),
+  INDEX       idx_invitations_company (company_id),
+  CONSTRAINT  fk_invitations_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,325 @@
+'use client';
+// src/components/layout/Sidebar.jsx
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const NAV_ITEMS = [
+  {
+    label: 'Overview',
+    href: '/dashboard',
+    exact: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+    ),
+  },
+  {
+    section: 'Company',
+    items: [
+      {
+        label: 'Profile & Settings',
+        href: '/dashboard/company',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5"/>
+            <circle cx="8" cy="6" r="2" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M3.5 13c.8-2 2.5-3 4.5-3s3.7 1 4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ),
+      },
+      {
+        label: 'Users',
+        href: '/dashboard/company/users',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5"/>
+            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    section: 'Procurement',
+    items: [
+      {
+        label: 'Vendors',
+        href: '/dashboard/vendors',
+        disabled: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 4h12l-1.5 7H3.5L2 4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <circle cx="5.5" cy="13.5" r="1" stroke="currentColor" strokeWidth="1.2"/>
+            <circle cx="11" cy="13.5" r="1" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M2 4l-.8-2H.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ),
+      },
+      {
+        label: 'RFQs',
+        href: '/dashboard/rfqs',
+        disabled: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        ),
+      },
+      {
+        label: 'Bids',
+        href: '/dashboard/bids',
+        disabled: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+];
+
+export default function Sidebar({ company }) {
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+
+  function isActive(href, exact = false) {
+    if (exact) return pathname === href;
+    return pathname.startsWith(href);
+  }
+
+  return (
+    <>
+      <style>{`
+        .sidebar {
+          width: ${collapsed ? '64px' : '224px'};
+          min-height: 100vh;
+          background: var(--ink);
+          display: flex;
+          flex-direction: column;
+          transition: width .22s cubic-bezier(.4,0,.2,1);
+          flex-shrink: 0;
+          position: relative;
+          overflow: hidden;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: ${collapsed ? '20px 0' : '20px 20px'};
+          justify-content: ${collapsed ? 'center' : 'flex-start'};
+          border-bottom: 1px solid rgba(255,255,255,.07);
+          height: 64px;
+        }
+        .sidebar-logo-mark {
+          width: 30px;
+          height: 30px;
+          background: var(--accent);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          font-family: 'Syne', sans-serif;
+          font-weight: 800;
+          font-size: .9rem;
+          color: #fff;
+          letter-spacing: -.02em;
+        }
+        .sidebar-logo-text {
+          font-family: 'Syne', sans-serif;
+          font-weight: 700;
+          font-size: .95rem;
+          color: #fff;
+          white-space: nowrap;
+          opacity: ${collapsed ? 0 : 1};
+          transition: opacity .15s;
+          letter-spacing: -.02em;
+        }
+        .sidebar-nav {
+          flex: 1;
+          padding: 12px 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        .nav-section-label {
+          font-size: .65rem;
+          font-weight: 600;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,.25);
+          padding: 16px 20px 6px;
+          white-space: nowrap;
+          opacity: ${collapsed ? 0 : 1};
+          transition: opacity .1s;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: ${collapsed ? '9px 0' : '9px 20px'};
+          justify-content: ${collapsed ? 'center' : 'flex-start'};
+          color: rgba(255,255,255,.45);
+          text-decoration: none;
+          font-family: 'DM Sans', sans-serif;
+          font-size: .855rem;
+          font-weight: 400;
+          border-radius: 0;
+          transition: color .15s, background .15s;
+          cursor: pointer;
+          white-space: nowrap;
+          position: relative;
+          border: none;
+          background: none;
+          width: 100%;
+          text-align: left;
+        }
+        .nav-item:hover:not(.nav-item--disabled) {
+          color: rgba(255,255,255,.85);
+          background: rgba(255,255,255,.05);
+        }
+        .nav-item--active {
+          color: #fff !important;
+          background: rgba(200,80,26,.18) !important;
+        }
+        .nav-item--active::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 4px;
+          bottom: 4px;
+          width: 3px;
+          background: var(--accent);
+          border-radius: 0 2px 2px 0;
+        }
+        .nav-item--disabled {
+          opacity: .3;
+          cursor: not-allowed;
+        }
+        .nav-icon {
+          flex-shrink: 0;
+          width: 16px;
+          height: 16px;
+        }
+        .nav-label {
+          opacity: ${collapsed ? 0 : 1};
+          transition: opacity .1s;
+          flex: 1;
+        }
+        .nav-badge {
+          font-size: .6rem;
+          background: rgba(255,255,255,.08);
+          color: rgba(255,255,255,.3);
+          padding: 1px 6px;
+          border-radius: 20px;
+          font-weight: 500;
+          opacity: ${collapsed ? 0 : 1};
+        }
+        .sidebar-footer {
+          padding: ${collapsed ? '16px 0' : '16px 20px'};
+          border-top: 1px solid rgba(255,255,255,.07);
+          display: flex;
+          align-items: center;
+          justify-content: ${collapsed ? 'center' : 'space-between'};
+        }
+        .sidebar-company-name {
+          font-family: 'DM Sans', sans-serif;
+          font-size: .78rem;
+          color: rgba(255,255,255,.4);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 120px;
+          opacity: ${collapsed ? 0 : 1};
+          transition: opacity .1s;
+        }
+        .collapse-btn {
+          background: rgba(255,255,255,.07);
+          border: none;
+          border-radius: 6px;
+          width: 26px;
+          height: 26px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: rgba(255,255,255,.4);
+          transition: background .15s, color .15s;
+          flex-shrink: 0;
+        }
+        .collapse-btn:hover {
+          background: rgba(255,255,255,.12);
+          color: rgba(255,255,255,.8);
+        }
+      `}</style>
+
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-mark">P</div>
+          <span className="sidebar-logo-text">ProcureIQ</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map((item, i) => {
+            if (item.section) {
+              return (
+                <div key={i}>
+                  <div className="nav-section-label">{item.section}</div>
+                  {item.items.map((sub) => (
+                    <NavLink key={sub.href} item={sub} active={isActive(sub.href, sub.exact)} collapsed={collapsed} />
+                  ))}
+                </div>
+              );
+            }
+            return <NavLink key={item.href} item={item} active={isActive(item.href, item.exact)} collapsed={collapsed} />;
+          })}
+        </nav>
+
+        <div className="sidebar-footer">
+          <span className="sidebar-company-name">{company?.name ?? 'Your Company'}</span>
+          <button className="collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function NavLink({ item, active, collapsed }) {
+  const cls = [
+    'nav-item',
+    active ? 'nav-item--active' : '',
+    item.disabled ? 'nav-item--disabled' : '',
+  ].filter(Boolean).join(' ');
+
+  if (item.disabled) {
+    return (
+      <div className={cls} title={item.label}>
+        <span className="nav-icon">{item.icon}</span>
+        <span className="nav-label">{item.label}</span>
+        <span className="nav-badge">Soon</span>
+      </div>
+    );
+  }
+
+  return (
+    <Link href={item.href} className={cls} title={collapsed ? item.label : undefined}>
+      <span className="nav-icon">{item.icon}</span>
+      <span className="nav-label">{item.label}</span>
+    </Link>
+  );
+}
