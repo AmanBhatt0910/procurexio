@@ -70,11 +70,10 @@ const NAV_ITEMS = [
   {
     section: 'Procurement',
     items: [
-      // Vendors item removed (now top‑level)
       {
         label: 'RFQs',
         href: '/dashboard/rfqs',
-        disabled: true,
+        
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />

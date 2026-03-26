@@ -1,0 +1,185 @@
+// src/app/api/rfqs/[id]/route.js
+import { query, getConnection } from '@/lib/db';
+import { requireRole } from '@/lib/rbac';
+
+// ── Allowed status transitions ──────────────────────────────────────────────
+const TRANSITIONS = {
+  draft:      ['published', 'cancelled'],
+  published:  ['closed', 'cancelled'],
+  closed:     [],
+  cancelled:  [],
+};
+
+// ── GET /api/rfqs/[id] ─────────────────────────────────────────────────────
+export async function GET(request, { params }) {
+  const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
+  const { id }    = await params;
+
+  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const allowed = requireRole(role, ['company_admin', 'manager', 'employee']);
+  if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  try {
+    // Core RFQ
+    const [rfqRows] = await query(
+      `SELECT r.*, u.name AS created_by_name
+         FROM rfqs r
+         JOIN users u ON u.id = r.created_by
+        WHERE r.id = ? AND r.company_id = ?`,
+      [id, companyId]
+    );
+    if (rfqRows.length === 0) {
+      return Response.json({ error: 'RFQ not found' }, { status: 404 });
+    }
+
+    // Line items
+    const [items] = await query(
+      `SELECT * FROM rfq_items WHERE rfq_id = ? ORDER BY sort_order ASC, id ASC`,
+      [id]
+    );
+
+    // Invited vendors with vendor info
+    const [vendors] = await query(
+      `SELECT rv.id, rv.vendor_id, rv.status AS invite_status,
+              rv.invited_at, rv.updated_at,
+              v.name AS vendor_name, v.email AS vendor_email,
+              v.status AS vendor_status
+         FROM rfq_vendors rv
+         JOIN vendors v ON v.id = rv.vendor_id
+        WHERE rv.rfq_id = ? AND rv.company_id = ?
+        ORDER BY rv.invited_at ASC`,
+      [id, companyId]
+    );
+
+    return Response.json({
+      message: 'OK',
+      data: { rfq: rfqRows[0], items, vendors },
+    });
+  } catch (err) {
+    console.error('GET /api/rfqs/[id] error:', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// ── PUT /api/rfqs/[id] ─────────────────────────────────────────────────────
+// Body: { title?, description?, deadline?, budget?, currency?, status? }
+export async function PUT(request, { params }) {
+  const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
+  const { id }    = await params;
+
+  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const allowed = requireRole(role, ['company_admin', 'manager']);
+  if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  let body;
+  try { body = await request.json(); }
+  catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  try {
+    // Fetch current RFQ
+    const [rfqRows] = await query(
+      `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (rfqRows.length === 0) {
+      return Response.json({ error: 'RFQ not found' }, { status: 404 });
+    }
+    const rfq = rfqRows[0];
+
+    // Validate status transition if status is being changed
+    if (body.status && body.status !== rfq.status) {
+      const allowed_transitions = TRANSITIONS[rfq.status] || [];
+      if (!allowed_transitions.includes(body.status)) {
+        return Response.json(
+          { error: `Cannot transition from '${rfq.status}' to '${body.status}'` },
+          { status: 422 }
+        );
+      }
+    }
+
+    // Prevent edits on closed/cancelled RFQs (except status field already handled above)
+    if ((rfq.status === 'closed' || rfq.status === 'cancelled') && !body.status) {
+      return Response.json(
+        { error: `Cannot edit a ${rfq.status} RFQ` },
+        { status: 422 }
+      );
+    }
+
+    const updates = {};
+    if (body.title       !== undefined) updates.title       = body.title.trim();
+    if (body.description !== undefined) updates.description = body.description?.trim() || null;
+    if (body.deadline    !== undefined) updates.deadline    = body.deadline  || null;
+    if (body.budget      !== undefined) updates.budget      = body.budget    || null;
+    if (body.currency    !== undefined) updates.currency    = body.currency;
+    if (body.status      !== undefined) updates.status      = body.status;
+
+    if (Object.keys(updates).length === 0) {
+      return Response.json({ error: 'No fields to update' }, { status: 422 });
+    }
+
+    const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const setValues  = Object.values(updates);
+
+    await query(
+      `UPDATE rfqs SET ${setClauses} WHERE id = ? AND company_id = ?`,
+      [...setValues, id, companyId]
+    );
+
+    const [updated] = await query(
+      `SELECT r.*, u.name AS created_by_name
+         FROM rfqs r JOIN users u ON u.id = r.created_by
+        WHERE r.id = ?`,
+      [id]
+    );
+
+    return Response.json({ message: 'RFQ updated', data: { rfq: updated[0] } });
+  } catch (err) {
+    console.error('PUT /api/rfqs/[id] error:', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// ── DELETE /api/rfqs/[id] ──────────────────────────────────────────────────
+// Only cancels if RFQ is in 'draft' status
+export async function DELETE(request, { params }) {
+  const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
+  const { id }    = await params;
+
+  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const allowed = requireRole(role, ['company_admin', 'manager']);
+  if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  try {
+    const [rfqRows] = await query(
+      `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (rfqRows.length === 0) {
+      return Response.json({ error: 'RFQ not found' }, { status: 404 });
+    }
+    const rfq = rfqRows[0];
+
+    if (rfq.status !== 'draft') {
+      return Response.json(
+        { error: `Only draft RFQs can be cancelled via DELETE. Current status: ${rfq.status}` },
+        { status: 422 }
+      );
+    }
+
+    await query(
+      `UPDATE rfqs SET status = 'cancelled' WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+
+    return Response.json({ message: 'RFQ cancelled' });
+  } catch (err) {
+    console.error('DELETE /api/rfqs/[id] error:', err);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

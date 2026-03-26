@@ -141,3 +141,24 @@ export function isCompanyRole(role) {
 export function isVendorRole(role) {
   return role === ROLES.VENDOR_USER;
 }
+
+/**
+ * Enforce that a user has at least one of the required permissions.
+ * Throws error if not allowed (use inside API routes).
+ *
+ * @param {object} user
+ * @param {string[]} requiredPermissions
+ */
+export function requirePermission(user, requiredPermissions = []) {
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const allowed = hasAnyPermission(user.role, requiredPermissions);
+
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
+
+  return true;
+}

@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/syne": "^5.2.7",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.2",
     "jsonwebtoken": "^9.0.3",
