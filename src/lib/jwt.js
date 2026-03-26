@@ -16,14 +16,12 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
 
 function getSecret() {
   const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET is not set in environment variables');
+  if (!secret) throw new Error('JWT_SECRET is not set');
   return new TextEncoder().encode(secret);
 }
 
 /**
- * Sign a JWT token.
- * @param {object} payload  - data to encode (userId, companyId, role, etc.)
- * @returns {Promise<string>} - signed JWT string
+ * Sign JWT
  */
 export async function signToken(payload) {
   return new SignJWT(payload)
@@ -34,10 +32,7 @@ export async function signToken(payload) {
 }
 
 /**
- * Verify and decode a JWT token.
- * Returns null if invalid or expired — never throws.
- * @param {string} token
- * @returns {Promise<object|null>}
+ * Verify JWT
  */
 export async function verifyToken(token) {
   try {
@@ -49,29 +44,31 @@ export async function verifyToken(token) {
 }
 
 /**
- * Build the httpOnly cookie string for Set-Cookie header.
- * @param {string} token
- * @returns {string}
+ * Build auth cookie
  */
-// src/lib/jwt.js
+export function buildAuthCookie(token, options = {}) {
+  const {
+    isSecure = false,
+  } = options;
 
-export function buildAuthCookie(token, secure = false) {
   return [
     `auth_token=${token}`,
     'HttpOnly',
     'Path=/',
-    `Max-Age=${7 * 24 * 60 * 60}`, // 7 days in seconds
-    secure ? 'Secure' : '',
+    `Max-Age=${7 * 24 * 60 * 60}`,
+    isSecure ? 'Secure' : '',
     'SameSite=Lax',
   ]
     .filter(Boolean)
     .join('; ');
 }
 
-/**
- * Build a cookie string that clears the auth cookie.
- * @returns {string}
- */
 export function clearAuthCookie() {
-  return 'auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax';
+  return [
+    'auth_token=',
+    'HttpOnly',
+    'Path=/',
+    'Max-Age=0',
+    'SameSite=Lax',
+  ].join('; ');
 }
