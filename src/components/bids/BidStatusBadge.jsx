@@ -1,31 +1,29 @@
-'use client';
-
 // BidStatusBadge — status pill: draft / submitted / withdrawn
 // Usage: <BidStatusBadge status="submitted" />
 
-const CONFIG = {
-  draft:     { label: 'Draft',     bg: '#f3f2f0', color: '#6b6660' },
-  submitted: { label: 'Submitted', bg: '#e6f4ea', color: '#1e7e34' },
-  withdrawn: { label: 'Withdrawn', bg: '#fce8e6', color: '#c62828' },
-};
+'use client';
 
 export default function BidStatusBadge({ status }) {
-  const cfg = CONFIG[status] ?? { label: status, bg: '#f3f2f0', color: '#6b6660' };
+  const map = {
+    draft:     { label: 'Draft',     color: '#b8b3ae', bg: '#f5f4f2' },
+    submitted: { label: 'Submitted', color: '#1a7a4a', bg: '#e8f5ee' },
+    withdrawn: { label: 'Withdrawn', color: '#c8501a', bg: '#fdf0eb' },
+  };
+  const cfg = map[status] || { label: status, color: '#6b6660', bg: '#f5f4f2' };
+
   return (
     <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      padding: '2px 10px',
-      borderRadius: 20,
-      fontSize: '.74rem',
-      fontWeight: 600,
-      letterSpacing: '.04em',
-      textTransform: 'uppercase',
-      background: cfg.bg,
-      color: cfg.color,
+      display: 'inline-flex', alignItems: 'center', gap: '5px',
+      padding: '3px 10px', borderRadius: '20px',
+      background: cfg.bg, color: cfg.color,
+      fontSize: '.72rem', fontWeight: 600,
+      letterSpacing: '.04em', textTransform: 'uppercase',
       fontFamily: "'DM Sans', sans-serif",
-      whiteSpace: 'nowrap',
     }}>
+      <span style={{
+        width: 6, height: 6, borderRadius: '50%',
+        background: cfg.color, flexShrink: 0,
+      }} />
       {cfg.label}
     </span>
   );

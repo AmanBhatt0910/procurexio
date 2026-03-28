@@ -1,167 +1,139 @@
 // src/app/dashboard/bids/page.jsx:
 
 'use client';
-
-// /dashboard/bids — Vendor's invited RFQ list
-
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
-import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
-
-function DeadlinePill({ deadline }) {
-  if (!deadline) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
-  const d = new Date(deadline);
-  const now = new Date();
-  const diffMs = d - now;
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const past = diffMs < 0;
-  const urgent = !past && diffDays <= 3;
-
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: '.8rem', fontWeight: 500,
-      color: past ? '#c62828' : urgent ? '#e65100' : 'var(--ink-soft)',
-    }}>
-      {past && '⚠ '}
-      {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-      {!past && urgent && <span style={{ fontSize: '.72rem', color: '#e65100' }}>({diffDays}d left)</span>}
-      {past && <span style={{ fontSize: '.72rem' }}>Expired</span>}
-    </span>
-  );
-}
-
-const COLUMNS = [
-  { key: 'reference_number', label: 'Reference' },
-  { key: 'title',            label: 'RFQ Title' },
-  { key: 'rfq_status',       label: 'RFQ Status' },
-  { key: 'deadline',         label: 'Deadline' },
-  { key: 'bid_status',       label: 'Your Bid' },
-  { key: 'total_amount',     label: 'Bid Amount' },
-  { key: 'action',           label: '' },
-];
+import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import { useRouter } from 'next/navigation';
 
 export default function VendorBidsPage() {
-  const router = useRouter();
-  const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [rfqs, setRfqs]       = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const LIMIT = 20;
+  const [error, setError]     = useState('');
+  const router = useRouter();
 
-  useEffect(() => {
-    const abortController = new AbortController();
+  useEffect(() => { fetchRFQs(); }, []);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  async function fetchRFQs() {
     setLoading(true);
+    try {
+      const res = await fetch('/api/bids/rfqs');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setRfqs(json.data.rfqs);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    fetch(`/api/bids/rfqs?page=${page}&limit=${LIMIT}`, {
-      signal: abortController.signal,
-    })
-      .then(r => r.json())
-      .then(d => {
-        if (abortController.signal.aborted) return;
-        if (d.error) throw new Error(d.error);
-        setRows(d.data.rows);
-        setTotal(d.data.total);
-      })
-      .catch(e => {
-        if (abortController.signal.aborted) return;
-        setError(e.message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
-      });
+  const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
 
-    return () => abortController.abort();
-  }, [page]);
-
-  const tableRows = rows.map(row => ({
-    ...row,
-    reference_number: (
-      <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 600, fontSize: '.85rem' }}>
-        {row.reference_number}
-      </span>
-    ),
-    rfq_status: <RFQStatusBadge status={row.rfq_status} />,
-    deadline:   <DeadlinePill deadline={row.deadline} />,
-    bid_status: row.bid_status
-      ? <BidStatusBadge status={row.bid_status} />
-      : <span style={{ color: 'var(--ink-faint)', fontSize: '.8rem', fontStyle: 'italic' }}>Not started</span>,
-    total_amount: row.total_amount
-      ? <span style={{ fontWeight: 600 }}>{parseFloat(row.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })} {row.currency}</span>
-      : '—',
-    action: (
-      <button
-        onClick={() => router.push(`/dashboard/bids/${row.id}`)}
-        style={{
-          padding: '5px 14px', borderRadius: 'var(--radius)',
-          border: '1px solid var(--border)', background: 'var(--white)',
-          color: 'var(--ink)', fontFamily: "'DM Sans', sans-serif",
-          fontSize: '.8rem', fontWeight: 500, cursor: 'pointer',
-          transition: 'all .15s',
-        }}
-        onMouseEnter={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.color = 'var(--accent)'; }}
-        onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--ink)'; }}
-      >
-        {row.bid_status === 'submitted' ? 'View / Edit' : row.bid_status === 'withdrawn' ? 'Resubmit' : 'Start Bid'}
-      </button>
-    ),
-  }));
+  const columns = [
+    {
+      key: 'reference_number',
+      label: 'Reference',
+      render: (val) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '.82rem', color: 'var(--ink-soft)', fontWeight: 600 }}>
+          {val}
+        </span>
+      ),
+    },
+    { key: 'title', label: 'RFQ Title', render: (val) => <span style={{ fontWeight: 500 }}>{val}</span> },
+    {
+      key: 'rfq_status',
+      label: 'RFQ Status',
+      render: (val) => <RFQStatusBadge status={val} />,
+    },
+    {
+      key: 'deadline',
+      label: 'Deadline',
+      render: (val, row) => {
+        if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
+        const past = isPastDeadline(val);
+        return (
+          <span style={{ color: past ? 'var(--accent)' : 'var(--ink)', fontSize: '.86rem' }}>
+            {past && '⚠ '}{new Date(val).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'bid_status',
+      label: 'My Bid',
+      render: (val) => val ? <BidStatusBadge status={val} /> : (
+        <span style={{ color: 'var(--ink-faint)', fontSize: '.82rem' }}>Not started</span>
+      ),
+    },
+    {
+      key: 'total_amount',
+      label: 'Bid Total',
+      render: (val, row) => val ? (
+        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+          {row.currency} {parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        </span>
+      ) : <span style={{ color: 'var(--ink-faint)' }}>—</span>,
+    },
+    {
+      key: 'id',
+      label: '',
+      render: (val, row) => (
+        <button
+          onClick={() => router.push(`/dashboard/bids/${row.id}`)}
+          style={{
+            padding: '6px 16px', background: 'var(--ink)', color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: '.8rem',
+            fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {row.bid_status === 'submitted' ? 'View' : row.bid_status === 'draft' ? 'Continue' : 'Open'}
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <DashboardLayout>
+    <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700&display=swap');
-        .bids-page { padding: 32px; max-width: 1200px; }
-        .bids-meta { font-family: 'DM Sans', sans-serif; font-size: .85rem; color: var(--ink-soft); margin-bottom: 24px; }
-        .pagination { display: flex; align-items: center; gap: 12px; margin-top: 24px; justify-content: flex-end; }
-        .page-btn {
-          padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border);
-          background: var(--white); color: var(--ink); font-family: 'DM Sans', sans-serif;
-          font-size: .82rem; cursor: pointer; transition: all .15s;
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
+        :root {
+          --ink:#0f0e0d;--ink-soft:#6b6660;--ink-faint:#b8b3ae;
+          --surface:#faf9f7;--white:#ffffff;--accent:#c8501a;--accent-h:#a83e12;
+          --border:#e4e0db;--radius:10px;
+          --shadow:0 1px 3px rgba(15,14,13,.06),0 8px 32px rgba(15,14,13,.08);
         }
-        .page-btn:disabled { opacity: .4; cursor: not-allowed; }
-        .page-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
-        .error-msg { color: #c62828; font-family: 'DM Sans', sans-serif; padding: 20px; }
+        body { font-family: 'DM Sans', sans-serif; }
+        .error-box {
+          background: #fdf0eb; border: 1px solid #f5c9b6; border-radius: var(--radius);
+          padding: 14px 18px; color: var(--accent); font-size: .88rem; margin-bottom: 20px;
+        }
+        .info-banner {
+          background: #f0f5ff; border: 1px solid #c3d5f8; border-radius: var(--radius);
+          padding: 12px 18px; color: #2d5bb8; font-size: .85rem; margin-bottom: 20px;
+        }
       `}</style>
-
-      <div className="bids-page">
+      <DashboardLayout>
         <PageHeader
-          title="My Bids"
+          title="My Bid Invitations"
           subtitle="RFQs you have been invited to respond to"
         />
-
-        {error && <div className="error-msg">{error}</div>}
-
-        <div className="bids-meta">
-          {!loading && `Showing ${rows.length} of ${total} RFQ invitation${total !== 1 ? 's' : ''}`}
-        </div>
-
-        <DataTable
-          columns={COLUMNS}
-          rows={tableRows}
-          loading={loading}
-          emptyMessage="No RFQ invitations found."
-        />
-
-        {total > LIMIT && (
-          <div className="pagination">
-            <button className="page-btn" disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Previous</button>
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-              Page {page} of {Math.ceil(total / LIMIT)}
-            </span>
-            <button className="page-btn" disabled={page >= Math.ceil(total / LIMIT)} onClick={() => setPage(p => p + 1)}>Next →</button>
+        {error && <div className="error-box">{error}</div>}
+        {!loading && rfqs.length === 0 && !error && (
+          <div className="info-banner">
+            You haven&apos;t been invited to any open RFQs yet. Check back later.
           </div>
         )}
-      </div>
-    </DashboardLayout>
+        <DataTable
+          columns={columns}
+          rows={rfqs}
+          loading={loading}
+          emptyMessage="No RFQ invitations found"
+        />
+      </DashboardLayout>
+    </>
   );
 }

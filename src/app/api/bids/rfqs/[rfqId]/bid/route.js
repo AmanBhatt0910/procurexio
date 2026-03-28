@@ -1,151 +1,131 @@
-// POST /api/bids/rfqs/[rfqId]/bid  — create a new draft bid
-// PUT  /api/bids/rfqs/[rfqId]/bid  — update bid header + upsert bid_items
-// Requires role: vendor_user
-
+import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-async function resolveVendorId(userId, companyId) {
+async function resolveVendor(userId) {
   const [rows] = await pool.query(
-    `SELECT vendor_id FROM vendor_users WHERE user_id = ? AND company_id = ? LIMIT 1`,
-    [userId, companyId]
+    `SELECT u.id, u.company_id, v.id AS vendor_id
+     FROM users u
+     LEFT JOIN vendor_contacts vc ON vc.email = u.email AND vc.company_id = u.company_id
+     LEFT JOIN vendors v ON v.id = vc.vendor_id AND v.company_id = u.company_id
+     WHERE u.id = ? LIMIT 1`,
+    [userId]
   );
-  return rows[0]?.vendor_id ?? null;
+  return rows[0] || null;
 }
 
-async function getInvitation(rfqId, vendorId, companyId) {
-  const [[row]] = await pool.query(
-    `SELECT rv.status, r.deadline, r.status AS rfq_status, r.company_id
-     FROM rfq_vendors rv
-     JOIN rfqs r ON r.id = rv.rfq_id
-     WHERE rv.rfq_id = ? AND rv.vendor_id = ? AND rv.company_id = ?`,
-    [rfqId, vendorId, companyId]
-  );
-  return row ?? null;
-}
-
+// POST /api/bids/rfqs/[rfqId]/bid — create a draft bid
 export async function POST(request, { params }) {
-  const role      = request.headers.get('x-user-role');
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const { rfqId } = params;
+  const role   = request.headers.get('x-user-role');
+  const userId = request.headers.get('x-user-id');
+  if (role !== 'vendor_user') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  if (role !== 'vendor_user') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const { rfqId } = await params;
 
-  const vendorId = await resolveVendorId(userId, companyId);
-  if (!vendorId) return Response.json({ error: 'Vendor association not found' }, { status: 404 });
-
-  const invite = await getInvitation(rfqId, vendorId, companyId);
-  if (!invite) return Response.json({ error: 'Not invited to this RFQ' }, { status: 403 });
-  if (['closed','cancelled'].includes(invite.rfq_status)) {
-    return Response.json({ error: 'RFQ is no longer accepting bids' }, { status: 422 });
-  }
-
-  const body = await request.json();
-  const { notes = null, currency = 'USD' } = body;
-
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
+    const userInfo = await resolveVendor(userId);
+    if (!userInfo?.vendor_id) return NextResponse.json({ error: 'No vendor linked' }, { status: 404 });
+    const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
-    const [result] = await conn.query(
+    // Verify invite
+    const [[invite]] = await pool.query(
+      `SELECT id FROM rfq_vendors WHERE rfq_id = ? AND vendor_id = ? AND company_id = ?`,
+      [rfqId, vendorId, companyId]
+    );
+    if (!invite) return NextResponse.json({ error: 'Not invited to this RFQ' }, { status: 403 });
+
+    // Check deadline
+    const [[rfq]] = await pool.query(`SELECT deadline, currency FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
+    if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
+    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+      return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const notes    = body.notes    || null;
+    const currency = body.currency || rfq.currency || 'USD';
+
+    const [result] = await pool.query(
       `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, total_amount)
        VALUES (?, ?, ?, 'draft', ?, ?, 0.00)`,
       [rfqId, vendorId, companyId, notes, currency]
     );
-    const bidId = result.insertId;
 
-    await conn.commit();
-    return Response.json({ message: 'Bid created', data: { bidId } }, { status: 201 });
+    return NextResponse.json({ message: 'Bid created', data: { bidId: result.insertId } }, { status: 201 });
   } catch (err) {
-    await conn.rollback();
     if (err.code === 'ER_DUP_ENTRY') {
-      return Response.json({ error: 'Bid already exists for this RFQ' }, { status: 409 });
+      return NextResponse.json({ error: 'A bid already exists for this RFQ' }, { status: 409 });
     }
-    console.error(err);
-    return Response.json({ error: 'Failed to create bid' }, { status: 500 });
-  } finally {
-    conn.release();
+    console.error('POST /api/bids/rfqs/[rfqId]/bid', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
+// PUT /api/bids/rfqs/[rfqId]/bid — update bid header + upsert items
 export async function PUT(request, { params }) {
-  const role      = request.headers.get('x-user-role');
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const { rfqId } = params;
+  const role   = request.headers.get('x-user-role');
+  const userId = request.headers.get('x-user-id');
+  if (role !== 'vendor_user') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  if (role !== 'vendor_user') {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const { rfqId } = await params;
 
-  const vendorId = await resolveVendorId(userId, companyId);
-  if (!vendorId) return Response.json({ error: 'Vendor association not found' }, { status: 404 });
-
-  const invite = await getInvitation(rfqId, vendorId, companyId);
-  if (!invite) return Response.json({ error: 'Not invited to this RFQ' }, { status: 403 });
-  if (['closed','cancelled'].includes(invite.rfq_status)) {
-    return Response.json({ error: 'RFQ is no longer accepting bids' }, { status: 422 });
-  }
-
-  // Fetch bid
-  const [[bid]] = await pool.query(
-    `SELECT id, status FROM bids WHERE rfq_id = ? AND vendor_id = ? AND company_id = ?`,
-    [rfqId, vendorId, companyId]
-  );
-  if (!bid) return Response.json({ error: 'Bid not found' }, { status: 404 });
-  if (bid.status === 'withdrawn') {
-    return Response.json({ error: 'Cannot edit a withdrawn bid. Resubmit instead.' }, { status: 422 });
-  }
-
-  const body = await request.json();
-  const { notes, currency, items = [] } = body;
-
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
+    const userInfo = await resolveVendor(userId);
+    if (!userInfo?.vendor_id) return NextResponse.json({ error: 'No vendor linked' }, { status: 404 });
+    const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
-    // Update bid header
-    await conn.query(
-      `UPDATE bids SET notes = ?, currency = ?, updated_at = NOW()
-       WHERE id = ? AND company_id = ?`,
-      [notes ?? null, currency ?? 'USD', bid.id, companyId]
-    );
-
-    // Upsert bid_items
-    for (const item of items) {
-      const { rfq_item_id, unit_price, quantity, notes: itemNotes } = item;
-      await conn.query(
-        `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           unit_price = VALUES(unit_price),
-           quantity   = VALUES(quantity),
-           notes      = VALUES(notes),
-           updated_at = NOW()`,
-        [bid.id, rfq_item_id, companyId, unit_price ?? 0, quantity ?? 1, itemNotes ?? null]
-      );
+    // Check deadline + bid ownership
+    const [[rfq]] = await pool.query(`SELECT deadline, currency FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
+    if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
+    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+      return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
 
-    // Recompute total_amount
-    const [[totRow]] = await conn.query(
-      `SELECT COALESCE(SUM(unit_price * quantity), 0) AS total
-       FROM bid_items WHERE bid_id = ? AND company_id = ?`,
-      [bid.id, companyId]
+    const [[bid]] = await pool.query(
+      `SELECT id, status FROM bids WHERE rfq_id = ? AND vendor_id = ? AND company_id = ?`,
+      [rfqId, vendorId, companyId]
     );
-    await conn.query(
-      `UPDATE bids SET total_amount = ?, updated_at = NOW() WHERE id = ?`,
-      [totRow.total, bid.id]
-    );
+    if (!bid) return NextResponse.json({ error: 'No bid found' }, { status: 404 });
+    if (bid.status === 'withdrawn') return NextResponse.json({ error: 'Cannot edit a withdrawn bid' }, { status: 422 });
 
-    await conn.commit();
-    return Response.json({ message: 'Bid updated', data: { total_amount: totRow.total } });
+    const body = await request.json();
+    const { notes, currency, items = [] } = body;
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Upsert bid_items
+      let totalAmount = 0;
+      for (const item of items) {
+        const { rfq_item_id, unit_price, quantity, notes: iNotes } = item;
+        const up  = parseFloat(unit_price)  || 0;
+        const qty = parseFloat(quantity)     || 1;
+        totalAmount += up * qty;
+        await conn.query(
+          `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes)`,
+          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null]
+        );
+      }
+
+      // Update bid header
+      await conn.query(
+        `UPDATE bids SET notes = ?, currency = ?, total_amount = ?, updated_at = NOW()
+         WHERE id = ?`,
+        [notes || null, currency || rfq.currency, totalAmount, bid.id]
+      );
+
+      await conn.commit();
+      return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount } });
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
   } catch (err) {
-    await conn.rollback();
-    console.error(err);
-    return Response.json({ error: 'Failed to update bid' }, { status: 500 });
-  } finally {
-    conn.release();
+    console.error('PUT /api/bids/rfqs/[rfqId]/bid', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

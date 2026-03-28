@@ -5,17 +5,17 @@
 
 -- ── RFQs (core request entity per tenant) ────────────────────────
 CREATE TABLE IF NOT EXISTS rfqs (
-  id               BIGINT         NOT NULL AUTO_INCREMENT,
-  company_id       BIGINT         NOT NULL,
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
   title            VARCHAR(255)   NOT NULL,
   description      TEXT           DEFAULT NULL,
-  reference_number VARCHAR(32)    NOT NULL,              -- e.g. RFQ-2025-00001
+  reference_number VARCHAR(32)    NOT NULL,
   status           ENUM('draft','published','closed','cancelled')
                                   NOT NULL DEFAULT 'draft',
   deadline         DATETIME       DEFAULT NULL,
   budget           DECIMAL(15,2)  DEFAULT NULL,
   currency         VARCHAR(8)     NOT NULL DEFAULT 'USD',
-  created_by       BIGINT         NOT NULL,
+  created_by BIGINT UNSIGNED NOT NULL,
   created_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP
                                   ON UPDATE CURRENT_TIMESTAMP,
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS rfqs (
 
 -- ── RFQ Line Items ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS rfq_items (
-  id           BIGINT         NOT NULL AUTO_INCREMENT,
-  rfq_id       BIGINT         NOT NULL,
-  company_id   BIGINT         NOT NULL,            -- denormalised for fast tenant queries
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  rfq_id BIGINT UNSIGNED NOT NULL,
+  company_id BIGINT UNSIGNED NOT NULL,
   description  VARCHAR(512)   NOT NULL,
   quantity     DECIMAL(10,2)  NOT NULL DEFAULT 1,
   unit         VARCHAR(64)    DEFAULT NULL,
@@ -56,11 +56,11 @@ CREATE TABLE IF NOT EXISTS rfq_items (
 
 -- ── RFQ Vendor Invitations ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS rfq_vendors (
-  id         BIGINT      NOT NULL AUTO_INCREMENT,
-  rfq_id     BIGINT      NOT NULL,
-  vendor_id  BIGINT      NOT NULL,
-  company_id BIGINT      NOT NULL,            -- denormalised for fast tenant queries
-  status     ENUM('invited','viewed','submitted','declined')
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  rfq_id     BIGINT UNSIGNED NOT NULL,
+  vendor_id  BIGINT UNSIGNED NOT NULL,
+  company_id BIGINT UNSIGNED NOT NULL,
+  status     ENUM('invited','viewed','submitted','declined','awarded')
                          NOT NULL DEFAULT 'invited',
   invited_at TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP

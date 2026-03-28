@@ -1,173 +1,161 @@
+// src/components/bids/BidComparisonTable
+
 'use client';
 
-// BidComparisonTable
-// Props:
-//   items : [{ id, description, quantity, unit, target_price, sort_order }]
-//   bids  : [{ bidId, vendorId, vendorName, status, totalAmount, currency, submittedAt, itemPrices }]
-//           itemPrices keyed as "rfqItemId_<id>"
-
-import BidStatusBadge from './BidStatusBadge';
-
-function fmt(val, currency = 'USD') {
-  const n = parseFloat(val);
-  if (isNaN(n)) return '—';
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function findLowest(bids, itemId) {
-  let lowest = Infinity;
-  for (const b of bids) {
-    if (b.status !== 'submitted') continue;
-    const v = b.itemPrices?.[`rfqItemId_${itemId}`]?.unitPrice;
-    if (v != null && parseFloat(v) < lowest) lowest = parseFloat(v);
-  }
-  return lowest === Infinity ? null : lowest;
-}
-
-export default function BidComparisonTable({ items = [], bids = [] }) {
+export default function BidComparisonTable({ rfqItems = [], bids = [], currency = 'USD' }) {
+  // Only show submitted bids in comparison
   const submittedBids = bids.filter(b => b.status === 'submitted');
+
+  const fmtPrice = (val) =>
+    val != null
+      ? parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '—';
+
+  // Find lowest unit price per rfq_item across all submitted bids
+  const lowestByItem = {};
+  rfqItems.forEach(item => {
+    const prices = submittedBids
+      .map(b => b.itemPrices?.[item.id]?.unitPrice)
+      .filter(p => p != null && p > 0);
+    lowestByItem[item.id] = prices.length ? Math.min(...prices) : null;
+  });
+
+  // Find lowest total
+  const totals = submittedBids.map(b => b.totalAmount).filter(t => t > 0);
+  const lowestTotal = totals.length ? Math.min(...totals) : null;
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@400;600;700&display=swap');
-
-        .bct-outer { width: 100%; overflow-x: auto; }
-        .bct-table {
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700&display=swap');
+        :root {
+          --ink: #0f0e0d; --ink-soft: #6b6660; --ink-faint: #b8b3ae;
+          --surface: #faf9f7; --white: #ffffff; --accent: #c8501a;
+          --border: #e4e0db; --radius: 10px;
+        }
+        .cmp-wrap { overflow-x: auto; }
+        .cmp-table {
           width: 100%; border-collapse: collapse;
-          font-family: 'DM Sans', sans-serif; font-size: .875rem;
+          font-family: 'DM Sans', sans-serif; font-size: .88rem;
+          min-width: 600px;
         }
-        .bct-table th {
-          font-size: .69rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-          color: var(--ink-faint); padding: 10px 14px; text-align: left;
-          border-bottom: 2px solid var(--border); white-space: nowrap; background: var(--surface);
+        .cmp-table th {
+          padding: 12px 16px; text-align: center;
+          font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+          text-transform: uppercase; color: var(--ink-faint);
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
+          white-space: nowrap;
         }
-        .bct-table th.vendor-col {
-          text-align: center; min-width: 140px;
+        .cmp-table th.item-col { text-align: left; min-width: 220px; }
+        .cmp-table td {
+          padding: 13px 16px; border-bottom: 1px solid var(--border);
+          vertical-align: middle;
         }
-        .bct-table td {
-          padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle;
-          color: var(--ink);
+        .cmp-table tbody tr:hover td { background: #fdf8f5; }
+        .cmp-table tbody tr:last-child td { border-bottom: none; }
+        .item-name { font-weight: 500; color: var(--ink); }
+        .item-meta { font-size: .78rem; color: var(--ink-soft); margin-top: 2px; }
+        .price-cell { text-align: center; font-variant-numeric: tabular-nums; }
+        .price-best {
+          color: #1a7a4a; font-weight: 700;
+          background: #e8f5ee; border-radius: 6px;
+          padding: 3px 10px; display: inline-block;
         }
-        .bct-table tr:hover td { background: #faf9f7; }
-
-        .bct-vendor-header {
+        .price-normal { color: var(--ink); font-weight: 500; }
+        .price-empty { color: var(--ink-faint); }
+        .total-row td {
+          font-weight: 600; background: var(--surface);
+          border-top: 2px solid var(--border);
+        }
+        .total-best {
+          color: var(--accent); font-weight: 700; font-size: 1rem;
+        }
+        .vendor-header {
           display: flex; flex-direction: column; align-items: center; gap: 4px;
         }
-        .bct-vendor-name {
-          font-family: 'Syne', sans-serif; font-size: .82rem; font-weight: 600;
-          color: var(--ink);
+        .vendor-name { color: var(--ink); font-size: .85rem; font-weight: 600; text-transform: none; letter-spacing: 0; }
+        .submitted-badge {
+          display: inline-block; padding: 2px 8px; border-radius: 10px;
+          background: #e8f5ee; color: #1a7a4a;
+          font-size: .68rem; font-weight: 600; letter-spacing: .04em;
         }
-        .bct-vendor-total {
-          font-size: .78rem; color: var(--ink-soft); font-weight: 400;
+        .no-bids {
+          text-align: center; padding: 48px 24px;
+          color: var(--ink-soft); font-size: .9rem;
         }
-        .bct-price-cell {
-          text-align: center; font-weight: 500; letter-spacing: -.01em;
-        }
-        .bct-price-cell.lowest {
-          color: var(--accent);
-          font-weight: 700;
-          position: relative;
-        }
-        .bct-price-cell.lowest::after {
-          content: '★';
-          font-size: .6rem;
-          margin-left: 3px;
-          vertical-align: super;
-          color: var(--accent);
-        }
-        .bct-price-cell.no-bid {
-          color: var(--ink-faint); font-style: italic; font-size: .8rem;
-        }
-        .bct-item-desc { font-weight: 500; max-width: 220px; }
-        .bct-item-meta { font-size: .76rem; color: var(--ink-faint); margin-top: 1px; }
-        .bct-total-row td {
-          border-top: 2px solid var(--border); font-weight: 700;
-          background: #f7f6f4 !important; border-bottom: none !important;
-        }
-        .bct-total-row td.lowest { color: var(--accent); }
-        .bct-empty {
-          text-align: center; padding: 40px; color: var(--ink-faint);
-          font-style: italic; font-size: .9rem;
-        }
+        .diff-note { font-size: .72rem; color: var(--ink-faint); margin-top: 2px; display: block; }
       `}</style>
 
       {submittedBids.length === 0 ? (
-        <div className="bct-empty">No submitted bids yet for this RFQ.</div>
+        <div className="no-bids">
+          <div style={{ fontSize: '2rem', marginBottom: 8 }}>📭</div>
+          <div style={{ fontWeight: 500, color: 'var(--ink)', marginBottom: 4 }}>No submitted bids yet</div>
+          <div>Bids will appear here once vendors submit their responses.</div>
+        </div>
       ) : (
-        <div className="bct-outer">
-          <table className="bct-table">
+        <div className="cmp-wrap">
+          <table className="cmp-table">
             <thead>
               <tr>
-                <th style={{ minWidth: 200 }}>Line Item</th>
-                <th>Qty / Unit</th>
-                <th>Target Price</th>
+                <th className="item-col">Line Item</th>
                 {submittedBids.map(bid => (
-                  <th key={bid.bidId} className="vendor-col">
-                    <div className="bct-vendor-header">
-                      <span className="bct-vendor-name">{bid.vendorName}</span>
-                      <BidStatusBadge status={bid.status} />
-                      <span className="bct-vendor-total">
-                        Total: {fmt(bid.totalAmount)} {bid.currency}
-                      </span>
+                  <th key={bid.bidId}>
+                    <div className="vendor-header">
+                      <span className="vendor-name">{bid.vendorName}</span>
+                      <span className="submitted-badge">Submitted</span>
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {items.map(item => {
-                const lowestPrice = findLowest(submittedBids, item.id);
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="bct-item-desc">{item.description}</div>
-                    </td>
-                    <td>
-                      <div className="bct-item-meta">{item.quantity} {item.unit || ''}</div>
-                    </td>
-                    <td>
-                      {item.target_price ? fmt(item.target_price) : <span style={{ color: 'var(--ink-faint)' }}>—</span>}
-                    </td>
-                    {submittedBids.map(bid => {
-                      const priceData = bid.itemPrices?.[`rfqItemId_${item.id}`];
-                      const unitPrice = priceData?.unitPrice;
-                      const isLowest = lowestPrice != null && parseFloat(unitPrice) === lowestPrice;
-                      return (
-                        <td key={bid.bidId} className={`bct-price-cell${isLowest ? ' lowest' : ''}`}>
-                          {unitPrice != null ? (
-                            <div>
-                              <div>{fmt(unitPrice)}</div>
-                              {priceData?.notes && (
-                                <div style={{ fontSize: '.72rem', color: 'var(--ink-faint)', fontWeight: 400, marginTop: 2 }}>
-                                  {priceData.notes}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="no-bid">Not quoted</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bct-total-row">
-                <td colSpan={3}>Grand Total</td>
-                {submittedBids.map(bid => {
-                  const minTotal = Math.min(...submittedBids.map(b => parseFloat(b.totalAmount) || 0));
-                  const isLowest = parseFloat(bid.totalAmount) === minTotal;
-                  return (
-                    <td key={bid.bidId} className={`bct-price-cell${isLowest ? ' lowest' : ''}`} style={{ fontSize: '1rem' }}>
-                      {fmt(bid.totalAmount)} {bid.currency}
-                    </td>
-                  );
-                })}
+              {rfqItems.map(item => (
+                <tr key={item.id}>
+                  <td>
+                    <div className="item-name">{item.description}</div>
+                    <div className="item-meta">
+                      Qty: {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+                      {item.target_price ? ` · Target: ${fmtPrice(item.target_price)}` : ''}
+                    </div>
+                  </td>
+                  {submittedBids.map(bid => {
+                    const priceData = bid.itemPrices?.[item.id];
+                    const up = priceData?.unitPrice;
+                    const isLowest = up != null && up > 0 && up === lowestByItem[item.id];
+                    return (
+                      <td key={bid.bidId} className="price-cell">
+                        {up != null && up > 0 ? (
+                          <span className={isLowest ? 'price-best' : 'price-normal'}>
+                            {fmtPrice(up)}
+                          </span>
+                        ) : (
+                          <span className="price-empty">—</span>
+                        )}
+                        {priceData?.totalPrice > 0 && (
+                          <span className="diff-note">
+                            Line: {fmtPrice(priceData.totalPrice)}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <tr className="total-row">
+                <td>Total Bid Amount</td>
+                {submittedBids.map(bid => (
+                  <td key={bid.bidId} className="price-cell">
+                    <span className={bid.totalAmount === lowestTotal ? 'total-best' : ''}>
+                      {bid.currency || currency} {fmtPrice(bid.totalAmount)}
+                    </span>
+                    {bid.totalAmount === lowestTotal && (
+                      <span className="diff-note" style={{ color: '#1a7a4a' }}>★ Lowest</span>
+                    )}
+                  </td>
+                ))}
               </tr>
-            </tfoot>
+            </tbody>
           </table>
         </div>
       )}

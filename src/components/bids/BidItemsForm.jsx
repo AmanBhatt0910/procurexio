@@ -1,178 +1,213 @@
+// src/components/bids/BidItemsForm
+
 'use client';
+import { useReducer, useEffect } from 'react';
 
-// BidItemsForm — table of rfq_items with editable unit_price + notes per row
-// Props:
-//   rfqItems       : [{ id, description, quantity, unit, target_price }]
-//   bidItems       : [{ rfq_item_id, unit_price, quantity, notes }]
-//   onChange(items): called with updated items array on any cell change
-//   readOnly       : bool — if true, no inputs rendered (employee view)
-
-import { useEffect, useState } from 'react';
-
-function fmt(val) {
-  const n = parseFloat(val);
-  return isNaN(n) ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function rowsReducer(state, action) {
+  switch (action.type) {
+    case 'RESET':
+      return action.payload;
+    case 'UPDATE':
+      return state.map((row, idx) =>
+        idx === action.index ? { ...row, [action.field]: action.value } : row
+      );
+    default:
+      return state;
+  }
 }
 
-export default function BidItemsForm({ rfqItems = [], bidItems = [], onChange, readOnly = false }) {
-  // Derive initial rows from props
-  const initialRows = useMemo(() => {
-    const map = {};
-    for (const bi of bidItems) {
-      map[bi.rfq_item_id] = bi;
-    }
-    return rfqItems.map(item => ({
+function computeRows(rfqItems, initialItems) {
+  return rfqItems.map(item => {
+    const existing = initialItems.find(i => i.rfq_item_id === item.id);
+    return {
       rfq_item_id: item.id,
       description: item.description,
-      rfq_quantity: item.quantity,
+      quantity: item.quantity,
       unit: item.unit,
       target_price: item.target_price,
-      unit_price: map[item.id]?.unit_price ?? '',
-      quantity: map[item.id]?.quantity ?? item.quantity,
-      notes: map[item.id]?.notes ?? '',
-    }));
-  }, [rfqItems, bidItems]);
+      unit_price: existing ? existing.unit_price : '',
+      bid_quantity: existing ? existing.quantity : item.quantity,
+      notes: existing ? existing.notes : '',
+    };
+  });
+}
 
-  const [rows, setRows] = useState(initialRows);
+export default function BidItemsForm({ rfqItems = [], initialItems = [], onChange, readOnly = false }) {
+  const [rows, dispatch] = useReducer(rowsReducer, null, () =>
+    computeRows(rfqItems, initialItems)
+  );
 
-  useEffect(() => {
-    setRows(initialRows);
-  }, [initialRows]);
+   useEffect(() => {
+    dispatch({ type: 'RESET', payload: computeRows(rfqItems, initialItems) });
+  }, [rfqItems, initialItems]);
 
-    function updateRow(idx, field, value) {
-        const next = rows.map((r, i) => i === idx ? { ...r, [field]: value } : r);
-        setRows(next);
-        onChange?.(next.map(r => ({
-        rfq_item_id: r.rfq_item_id,
-        unit_price: parseFloat(r.unit_price) || 0,
-        quantity: parseFloat(r.quantity) || 0,
-        notes: r.notes,
-        })));
+  const update = (idx, field, value) => {
+    dispatch({ type: 'UPDATE', index: idx, field, value });
+    if (onChange) {
+      const updatedRows = rows.map((r, i) =>
+        i === idx ? { ...r, [field]: value } : r
+      );
+      onChange(
+        updatedRows.map(r => ({
+          rfq_item_id: r.rfq_item_id,
+          unit_price: parseFloat(r.unit_price) || 0,
+          quantity: parseFloat(r.bid_quantity) || 0,
+          notes: r.notes || '',
+        }))
+      );
     }
+  };
 
-  const total = rows.reduce((sum, r) => {
-    const p = parseFloat(r.unit_price) || 0;
-    const q = parseFloat(r.quantity) || 0;
-    return sum + p * q;
+  const totalBid = rows.reduce((sum, r) => {
+    const up = parseFloat(r.unit_price) || 0;
+    const qty = parseFloat(r.bid_quantity) || 0;
+    return sum + up * qty;
   }, 0);
 
   return (
     <>
       <style>{`
-        .bif-wrap { width: 100%; overflow-x: auto; }
-        .bif-table { width: 100%; border-collapse: collapse; font-family: 'DM Sans', sans-serif; font-size: .875rem; }
-        .bif-table th {
-          font-size: .69rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-          color: var(--ink-faint); padding: 8px 12px; text-align: left;
-          border-bottom: 1px solid var(--border); white-space: nowrap;
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700&display=swap');
+        .bid-items-table { width: 100%; border-collapse: collapse; font-family: 'DM Sans', sans-serif; }
+        .bid-items-table th {
+          font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+          text-transform: uppercase; color: var(--ink-faint, #b8b3ae);
+          padding: 10px 12px; text-align: left;
+          border-bottom: 1px solid var(--border, #e4e0db);
+          background: #faf9f7;
         }
-        .bif-table td {
-          padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle;
-          color: var(--ink);
+        .bid-items-table th.right { text-align: right; }
+        .bid-items-table td {
+          padding: 12px; border-bottom: 1px solid var(--border, #e4e0db);
+          vertical-align: middle; color: var(--ink, #0f0e0d); font-size: .88rem;
         }
-        .bif-table tr:last-child td { border-bottom: none; }
-        .bif-table tr:hover td { background: #faf9f7; }
-        .bif-input {
-          width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
-          font-size: .875rem; font-family: 'DM Sans', sans-serif; color: var(--ink);
-          background: var(--white); outline: none; transition: border-color .15s;
-          min-width: 90px;
+        .bid-items-table tr:last-child td { border-bottom: none; }
+        .bid-items-table tr:hover td { background: #faf9f7; }
+        .bid-input {
+          width: 100%; padding: 7px 10px;
+          border: 1px solid var(--border, #e4e0db); border-radius: 6px;
+          font-size: .88rem; font-family: 'DM Sans', sans-serif;
+          color: var(--ink, #0f0e0d); background: #fff;
+          outline: none; transition: border-color .15s;
+          box-sizing: border-box;
         }
-        .bif-input:focus { border-color: var(--accent); }
-        .bif-total-row td {
-          border-top: 2px solid var(--border); font-weight: 600;
-          background: #f7f6f4; border-bottom: none !important;
+        .bid-input:focus { border-color: var(--accent, #c8501a); }
+        .bid-input:disabled { background: #f5f4f2; color: var(--ink-soft, #6b6660); cursor: not-allowed; }
+        .target-chip {
+          display: inline-block; padding: 2px 8px; border-radius: 4px;
+          background: #fdf0eb; color: var(--accent, #c8501a);
+          font-size: .75rem; font-weight: 500;
         }
-        .bif-target { font-size: .78rem; color: var(--ink-faint); margin-top: 2px; }
-        .bif-computed { font-weight: 500; }
+        .total-row td {
+          font-weight: 600; background: #faf9f7;
+          border-top: 2px solid var(--border, #e4e0db) !important;
+          border-bottom: none !important;
+        }
+        .price-cell { text-align: right; font-variant-numeric: tabular-nums; }
+        .diff-low { color: #1a7a4a; font-size: .75rem; }
+        .diff-high { color: var(--accent, #c8501a); font-size: .75rem; }
       `}</style>
 
-      <div className="bif-wrap">
-        <table className="bif-table">
+      <div style={{ overflowX: 'auto', border: '1px solid var(--border, #e4e0db)', borderRadius: 'var(--radius, 10px)', background: '#fff' }}>
+        <table className="bid-items-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Description</th>
-              <th>RFQ Qty</th>
-              <th>Unit</th>
-              {!readOnly && <th>Target Price</th>}
-              <th>Your Unit Price</th>
-              <th>Your Qty</th>
-              <th>Line Total</th>
-              {!readOnly && <th>Notes</th>}
+              <th style={{ width: '32px' }}>#</th>
+              <th>Item Description</th>
+              <th style={{ width: '90px' }}>Qty</th>
+              <th style={{ width: '80px' }}>Unit</th>
+              <th style={{ width: '130px' }}>Target Price</th>
+              <th style={{ width: '140px' }}>Your Unit Price</th>
+              <th style={{ width: '130px' }} className="right">Line Total</th>
+              {!readOnly && <th style={{ width: '180px' }}>Notes</th>}
             </tr>
           </thead>
           <tbody>
             {rows.map((row, idx) => {
-              const lineTotal = (parseFloat(row.unit_price) || 0) * (parseFloat(row.quantity) || 0);
+              const lineTotal = (parseFloat(row.unit_price) || 0) * (parseFloat(row.bid_quantity) || 0);
+              const hasTarget = row.target_price != null && row.target_price > 0;
+              const diff = hasTarget && row.unit_price
+                ? parseFloat(row.unit_price) - parseFloat(row.target_price)
+                : null;
+
               return (
                 <tr key={row.rfq_item_id}>
-                  <td style={{ color: 'var(--ink-faint)', width: 32 }}>{idx + 1}</td>
-                  <td style={{ maxWidth: 240 }}>{row.description}</td>
-                  <td>{fmt(row.rfq_quantity)}</td>
-                  <td>{row.unit || '—'}</td>
-                  {!readOnly && (
-                    <td>
-                      <span>{row.target_price ? fmt(row.target_price) : '—'}</span>
-                    </td>
-                  )}
+                  <td style={{ color: 'var(--ink-faint, #b8b3ae)', fontSize: '.8rem' }}>{idx + 1}</td>
+                  <td>
+                    <span style={{ fontWeight: 500 }}>{row.description}</span>
+                  </td>
                   <td>
                     {readOnly ? (
-                      <span className="bif-computed">{fmt(row.unit_price)}</span>
+                      <span>{row.bid_quantity}</span>
                     ) : (
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="bif-input"
-                        value={row.unit_price}
-                        placeholder="0.00"
-                        onChange={e => updateRow(idx, 'unit_price', e.target.value)}
+                        className="bid-input"
+                        type="number" min="0" step="0.01"
+                        value={row.bid_quantity}
+                        onChange={e => update(idx, 'bid_quantity', e.target.value)}
                       />
+                    )}
+                  </td>
+                  <td style={{ color: 'var(--ink-soft, #6b6660)', fontSize: '.83rem' }}>
+                    {row.unit || '—'}
+                  </td>
+                  <td>
+                    {hasTarget ? (
+                      <span className="target-chip">
+                        {parseFloat(row.target_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--ink-faint, #b8b3ae)', fontSize: '.83rem' }}>—</span>
                     )}
                   </td>
                   <td>
                     {readOnly ? (
-                      <span>{fmt(row.quantity)}</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                        {parseFloat(row.unit_price || 0).toFixed(2)}
+                      </span>
                     ) : (
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="bif-input"
-                        value={row.quantity}
-                        onChange={e => updateRow(idx, 'quantity', e.target.value)}
-                      />
+                      <div>
+                        <input
+                          className="bid-input"
+                          type="number" min="0" step="0.01" placeholder="0.00"
+                          value={row.unit_price}
+                          onChange={e => update(idx, 'unit_price', e.target.value)}
+                        />
+                        {diff !== null && (
+                          <div className={diff < 0 ? 'diff-low' : 'diff-high'} style={{ marginTop: 2 }}>
+                            {diff < 0 ? '▼' : '▲'} {Math.abs(diff).toFixed(2)} vs target
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
-                  <td className="bif-computed">{fmt(lineTotal)}</td>
+                  <td className="price-cell" style={{ fontWeight: 500 }}>
+                    {lineTotal > 0
+                      ? lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
+                  </td>
                   {!readOnly && (
                     <td>
                       <input
-                        type="text"
-                        className="bif-input"
-                        style={{ minWidth: 140 }}
+                        className="bid-input"
+                        type="text" placeholder="Optional note…"
                         value={row.notes}
-                        placeholder="Optional notes…"
-                        onChange={e => updateRow(idx, 'notes', e.target.value)}
+                        onChange={e => update(idx, 'notes', e.target.value)}
                       />
                     </td>
                   )}
                 </tr>
               );
             })}
-          </tbody>
-          <tfoot>
-            <tr className="bif-total-row">
-              <td colSpan={readOnly ? 6 : 7} style={{ textAlign: 'right', paddingRight: 16 }}>
-                Total Bid Amount
-              </td>
-              <td className="bif-computed" style={{ fontSize: '1rem' }}>
-                {fmt(total)}
+            <tr className="total-row">
+              <td colSpan={readOnly ? 5 : 5} />
+              <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>TOTAL BID</td>
+              <td className="price-cell" style={{ fontSize: '1rem', color: 'var(--ink)' }}>
+                {totalBid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               {!readOnly && <td />}
             </tr>
-          </tfoot>
+          </tbody>
         </table>
       </div>
     </>

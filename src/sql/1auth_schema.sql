@@ -5,7 +5,7 @@
 
 -- ── Companies (tenants) ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
-  id         BIGINT       NOT NULL AUTO_INCREMENT,
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name       VARCHAR(255) NOT NULL,
   email      VARCHAR(255),
   plan       ENUM('free','pro','enterprise') NOT NULL DEFAULT 'free',
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS companies (
 
 -- ── Users ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-  id         BIGINT       NOT NULL AUTO_INCREMENT,
-  company_id BIGINT,                              -- NULL for super_admin
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED,
   name       VARCHAR(255) NOT NULL,
   email      VARCHAR(255) NOT NULL,
   password   VARCHAR(255) NOT NULL,               -- bcrypt hash
@@ -64,8 +64,8 @@ VALUES (
 
 -- ── Company Settings ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS company_settings (
-  id          BIGINT        NOT NULL AUTO_INCREMENT,
-  company_id  BIGINT        NOT NULL,
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
   timezone    VARCHAR(64)   NOT NULL DEFAULT 'UTC',
   currency    VARCHAR(8)    NOT NULL DEFAULT 'USD',
   logo_url    VARCHAR(512)  DEFAULT NULL,
@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS company_settings (
 
 -- ── Invitations ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invitations (
-  id          BIGINT        NOT NULL AUTO_INCREMENT,
-  company_id  BIGINT        NOT NULL,
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
   email       VARCHAR(255)  NOT NULL,
   role        ENUM(
                 'company_admin',

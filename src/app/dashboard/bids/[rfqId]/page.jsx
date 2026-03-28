@@ -1,49 +1,37 @@
 'use client';
-
-// /dashboard/bids/[rfqId] — Vendor bid workspace
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
-import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import BidItemsForm from '@/components/bids/BidItemsForm';
+import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import Modal from '@/components/ui/Modal';
 
-function InfoRow({ label, children }) {
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-      <span style={{ fontSize: '.75rem', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)', minWidth: 110, paddingTop: 2 }}>{label}</span>
-      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.9rem', color: 'var(--ink)' }}>{children}</span>
-    </div>
-  );
-}
-
-export default function VendorBidWorkspace() {
+export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
-  const router = useRouter();
+  const router    = useRouter();
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-
-  const [notes, setNotes] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [bidItemsState, setBidItemsState] = useState([]);
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState('');
+  const [success, setSuccess]     = useState('');
+  const [bidItems, setBidItems]   = useState([]);
+  const [notes, setNotes]         = useState('');
+  const [currency, setCurrency]   = useState('USD');
+  const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/bids/rfqs/${rfqId}`);
-      const d = await res.json();
-      if (d.error) throw new Error(d.error);
-      setData(d.data);
-      setNotes(d.data.bid?.notes || '');
-      setCurrency(d.data.bid?.currency || d.data.rfq?.currency || 'USD');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
+      setData(json.data);
+      if (json.data.bid) {
+        setNotes(json.data.bid.notes || '');
+        setCurrency(json.data.bid.currency || 'USD');
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -55,36 +43,45 @@ export default function VendorBidWorkspace() {
 
   const rfq = data?.rfq;
   const bid = data?.bid;
-  const isDeadlinePassed = rfq?.deadline && new Date() > new Date(rfq.deadline);
-  const isRfqClosed = ['closed', 'cancelled'].includes(rfq?.status);
-  const canEdit = !isDeadlinePassed && !isRfqClosed && bid?.status !== 'withdrawn';
-  const canSubmit = canEdit && bid?.status === 'draft';
-  const canWithdraw = !isDeadlinePassed && !isRfqClosed && bid?.status === 'submitted';
+  const rfqItems = data?.items || [];
+
+  const isPastDeadline = rfq?.deadline && new Date() > new Date(rfq.deadline);
+  const canEdit = bid && bid.status === 'draft' && !isPastDeadline;
+  const canSubmit = canEdit && bidItems.length > 0;
+  const canWithdraw = bid?.status === 'submitted' && !isPastDeadline;
+  const showForm = bid && (bid.status === 'draft' || bid.status === 'submitted');
+
+  async function handleCreateBid() {
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSuccess('Bid created! Fill in your prices below.');
+      await fetchData();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleSave() {
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(''); setSuccess('');
     try {
-      // Ensure bid exists
-      if (!bid) {
-        const r = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notes, currency }),
-        });
-        const d = await r.json();
-        if (d.error) throw new Error(d.error);
-      }
-
-      const r = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, items: bidItemsState }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
-      setSuccess('Bid saved as draft.');
-      fetchData();
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSuccess('Bid saved successfully.');
+      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -93,224 +90,339 @@ export default function VendorBidWorkspace() {
   }
 
   async function handleSubmit() {
-    setSubmitting(true);
-    setError(null);
+    setSaving(true); setError(''); setSuccess('');
     try {
-      await handleSave(); // save first
-      const r = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
+      // Save first
+      await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes, currency, items: bidItems }),
+      });
+      // Then submit
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
       setSuccess('Bid submitted successfully!');
-      fetchData();
+      setConfirmModal({ open: false, action: '' });
+      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   }
 
   async function handleWithdraw() {
-    if (!confirm('Are you sure you want to withdraw this bid?')) return;
-    setWithdrawing(true);
-    setError(null);
+    setSaving(true); setError(''); setSuccess('');
     try {
-      const r = await fetch(`/api/bids/rfqs/${rfqId}/bid/withdraw`, { method: 'POST' });
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/withdraw`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
       setSuccess('Bid withdrawn.');
-      fetchData();
+      setConfirmModal({ open: false, action: '' });
+      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
-      setWithdrawing(false);
+      setSaving(false);
     }
   }
 
   return (
-    <DashboardLayout>
+    <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
         :root {
-          --ink: #0f0e0d; --ink-soft: #6b6660; --ink-faint: #b8b3ae;
-          --surface: #faf9f7; --white: #ffffff; --accent: #c8501a; --accent-h: #a83e12;
-          --border: #e4e0db; --radius: 10px; --shadow: 0 1px 3px rgba(15,14,13,.06), 0 8px 32px rgba(15,14,13,.08);
+          --ink:#0f0e0d;--ink-soft:#6b6660;--ink-faint:#b8b3ae;
+          --surface:#faf9f7;--white:#ffffff;--accent:#c8501a;--accent-h:#a83e12;
+          --border:#e4e0db;--radius:10px;
+          --shadow:0 1px 3px rgba(15,14,13,.06),0 8px 32px rgba(15,14,13,.08);
         }
-        .bw-page { padding: 32px; max-width: 1100px; }
-        .bw-grid { display: grid; grid-template-columns: 1fr 300px; gap: 28px; margin-top: 28px; }
-        .bw-main { min-width: 0; }
-        .bw-aside {}
-        .bw-card {
-          background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
-          box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        body { font-family: 'DM Sans', sans-serif; }
+        .rfq-meta-card {
+          background: var(--white); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 20px 24px;
+          margin-bottom: 24px; box-shadow: var(--shadow);
         }
-        .bw-card-title {
-          font-family: 'Syne', sans-serif; font-size: .88rem; font-weight: 700;
-          letter-spacing: -.01em; color: var(--ink); margin: 0 0 16px 0; padding-bottom: 12px;
-          border-bottom: 1px solid var(--border);
+        .rfq-meta-grid {
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap: 16px; margin-top: 12px;
         }
-        .bw-label {
-          font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-          color: var(--ink-faint); display: block; margin-bottom: 5px;
+        .meta-item label {
+          display: block; font-size: .72rem; font-weight: 600;
+          letter-spacing: .08em; text-transform: uppercase;
+          color: var(--ink-faint); margin-bottom: 4px;
         }
-        .bw-input, .bw-textarea, .bw-select {
-          width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 7px;
-          font-size: .875rem; font-family: 'DM Sans', sans-serif; color: var(--ink);
-          background: var(--white); outline: none; transition: border-color .15s; box-sizing: border-box;
+        .meta-item span { font-size: .9rem; font-weight: 500; color: var(--ink); }
+        .bid-card {
+          background: var(--white); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 24px;
+          margin-bottom: 24px; box-shadow: var(--shadow);
         }
-        .bw-input:focus, .bw-textarea:focus, .bw-select:focus { border-color: var(--accent); }
-        .bw-textarea { resize: vertical; min-height: 80px; }
-        .bw-row { margin-bottom: 16px; }
-        .bw-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-        .btn-primary {
-          padding: 10px 22px; border-radius: var(--radius); border: none;
-          background: var(--accent); color: #fff; font-family: 'DM Sans', sans-serif;
-          font-size: .875rem; font-weight: 500; cursor: pointer; transition: background .15s;
+        .bid-card-header {
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 20px;
         }
-        .btn-primary:hover { background: var(--accent-h); }
-        .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-        .btn-secondary {
-          padding: 10px 20px; border-radius: var(--radius); border: 1px solid var(--border);
-          background: var(--white); color: var(--ink); font-family: 'DM Sans', sans-serif;
-          font-size: .875rem; font-weight: 500; cursor: pointer; transition: all .15s;
+        .section-label {
+          font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+          text-transform: uppercase; color: var(--ink-faint);
         }
-        .btn-secondary:hover { border-color: var(--ink-soft); }
-        .btn-danger {
-          padding: 10px 20px; border-radius: var(--radius); border: 1px solid #f9c6c6;
-          background: #fff5f5; color: #c62828; font-family: 'DM Sans', sans-serif;
-          font-size: .875rem; font-weight: 500; cursor: pointer; transition: all .15s;
+        .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label {
+          display: block; font-size: .79rem; font-weight: 500;
+          color: var(--ink); margin-bottom: 6px;
         }
-        .btn-danger:hover { background: #ffe8e8; }
-        .alert {
-          padding: 12px 16px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
-          font-size: .875rem; margin-bottom: 20px;
+        .form-control {
+          width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+          border-radius: 6px; font-size: .88rem; font-family: 'DM Sans', sans-serif;
+          color: var(--ink); background: var(--white); outline: none;
+          transition: border-color .15s; box-sizing: border-box;
         }
-        .alert-error { background: #fff5f5; color: #c62828; border: 1px solid #f9c6c6; }
-        .alert-success { background: #e8f5e9; color: #1b5e20; border: 1px solid #c8e6c9; }
-        .alert-warning { background: #fff8e1; color: #e65100; border: 1px solid #ffe0b2; }
-        .bw-spinner { text-align: center; padding: 80px 0; color: var(--ink-faint); font-family: 'DM Sans', sans-serif; }
-        @media (max-width: 768px) { .bw-grid { grid-template-columns: 1fr; } }
+        .form-control:focus { border-color: var(--accent); }
+        .form-control:disabled { background: var(--surface); color: var(--ink-soft); cursor: not-allowed; }
+        .actions-bar {
+          display: flex; gap: 10px; align-items: center;
+          padding-top: 20px; border-top: 1px solid var(--border);
+          margin-top: 20px; flex-wrap: wrap;
+        }
+        .btn {
+          padding: 9px 20px; border-radius: 8px; font-size: .88rem;
+          font-weight: 600; cursor: pointer; border: none;
+          font-family: 'DM Sans', sans-serif; transition: all .15s;
+        }
+        .btn-primary { background: var(--ink); color: var(--white); }
+        .btn-primary:hover:not(:disabled) { background: #2a2928; }
+        .btn-accent { background: var(--accent); color: var(--white); }
+        .btn-accent:hover:not(:disabled) { background: var(--accent-h); }
+        .btn-outline {
+          background: transparent; color: var(--ink);
+          border: 1px solid var(--border);
+        }
+        .btn-outline:hover:not(:disabled) { background: var(--surface); }
+        .btn-danger { background: #fdf0eb; color: var(--accent); border: 1px solid #f5c9b6; }
+        .btn-danger:hover:not(:disabled) { background: #fae3d9; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .error-box {
+          background: #fdf0eb; border: 1px solid #f5c9b6; border-radius: var(--radius);
+          padding: 12px 16px; color: var(--accent); font-size: .86rem; margin-bottom: 16px;
+        }
+        .success-box {
+          background: #e8f5ee; border: 1px solid #b8dfc8; border-radius: var(--radius);
+          padding: 12px 16px; color: #1a7a4a; font-size: .86rem; margin-bottom: 16px;
+        }
+        .warning-banner {
+          background: #fff8e8; border: 1px solid #f5dfa0; border-radius: var(--radius);
+          padding: 12px 16px; color: #8a6500; font-size: .86rem; margin-bottom: 16px;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .start-box {
+          text-align: center; padding: 40px 24px;
+          border: 2px dashed var(--border); border-radius: var(--radius);
+        }
+        .start-box h3 { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
+        .start-box p { color: var(--ink-soft); font-size: .9rem; margin: 0 0 20px; }
+        .confirm-text { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: .92rem; line-height: 1.6; }
+        .confirm-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+        .skeleton { background: linear-gradient(90deg, #f0ede9 25%, #faf9f7 50%, #f0ede9 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 6px; }
+        @keyframes shimmer { to { background-position: -200% 0; } }
       `}</style>
 
-      <div className="bw-page">
+      <DashboardLayout>
         {loading ? (
-          <div className="bw-spinner">Loading…</div>
-        ) : error && !data ? (
-          <div className="alert alert-error">{error}</div>
-        ) : (
+          <div>
+            <div className="skeleton" style={{ height: 32, width: 300, marginBottom: 8 }} />
+            <div className="skeleton" style={{ height: 18, width: 200, marginBottom: 24 }} />
+            <div className="skeleton" style={{ height: 120, marginBottom: 24 }} />
+            <div className="skeleton" style={{ height: 300 }} />
+          </div>
+        ) : error ? (
+          <div className="error-box">{error}</div>
+        ) : rfq ? (
           <>
             <PageHeader
-              title={rfq?.title}
-              subtitle={`${rfq?.reference_number} · Bid Workspace`}
+              title={rfq.title}
+              subtitle={`${rfq.reference_number} · Bid Workspace`}
               action={
-                <button className="btn-secondary" onClick={() => router.push('/dashboard/bids')}>
-                  ← Back to My Bids
+                <button className="btn btn-outline" onClick={() => router.back()}>
+                  ← Back
                 </button>
               }
             />
 
-            {error   && <div className="alert alert-error">{error}</div>}
-            {success && <div className="alert alert-success">{success}</div>}
-            {isDeadlinePassed && <div className="alert alert-warning">⚠ The deadline for this RFQ has passed. Bids can no longer be edited or submitted.</div>}
-            {isRfqClosed && <div className="alert alert-warning">⚠ This RFQ is {rfq?.status}. Bids can no longer be modified.</div>}
+            {/* RFQ Details */}
+            <div className="rfq-meta-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span className="section-label">RFQ Details</span>
+                <RFQStatusBadge status={rfq.status} />
+              </div>
+              {rfq.description && (
+                <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 12px' }}>{rfq.description}</p>
+              )}
+              <div className="rfq-meta-grid">
+                <div className="meta-item">
+                  <label>Deadline</label>
+                  <span style={{ color: isPastDeadline ? 'var(--accent)' : 'var(--ink)' }}>
+                    {rfq.deadline
+                      ? new Date(rfq.deadline).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                      : '—'}
+                    {isPastDeadline && ' (Closed)'}
+                  </span>
+                </div>
+                {rfq.budget && (
+                  <div className="meta-item">
+                    <label>Budget</label>
+                    <span>{rfq.currency} {parseFloat(rfq.budget).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                <div className="meta-item">
+                  <label>Line Items</label>
+                  <span>{rfqItems.length}</span>
+                </div>
+              </div>
+            </div>
 
-            <div className="bw-grid">
-              {/* Main — bid form */}
-              <div className="bw-main">
-                <div className="bw-card">
-                  <div className="bw-card-title">Your Bid Items</div>
+            {/* Alerts */}
+            {error && <div className="error-box">{error}</div>}
+            {success && <div className="success-box">{success}</div>}
+            {isPastDeadline && (
+              <div className="warning-banner">⚠ The deadline for this RFQ has passed. Bid editing is locked.</div>
+            )}
+
+            {/* Bid section */}
+            {!bid ? (
+              <div className="bid-card">
+                <div className="start-box">
+                  <h3>Start Your Bid</h3>
+                  <p>You haven&apos;t created a bid for this RFQ yet. Click below to begin.</p>
+                  <button
+                    className="btn btn-accent"
+                    disabled={isPastDeadline || saving}
+                    onClick={handleCreateBid}
+                  >
+                    {saving ? 'Creating…' : 'Create Bid'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bid-card">
+                <div className="bid-card-header">
+                  <span className="section-label">Your Bid</span>
+                  <BidStatusBadge status={bid.status} />
+                </div>
+
+                {/* Header fields */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Currency</label>
+                    <select
+                      className="form-control"
+                      value={currency}
+                      onChange={e => setCurrency(e.target.value)}
+                      disabled={!canEdit}
+                    >
+                      {['USD','EUR','GBP','INR','AED','SGD','CAD','AUD'].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 3 }}>
+                    <label>Notes / Cover Message (optional)</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Any overall notes for the buyer…"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      disabled={!canEdit}
+                      style={{ resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Items table */}
+                <div style={{ marginBottom: 20 }}>
                   <BidItemsForm
-                    rfqItems={data?.items || []}
-                    bidItems={data?.bidItems || []}
-                    onChange={setBidItemsState}
+                    rfqItems={rfqItems}
+                    initialItems={bid.items || []}
+                    onChange={setBidItems}
                     readOnly={!canEdit}
                   />
                 </div>
 
-                {canEdit && (
-                  <div className="bw-card">
-                    <div className="bw-card-title">Bid Details</div>
-                    <div className="bw-row">
-                      <label className="bw-label">Currency</label>
-                      <select className="bw-select" value={currency} onChange={e => setCurrency(e.target.value)}>
-                        {['USD','EUR','GBP','INR','AED','JPY','CAD','AUD','SGD'].map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="bw-row">
-                      <label className="bw-label">Notes (optional)</label>
-                      <textarea
-                        className="bw-textarea"
-                        value={notes}
-                        onChange={e => setNotes(e.target.value)}
-                        placeholder="Add any notes, conditions, or comments about your bid…"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="bw-actions">
-                  {canEdit && (
-                    <button className="btn-secondary" disabled={saving} onClick={handleSave}>
-                      {saving ? 'Saving…' : 'Save Draft'}
-                    </button>
-                  )}
-                  {canSubmit && (
-                    <button className="btn-primary" disabled={submitting} onClick={handleSubmit}>
-                      {submitting ? 'Submitting…' : 'Submit Bid'}
-                    </button>
-                  )}
-                  {canWithdraw && (
-                    <button className="btn-danger" disabled={withdrawing} onClick={handleWithdraw}>
-                      {withdrawing ? 'Withdrawing…' : 'Withdraw Bid'}
-                    </button>
-                  )}
-                  {bid?.status === 'withdrawn' && !isDeadlinePassed && !isRfqClosed && (
-                    <button className="btn-primary" onClick={handleSave}>
-                      Resubmit Bid
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Sidebar — RFQ info */}
-              <div className="bw-aside">
-                <div className="bw-card">
-                  <div className="bw-card-title">RFQ Information</div>
-                  <InfoRow label="Reference">{rfq?.reference_number}</InfoRow>
-                  <InfoRow label="Status"><RFQStatusBadge status={rfq?.status} /></InfoRow>
-                  <InfoRow label="Deadline">
-                    {rfq?.deadline
-                      ? new Date(rfq.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                      : '—'}
-                  </InfoRow>
-                  {rfq?.budget && <InfoRow label="Budget">{parseFloat(rfq.budget).toLocaleString('en-US', { minimumFractionDigits: 2 })} {rfq.currency}</InfoRow>}
-                  {rfq?.description && (
-                    <div style={{ marginTop: 12, fontSize: '.86rem', color: 'var(--ink-soft)', lineHeight: 1.6, fontFamily: "'DM Sans', sans-serif" }}>
-                      {rfq.description}
-                    </div>
-                  )}
-                </div>
-
-                {bid && (
-                  <div className="bw-card">
-                    <div className="bw-card-title">Your Bid Status</div>
-                    <InfoRow label="Status"><BidStatusBadge status={bid.status} /></InfoRow>
-                    <InfoRow label="Total Amount">
-                      <strong>{parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} {bid.currency}</strong>
-                    </InfoRow>
+                {/* Actions */}
+                {(canEdit || canWithdraw) && (
+                  <div className="actions-bar">
+                    {canEdit && (
+                      <>
+                        <button className="btn btn-outline" disabled={saving} onClick={handleSave}>
+                          {saving ? 'Saving…' : 'Save Draft'}
+                        </button>
+                        <button
+                          className="btn btn-accent"
+                          disabled={saving || bidItems.length === 0}
+                          onClick={() => setConfirmModal({ open: true, action: 'submit' })}
+                        >
+                          Submit Bid
+                        </button>
+                      </>
+                    )}
+                    {canWithdraw && (
+                      <button
+                        className="btn btn-danger"
+                        disabled={saving}
+                        onClick={() => setConfirmModal({ open: true, action: 'withdraw' })}
+                      >
+                        Withdraw Bid
+                      </button>
+                    )}
                     {bid.submitted_at && (
-                      <InfoRow label="Submitted">
-                        {new Date(bid.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </InfoRow>
+                      <span style={{ marginLeft: 'auto', color: 'var(--ink-soft)', fontSize: '.8rem' }}>
+                        Submitted {new Date(bid.submitted_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </span>
                     )}
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </>
-        )}
-      </div>
-    </DashboardLayout>
+        ) : null}
+
+        {/* Confirm modal */}
+        <Modal
+          open={confirmModal.open}
+          onClose={() => setConfirmModal({ open: false, action: '' })}
+          title={confirmModal.action === 'submit' ? 'Submit Bid' : 'Withdraw Bid'}
+          width={460}
+        >
+          {confirmModal.action === 'submit' ? (
+            <>
+              <p className="confirm-text">
+                Are you sure you want to submit your bid? Once submitted, the buyer will be able to see your prices.
+                You can still withdraw it before the deadline.
+              </p>
+              <div className="confirm-actions">
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
+                <button className="btn btn-accent" disabled={saving} onClick={handleSubmit}>
+                  {saving ? 'Submitting…' : 'Yes, Submit Bid'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="confirm-text">
+                Are you sure you want to withdraw your bid? Your submission will be removed and you&apos;ll need to resubmit if you change your mind.
+              </p>
+              <div className="confirm-actions">
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
+                <button className="btn btn-danger" disabled={saving} onClick={handleWithdraw}>
+                  {saving ? 'Withdrawing…' : 'Yes, Withdraw'}
+                </button>
+              </div>
+            </>
+          )}
+        </Modal>
+      </DashboardLayout>
+    </>
   );
 }
