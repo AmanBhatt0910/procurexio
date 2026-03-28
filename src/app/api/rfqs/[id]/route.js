@@ -1,5 +1,5 @@
 // src/app/api/rfqs/[id]/route.js
-import { query, getConnection } from '@/lib/db';
+import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
@@ -22,8 +22,8 @@ export async function GET(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    // Core RFQ
-    const [rfqRows] = await query(
+    // Core RFQ — query() already returns the rows array directly
+    const rfqRows = await query(
       `SELECT r.*, u.name AS created_by_name
          FROM rfqs r
          JOIN users u ON u.id = r.created_by
@@ -35,13 +35,13 @@ export async function GET(request, { params }) {
     }
 
     // Line items
-    const [items] = await query(
+    const items = await query(
       `SELECT * FROM rfq_items WHERE rfq_id = ? ORDER BY sort_order ASC, id ASC`,
       [id]
     );
 
     // Invited vendors with vendor info
-    const [vendors] = await query(
+    const vendors = await query(
       `SELECT rv.id, rv.vendor_id, rv.status AS invite_status,
               rv.invited_at, rv.updated_at,
               v.name AS vendor_name, v.email AS vendor_email,
@@ -64,7 +64,6 @@ export async function GET(request, { params }) {
 }
 
 // ── PUT /api/rfqs/[id] ─────────────────────────────────────────────────────
-// Body: { title?, description?, deadline?, budget?, currency?, status? }
 export async function PUT(request, { params }) {
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
@@ -80,8 +79,7 @@ export async function PUT(request, { params }) {
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
   try {
-    // Fetch current RFQ
-    const [rfqRows] = await query(
+    const rfqRows = await query(
       `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
       [id, companyId]
     );
@@ -90,7 +88,6 @@ export async function PUT(request, { params }) {
     }
     const rfq = rfqRows[0];
 
-    // Validate status transition if status is being changed
     if (body.status && body.status !== rfq.status) {
       const allowed_transitions = TRANSITIONS[rfq.status] || [];
       if (!allowed_transitions.includes(body.status)) {
@@ -101,7 +98,6 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Prevent edits on closed/cancelled RFQs (except status field already handled above)
     if ((rfq.status === 'closed' || rfq.status === 'cancelled') && !body.status) {
       return Response.json(
         { error: `Cannot edit a ${rfq.status} RFQ` },
@@ -129,7 +125,7 @@ export async function PUT(request, { params }) {
       [...setValues, id, companyId]
     );
 
-    const [updated] = await query(
+    const updated = await query(
       `SELECT r.*, u.name AS created_by_name
          FROM rfqs r JOIN users u ON u.id = r.created_by
         WHERE r.id = ?`,
@@ -144,7 +140,6 @@ export async function PUT(request, { params }) {
 }
 
 // ── DELETE /api/rfqs/[id] ──────────────────────────────────────────────────
-// Only cancels if RFQ is in 'draft' status
 export async function DELETE(request, { params }) {
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
@@ -156,7 +151,7 @@ export async function DELETE(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    const [rfqRows] = await query(
+    const rfqRows = await query(
       `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
       [id, companyId]
     );

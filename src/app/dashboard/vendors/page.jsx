@@ -1,7 +1,7 @@
 'use client';
 // src/app/dashboard/vendors/page.jsx
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -16,8 +16,13 @@ const LIMIT = 10;
 
 export default function VendorsPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const canWrite = user && ['company_admin', 'manager', 'super_admin'].includes(user.role);
+  const { user, loading: authLoading } = useAuth();
+
+  // Only compute canWrite after auth has resolved so the button actually appears.
+  const canWrite =
+    !authLoading &&
+    !!user &&
+    ['company_admin', 'manager', 'super_admin'].includes(user.role);
 
   const [vendors,    setVendors]    = useState([]);
   const [categories, setCategories] = useState([]);
@@ -89,12 +94,18 @@ export default function VendorsPage() {
     }
   }
 
-  const columns = [
+  // ⚠️ Wrap columns in useMemo so the canWrite closure is always the latest
+  // value. Without this, canWrite is captured as `false` on first render
+  // and the Deactivate button never appears even after auth resolves.
+  const columns = useMemo(() => [
     {
       key: 'name',
       label: 'Vendor',
       render: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div
+          onClick={() => router.push(`/dashboard/vendors/${row.id}`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+        >
           <div style={{
             width: 32, height: 32, borderRadius: 8,
             background: 'var(--surface)', border: '1px solid var(--border)',
@@ -105,7 +116,7 @@ export default function VendorsPage() {
             {row.name.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 500, fontSize: '.875rem' }}>{row.name}</div>
+            <div style={{ fontWeight: 500, fontSize: '.875rem', color: 'var(--ink)' }}>{row.name}</div>
             {row.email && (
               <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{row.email}</div>
             )}
@@ -146,11 +157,11 @@ export default function VendorsPage() {
     {
       key: 'actions',
       label: '',
-      width: canWrite ? 130 : 70,
+      width: 150,
       render: (row) => (
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
           <button
-            onClick={() => router.push(`/dashboard/vendors/${row.id}`)}
+            onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/vendors/${row.id}`); }}
             style={{
               background: 'none', border: '1px solid var(--border)',
               borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
@@ -164,7 +175,7 @@ export default function VendorsPage() {
           </button>
           {canWrite && row.status !== 'inactive' && (
             <button
-              onClick={() => setDeactivateTarget(row)}
+              onClick={(e) => { e.stopPropagation(); setDeactivateTarget(row); }}
               style={{
                 background: 'none', border: '1px solid var(--border)',
                 borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
@@ -180,27 +191,32 @@ export default function VendorsPage() {
         </div>
       ),
     },
-  ];
+  // Re-derive columns whenever canWrite or router changes
+  ], [canWrite, router, setDeactivateTarget]);
 
-  const addBtn = canWrite && (
-    <button
-      onClick={() => router.push('/dashboard/vendors/new')}
-      style={{
-        background: 'var(--accent)', color: '#fff', border: 'none',
-        padding: '10px 18px', borderRadius: 8,
-        fontFamily: 'DM Sans, sans-serif', fontWeight: 500, fontSize: '.855rem',
-        cursor: 'pointer', transition: 'background .15s',
-        display: 'flex', alignItems: 'center', gap: 7,
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
-    >
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-        <path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-      Add Vendor
-    </button>
-  );
+  // addBtn is also derived from canWrite — same concern, keep it in render scope
+  // (it's not memoised, it's just JSX computed each render which is fine)
+  const addBtn = !authLoading ? (
+    canWrite ? (
+      <button
+        onClick={() => router.push('/dashboard/vendors/new')}
+        style={{
+          background: 'var(--accent)', color: '#fff', border: 'none',
+          padding: '10px 18px', borderRadius: 8,
+          fontFamily: 'DM Sans, sans-serif', fontWeight: 500, fontSize: '.855rem',
+          cursor: 'pointer', transition: 'background .15s',
+          display: 'flex', alignItems: 'center', gap: 7,
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+      >
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+        Add Vendor
+      </button>
+    ) : null
+  ) : null;
 
   return (
     <DashboardLayout pageTitle="Vendors">
@@ -243,7 +259,6 @@ export default function VendorsPage() {
         action={addBtn}
       />
 
-      {/* Filters */}
       <div className="filters">
         <input
           className="filter-input filter-input--search"
@@ -281,7 +296,6 @@ export default function VendorsPage() {
         emptyMessage="No vendors found. Add your first vendor to get started."
       />
 
-      {/* Pagination */}
       {pagination.pages > 1 && (
         <div className="pagination">
           <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
@@ -302,7 +316,6 @@ export default function VendorsPage() {
         </div>
       )}
 
-      {/* Deactivate Confirm Modal */}
       <Modal
         open={!!deactivateTarget}
         onClose={() => setDeactivateTarget(null)}

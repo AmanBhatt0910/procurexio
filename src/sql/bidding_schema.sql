@@ -1,0 +1,41 @@
+-- ============================================================
+-- Module 5: Bidding Schema
+-- ============================================================
+
+-- bids (one bid per vendor per RFQ)
+CREATE TABLE IF NOT EXISTS bids (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  rfq_id        INT UNSIGNED NOT NULL,
+  vendor_id     INT UNSIGNED NOT NULL,
+  company_id    INT UNSIGNED NOT NULL,
+  status        ENUM('draft','submitted','withdrawn') NOT NULL DEFAULT 'draft',
+  notes         TEXT,
+  total_amount  DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  currency      VARCHAR(8) NOT NULL DEFAULT 'USD',
+  submitted_at  TIMESTAMP NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_bid_rfq_vendor (rfq_id, vendor_id),
+  CONSTRAINT fk_bids_rfq    FOREIGN KEY (rfq_id)    REFERENCES rfqs(id)     ON DELETE CASCADE,
+  CONSTRAINT fk_bids_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id)  ON DELETE CASCADE,
+  CONSTRAINT fk_bids_co     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- bid_items (one row per rfq_item per bid)
+CREATE TABLE IF NOT EXISTS bid_items (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  bid_id       INT UNSIGNED NOT NULL,
+  rfq_item_id  INT UNSIGNED NOT NULL,
+  company_id   INT UNSIGNED NOT NULL,
+  unit_price   DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  quantity     DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+  total_price  DECIMAL(15,2) GENERATED ALWAYS AS (unit_price * quantity) STORED,
+  notes        VARCHAR(512),
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_bid_item (bid_id, rfq_item_id),
+  CONSTRAINT fk_biditems_bid      FOREIGN KEY (bid_id)      REFERENCES bids(id)      ON DELETE CASCADE,
+  CONSTRAINT fk_biditems_rfqitem  FOREIGN KEY (rfq_item_id) REFERENCES rfq_items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

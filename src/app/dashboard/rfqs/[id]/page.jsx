@@ -68,6 +68,7 @@ export default function RFQDetailPage({ params }) {
       try {
         const res  = await fetch(`/api/rfqs/${id}`);
         const json = await res.json();
+        console.log('RFQ API response:', json);
         if (!res.ok) { setError(json.error || 'RFQ not found'); setLoading(false); return; }
         setRfq(json.data.rfq);
         setItems(json.data.items);
@@ -127,6 +128,7 @@ export default function RFQDetailPage({ params }) {
     setTransitioning(false);
   };
 
+  // ── Guards ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <DashboardLayout>
       <div style={{ padding: 40, color: 'var(--ink-faint)', fontSize: '.88rem' }}>Loading RFQ…</div>
@@ -138,6 +140,14 @@ export default function RFQDetailPage({ params }) {
       <div style={{ padding: 40, color: 'var(--accent)', fontSize: '.88rem' }}>{error}</div>
     </DashboardLayout>
   );
+
+  // Safety net: loading is false but rfq hasn't been set yet (e.g. useAuth re-render race)
+  if (!rfq) return (
+    <DashboardLayout>
+      <div style={{ padding: 40, color: 'var(--ink-faint)', fontSize: '.88rem' }}>Loading RFQ…</div>
+    </DashboardLayout>
+  );
+  // ──────────────────────────────────────────────────────────────────────────
 
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
   const isEditable  = rfq && !['closed', 'cancelled'].includes(rfq.status) && canWrite;

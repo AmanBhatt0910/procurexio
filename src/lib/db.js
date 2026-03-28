@@ -15,11 +15,27 @@ const pool = mysql.createPool({
 });
 
 /**
- * Execute a parameterized query.
- * Usage:  const [rows] = await query('SELECT * FROM users WHERE id = ?', [id]);
+ * Execute a parameterized query using prepared statements (pool.execute).
+ * Safe for all queries EXCEPT those with LIMIT/OFFSET placeholders —
+ * mysql2's prepared-statement path rejects integer binding for LIMIT/OFFSET
+ * in many versions (ER_WRONG_ARGUMENTS).
+ *
+ * Usage: const rows = await query('SELECT * FROM users WHERE id = ?', [id]);
  */
 export async function query(sql, params = []) {
   const [results] = await pool.execute(sql, params);
+  return results;
+}
+
+/**
+ * Execute a query using pool.query (non-prepared, value-interpolated).
+ * Use this whenever the SQL contains LIMIT or OFFSET placeholders, or
+ * anytime pool.execute raises ER_WRONG_ARGUMENTS.
+ *
+ * Usage: const rows = await queryRaw('SELECT * FROM t LIMIT ? OFFSET ?', [10, 0]);
+ */
+export async function queryRaw(sql, params = []) {
+  const [results] = await pool.query(sql, params);
   return results;
 }
 

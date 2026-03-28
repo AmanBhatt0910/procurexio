@@ -1,9 +1,8 @@
 // src/app/api/vendors/route.js
-import { query, getConnection } from '@/lib/db';
+import { query, queryRaw, getConnection } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
 
 // ─── GET /api/vendors ────────────────────────────────────────────
-// Query params: status, category, search, page (default 1), limit (default 10)
 export async function GET(request) {
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
@@ -16,39 +15,32 @@ export async function GET(request) {
   const status   = searchParams.get('status')   || '';
   const category = searchParams.get('category') || '';
   const search   = searchParams.get('search')   || '';
-  const page     = Math.max(1, parseInt(searchParams.get('page')  || '1'));
-  const limit    = Math.max(1, parseInt(searchParams.get('limit') || '10'));
+  const page     = Math.max(1, parseInt(searchParams.get('page')  || '1',  10));
+  const limit    = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
   const offset   = (page - 1) * limit;
 
   try {
-    // Build WHERE clauses dynamically
     const conditions = ['v.company_id = ?'];
     const params     = [companyId];
 
-    if (status)   { conditions.push('v.status = ?');                params.push(status); }
-    if (search)   { conditions.push('(v.name LIKE ? OR v.email LIKE ?)');
-                    params.push(`%${search}%`, `%${search}%`); }
-    if (category) { conditions.push(
-                    'EXISTS (SELECT 1 FROM vendor_category_map vcm WHERE vcm.vendor_id = v.id AND vcm.category_id = ?)');
-                    params.push(category); }
+    if (status)   { conditions.push('v.status = ?'); params.push(status); }
+    if (search)   { conditions.push('(v.name LIKE ? OR v.email LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
+    if (category) { conditions.push('EXISTS (SELECT 1 FROM vendor_category_map vcm WHERE vcm.vendor_id = v.id AND vcm.category_id = ?)'); params.push(category); }
 
     const where = conditions.join(' AND ');
 
-    // Total count (for pagination)
     const countRows = await query(
       `SELECT COUNT(*) AS total FROM vendors v WHERE ${where}`,
       params
     );
     const total = countRows[0].total;
 
-    // Paginated vendor rows with aggregated categories
-    const vendors = await query(
+    // Use queryRaw (pool.query) — pool.execute throws ER_WRONG_ARGUMENTS for LIMIT/OFFSET params
+    const vendors = await queryRaw(
       `SELECT
          v.id, v.name, v.email, v.phone, v.website, v.status, v.created_at,
-         -- primary contact name (if any)
          (SELECT vc.name FROM vendor_contacts vc
           WHERE vc.vendor_id = v.id AND vc.is_primary = 1 LIMIT 1) AS primary_contact,
-         -- categories as JSON array
          (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', cat.id, 'name', cat.name, 'color', cat.color))
           FROM vendor_category_map vcm
           JOIN vendor_categories cat ON cat.id = vcm.category_id
@@ -60,7 +52,6 @@ export async function GET(request) {
       [...params, limit, offset]
     );
 
-    // JSON_ARRAYAGG returns a string in some MySQL versions — parse if needed
     const rows = vendors.map(v => ({
       ...v,
       categories: v.categories
@@ -100,20 +91,11 @@ export async function POST(request) {
     const [result] = await conn.execute(
       `INSERT INTO vendors (company_id, name, email, phone, website, address, status, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        companyId,
-        name.trim(),
-        email?.trim().toLowerCase() || null,
-        phone?.trim() || null,
-        website?.trim() || null,
-        address?.trim() || null,
-        status,
-        notes?.trim() || null,
-      ]
+      [companyId, name.trim(), email?.trim().toLowerCase() || null, phone?.trim() || null,
+       website?.trim() || null, address?.trim() || null, status, notes?.trim() || null]
     );
     const vendorId = result.insertId;
 
-    // Assign categories (validate they belong to this company first)
     if (category_ids.length) {
       const cats = await query(
         `SELECT id FROM vendor_categories WHERE id IN (${category_ids.map(() => '?').join(',')}) AND company_id = ?`,
@@ -128,7 +110,6 @@ export async function POST(request) {
     }
 
     await conn.commit();
-
     return Response.json({ message: 'Vendor created', data: { id: vendorId } }, { status: 201 });
   } catch (err) {
     await conn.rollback();

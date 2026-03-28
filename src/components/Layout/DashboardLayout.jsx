@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
 export default function DashboardLayout({ children, pageTitle }) {
-  const [user, setUser]       = useState(null);
+  const [user,    setUser]    = useState(null);
   const [company, setCompany] = useState(null);
 
   useEffect(() => {
@@ -18,7 +18,8 @@ export default function DashboardLayout({ children, pageTitle }) {
         ]);
         if (uRes.ok) {
           const u = await uRes.json();
-          setUser(u.data);
+          // /api/auth/me returns { user: {...} } — not { data: {...} }
+          setUser(u.user ?? u.data ?? null);
         }
         if (cRes.ok) {
           const c = await cRes.json();

@@ -87,7 +87,6 @@ const NAV_ITEMS = [
       {
         label: 'Bids',
         href: '/dashboard/bids',
-        disabled: true,
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />

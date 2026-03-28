@@ -26,6 +26,20 @@ export default function PageHeader({ title, subtitle, action }) {
           color: var(--ink-soft);
           margin-top: 4px;
         }
+        .page-header-action {
+          padding: 8px 18px;
+          background: var(--ink);
+          color: var(--white);
+          border: none;
+          border-radius: var(--radius);
+          font-family: 'DM Sans', sans-serif;
+          font-size: .84rem;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .page-header-action:hover { opacity: .85; }
       `}</style>
 
       <div className="page-header">
@@ -33,7 +47,11 @@ export default function PageHeader({ title, subtitle, action }) {
           <h1 className="page-header-title">{title}</h1>
           {subtitle && <p className="page-header-subtitle">{subtitle}</p>}
         </div>
-        {action && <div>{action}</div>}
+        {action && (
+          typeof action === 'object' && action.label
+            ? <button className="page-header-action" onClick={action.onClick}>{action.label}</button>
+            : <div>{action}</div>
+        )}
       </div>
     </>
   );

@@ -1,7 +1,7 @@
-// src/app/dashboard/rfqs/page.jsx
 'use client';
-import '@fontsource/syne/700.css';
-import { useState, useEffect, useCallback, useRef } from 'react';
+// src/app/dashboard/rfqs/page.jsx
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -21,89 +21,83 @@ function formatCurrency(value, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
-export default function RFQsPage() {
-  const { user }  = useAuth();
-  const router    = useRouter();
-  const canWrite  = user && ['company_admin', 'manager'].includes(user.role);
+const pageBtn = {
+  padding: '6px 14px',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  background: 'var(--white)',
+  fontSize: '.82rem',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  color: 'var(--ink)',
+};
 
-  const [rfqs, setRfqs]           = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
-  const [status, setStatus]       = useState('all');
-  const [page, setPage]           = useState(1);
+export default function RFQsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router   = useRouter();
+  const canWrite = !authLoading && !!user && ['company_admin', 'manager', 'super_admin'].includes(user.role);
+
+  const [rfqs,       setRfqs]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
+  const [status,     setStatus]     = useState('all');
+  const [page,       setPage]       = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
-  // Track previous filter values to detect changes inside one unified effect,
-  // avoiding the setState-in-effect anti-pattern.
-    const handleStatusChange = (s) => {
-    setStatus(s);
-    setPage(1); // reset here instead
-    };
-
-    const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(1); // reset here instead
-    };
+  const handleStatusChange = (s) => { setStatus(s); setPage(1); };
+  const handleSearchChange = (e)  => { setSearch(e.target.value); setPage(1); };
 
   const fetchRfqs = useCallback(async (targetPage) => {
+    setLoading(true);
     try {
-        const params = new URLSearchParams({ page: targetPage, pageSize: 20 });
-        if (status !== 'all') params.set('status', status);
-        if (search) params.set('search', search);
+      const params = new URLSearchParams({ page: targetPage, pageSize: 20 });
+      if (status !== 'all') params.set('status', status);
+      if (search)           params.set('search', search);
 
-        const res  = await fetch(`/api/rfqs?${params}`);
-        const json = await res.json();
-
-        if (res.ok) {
+      const res  = await fetch(`/api/rfqs?${params}`);
+      const json = await res.json();
+      if (res.ok) {
         setRfqs(json.data.rfqs);
         setPagination(json.data.pagination);
-        }
-    } catch {} 
-    finally {
-        setLoading(false);
-    }
-    }, [status, search]);
+      }
+    } catch {}
+    finally { setLoading(false); }
+  }, [status, search]);
 
-    useEffect(() => {
-        let isMounted = true;
+  useEffect(() => {
+    fetchRfqs(page);
+  }, [status, search, page, fetchRfqs]);
 
-        setLoading(true);
-
-        fetchRfqs(page).finally(() => {
-            if (isMounted) setLoading(false);
-        });
-
-        return () => {
-            isMounted = false;
-        };
-        }, [status, search, page, fetchRfqs]);
-
-  const columns = [
+  // Memoize so canWrite closure is always fresh after auth resolves
+  const columns = useMemo(() => [
     {
       key: 'reference_number',
       label: 'Reference',
-      render: (v) => (
+      render: (row) => (
         <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {v}
+          {row.reference_number}
         </span>
       ),
     },
-    { key: 'title', label: 'Title', render: (v) => <span style={{ fontWeight: 500 }}>{v}</span> },
+    {
+      key: 'title',
+      label: 'Title',
+      render: (row) => <span style={{ fontWeight: 500 }}>{row.title}</span>,
+    },
     {
       key: 'status',
       label: 'Status',
-      render: (v) => <RFQStatusBadge status={v} />,
+      render: (row) => <RFQStatusBadge status={row.status} />,
     },
     {
       key: 'deadline',
       label: 'Deadline',
-      render: (v, row) => {
-        if (!v) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
-        const isOverdue = new Date(v) < new Date() && !['closed', 'cancelled'].includes(row.status);
+      render: (row) => {
+        if (!row.deadline) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
+        const isOverdue = new Date(row.deadline) < new Date() && !['closed', 'cancelled'].includes(row.status);
         return (
           <span style={{ color: isOverdue ? 'var(--accent)' : 'var(--ink)', fontWeight: isOverdue ? 600 : 400 }}>
-            {formatDate(v)}
-            {isOverdue && ' ⚠'}
+            {formatDate(row.deadline)}{isOverdue && ' ⚠'}
           </span>
         );
       },
@@ -111,40 +105,72 @@ export default function RFQsPage() {
     {
       key: 'budget',
       label: 'Budget',
-      render: (v, row) => formatCurrency(v, row.currency),
+      render: (row) => formatCurrency(row.budget, row.currency),
     },
     {
       key: 'item_count',
       label: 'Items',
-      render: (v) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{v}</span>
-      ),
+      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.item_count}</span>,
     },
     {
       key: 'vendor_count',
       label: 'Vendors',
-      render: (v) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{v}</span>
-      ),
+      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.vendor_count}</span>,
     },
     {
       key: 'created_by_name',
       label: 'Created By',
-      render: (v) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{v}</span>
-      ),
+      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.created_by_name}</span>,
     },
     {
       key: 'created_at',
       label: 'Created',
-      render: (v) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>{formatDate(v)}</span>
+      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>{formatDate(row.created_at)}</span>,
+    },
+    {
+      key: 'actions',
+      label: '',
+      width: 80,
+      render: (row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/rfqs/${row.id}`); }}
+          style={{
+            background: 'none', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+            fontFamily: 'DM Sans, sans-serif', fontSize: '.78rem', color: 'var(--ink-soft)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--ink)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--ink-soft)'; }}
+        >
+          View
+        </button>
       ),
     },
-  ];
+  ], [canWrite, router]);
+
+  // ✅ action must be JSX, not a plain object {label, onClick}
+  const addBtn = !authLoading && canWrite ? (
+    <button
+      onClick={() => router.push('/dashboard/rfqs/new')}
+      style={{
+        background: 'var(--accent)', color: '#fff', border: 'none',
+        padding: '10px 18px', borderRadius: 8,
+        fontFamily: 'DM Sans, sans-serif', fontWeight: 500, fontSize: '.855rem',
+        cursor: 'pointer', transition: 'background .15s',
+        display: 'flex', alignItems: 'center', gap: 7,
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+    >
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      New RFQ
+    </button>
+  ) : null;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout pageTitle="RFQs">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
         .rfq-page { animation: fadeUp .35s ease both; }
@@ -161,13 +187,9 @@ export default function RFQsPage() {
         <PageHeader
           title="Requests for Quotation"
           subtitle="Manage procurement requests and vendor invitations"
-          action={canWrite ? {
-            label: '+ New RFQ',
-            onClick: () => router.push('/dashboard/rfqs/new'),
-          } : undefined}
+          action={addBtn}
         />
 
-        {/* Filters */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
           {STATUS_FILTERS.map(s => (
             <button
@@ -184,21 +206,14 @@ export default function RFQsPage() {
               onChange={handleSearchChange}
               placeholder="Search by title or ref…"
               style={{
-                padding: '7px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '.83rem',
-                fontFamily: 'inherit',
-                color: 'var(--ink)',
-                background: 'var(--white)',
-                outline: 'none',
-                width: 220,
+                padding: '7px 12px', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)', fontSize: '.83rem', fontFamily: 'inherit',
+                color: 'var(--ink)', background: 'var(--white)', outline: 'none', width: 220,
               }}
             />
           </div>
         </div>
 
-        {/* Table */}
         <DataTable
           columns={columns}
           rows={rfqs}
@@ -208,24 +223,15 @@ export default function RFQsPage() {
           rowClassName="rfq-row"
         />
 
-        {/* Pagination */}
         {pagination.pages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24, alignItems: 'center' }}>
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              style={pageBtn}
-            >
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={pageBtn}>
               ← Prev
             </button>
             <span style={{ fontSize: '.84rem', color: 'var(--ink-soft)' }}>
               Page {page} of {pagination.pages} ({pagination.total} total)
             </span>
-            <button
-              onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-              disabled={page >= pagination.pages}
-              style={pageBtn}
-            >
+            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages} style={pageBtn}>
               Next →
             </button>
           </div>
@@ -234,14 +240,3 @@ export default function RFQsPage() {
     </DashboardLayout>
   );
 }
-
-const pageBtn = {
-  padding: '6px 14px',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius)',
-  background: 'var(--white)',
-  fontSize: '.82rem',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  color: 'var(--ink)',
-};
