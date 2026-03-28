@@ -2,7 +2,7 @@
 // Transition bid: draft → submitted. Blocks past deadline.
 // Also updates rfq_vendors.status = 'submitted' in same transaction.
 
-import { pool } from '@/lib/db';
+import pool from '@/lib/db';
 
 export async function POST(request, { params }) {
   const role      = request.headers.get('x-user-role');

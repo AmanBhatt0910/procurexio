@@ -12,7 +12,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import BidComparisonTable from '@/components/bids/BidComparisonTable';
-import useAuth from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 function StatCard({ label, value, accent }) {
   return (

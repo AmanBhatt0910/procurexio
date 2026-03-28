@@ -2,7 +2,7 @@
 // PUT  /api/bids/rfqs/[rfqId]/bid  — update bid header + upsert bid_items
 // Requires role: vendor_user
 
-import { pool } from '@/lib/db';
+import pool from '@/lib/db';
 
 async function resolveVendorId(userId, companyId) {
   const [rows] = await pool.query(

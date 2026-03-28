@@ -2,7 +2,7 @@
 // Transition bid: submitted → withdrawn. Blocks if past deadline or RFQ closed/cancelled.
 // Reverts rfq_vendors.status = 'invited' in same transaction.
 
-import { pool } from '@/lib/db';
+import pool from '@/lib/db';
 
 export async function POST(request, { params }) {
   const role      = request.headers.get('x-user-role');

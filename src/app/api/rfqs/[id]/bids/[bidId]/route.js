@@ -2,7 +2,7 @@
 // Full bid detail with all bid_items.
 // Requires role: company_admin | manager | employee
 
-import { pool } from '@/lib/db';
+import pool from '@/lib/db';
 
 const ALLOWED_ROLES = ['company_admin', 'manager', 'employee', 'super_admin'];
 

@@ -2,7 +2,7 @@
 // Returns structured comparison payload for all bids on an RFQ.
 // Requires role: company_admin | manager | employee
 
-import { pool } from '@/lib/db';
+import pool from '@/lib/db';
 
 const ALLOWED_ROLES = ['company_admin', 'manager', 'employee', 'super_admin'];
 
