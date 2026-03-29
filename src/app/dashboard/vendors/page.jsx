@@ -94,8 +94,9 @@ export default function VendorsPage() {
     {
       key: 'name',
       label: 'Vendor',
-      render: (row) => {
-        // ✅ null-safe: guard against missing name before calling .slice()
+      // val = row['name'] (string|null), row = full vendor object
+      // We need row.id and row.email too, so use (_val, row)
+      render: (_val, row) => {
         const name = row.name || '';
         const initials = name.slice(0, 2).toUpperCase() || '??';
         return (
@@ -126,29 +127,35 @@ export default function VendorsPage() {
       key: 'status',
       label: 'Status',
       width: 110,
-      render: (row) => <VendorStatusBadge status={row.status} />,
+      // val = row['status'] (string) — use it directly
+      render: (val) => <VendorStatusBadge status={val} />,
     },
     {
       key: 'categories',
       label: 'Categories',
-      render: (row) => (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {(row.categories || []).map(cat => (
-            <VendorCategoryTag key={cat.id} name={cat.name} color={cat.color} />
-          ))}
-          {(!row.categories || row.categories.length === 0) && (
-            <span style={{ fontSize: '.78rem', color: 'var(--ink-faint)' }}>—</span>
-          )}
-        </div>
-      ),
+      // val = row['categories'] (array|null) — use it directly
+      render: (val) => {
+        const cats = val || [];
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {cats.map(cat => (
+              <VendorCategoryTag key={cat.id} name={cat.name} color={cat.color} />
+            ))}
+            {cats.length === 0 && (
+              <span style={{ fontSize: '.78rem', color: 'var(--ink-faint)' }}>—</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'primary_contact',
       label: 'Primary Contact',
       width: 160,
-      render: (row) => (
+      // val = row['primary_contact'] (string|null) — use it directly, never read .primary_contact on it
+      render: (val) => (
         <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.primary_contact || <span style={{ color: 'var(--ink-faint)' }}>—</span>}
+          {val || <span style={{ color: 'var(--ink-faint)' }}>—</span>}
         </span>
       ),
     },
@@ -156,7 +163,8 @@ export default function VendorsPage() {
       key: 'actions',
       label: '',
       width: 150,
-      render: (row) => (
+      // Need row.id and row.status — use (_val, row)
+      render: (_val, row) => (
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
           <button
             onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/vendors/${row.id}`); }}

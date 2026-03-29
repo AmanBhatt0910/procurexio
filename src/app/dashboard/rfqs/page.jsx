@@ -17,11 +17,12 @@ function formatDate(d) {
 }
 
 function formatCurrency(value, currency = 'USD') {
-  // ✅ Guard: value must be a real number — null/undefined/0 all return '—'
   if (value == null || value === '') return '—';
   const num = parseFloat(value);
   if (isNaN(num)) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0 }).format(num);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0,
+  }).format(num);
 }
 
 const pageBtn = {
@@ -56,7 +57,6 @@ export default function RFQsPage() {
       const params = new URLSearchParams({ page: targetPage, pageSize: 20 });
       if (status !== 'all') params.set('status', status);
       if (search)           params.set('search', search);
-
       const res  = await fetch(`/api/rfqs?${params}`);
       const json = await res.json();
       if (res.ok) {
@@ -67,41 +67,42 @@ export default function RFQsPage() {
     finally { setLoading(false); }
   }, [status, search]);
 
-  useEffect(() => {
-    fetchRfqs(page);
-  }, [status, search, page, fetchRfqs]);
+  useEffect(() => { fetchRfqs(page); }, [status, search, page, fetchRfqs]);
 
   const columns = useMemo(() => [
     {
       key: 'reference_number',
       label: 'Reference',
-      render: (row) => (
+      // val = row['reference_number'] (string|null) — use directly
+      render: (val) => (
         <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.reference_number || '—'}
+          {val || '—'}
         </span>
       ),
     },
     {
       key: 'title',
       label: 'Title',
-      render: (row) => <span style={{ fontWeight: 500 }}>{row.title || '—'}</span>,
+      // val = row['title'] (string|null) — use directly
+      render: (val) => <span style={{ fontWeight: 500 }}>{val || '—'}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      render: (row) => row.status ? <RFQStatusBadge status={row.status} /> : null,
+      // val = row['status'] (string|null) — use directly
+      render: (val) => val ? <RFQStatusBadge status={val} /> : null,
     },
     {
       key: 'deadline',
       label: 'Deadline',
-      render: (row) => {
-        if (!row.deadline) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
-        // ✅ Guard status before calling .includes() — it could be null
+      // val = row['deadline'] (string|null), need row.status too → use (val, row)
+      render: (val, row) => {
+        if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
         const safeStatus = row.status || '';
-        const isOverdue = new Date(row.deadline) < new Date() && !['closed', 'cancelled'].includes(safeStatus);
+        const isOverdue = new Date(val) < new Date() && !['closed', 'cancelled'].includes(safeStatus);
         return (
           <span style={{ color: isOverdue ? 'var(--accent)' : 'var(--ink)', fontWeight: isOverdue ? 600 : 400 }}>
-            {formatDate(row.deadline)}{isOverdue && ' ⚠'}
+            {formatDate(val)}{isOverdue && ' ⚠'}
           </span>
         );
       },
@@ -109,49 +110,47 @@ export default function RFQsPage() {
     {
       key: 'budget',
       label: 'Budget',
-      render: (row) => formatCurrency(row.budget, row.currency),
+      // val = row['budget'] (number|null), need row.currency too → use (val, row)
+      render: (val, row) => formatCurrency(val, row.currency),
     },
     {
       key: 'item_count',
       label: 'Items',
-      render: (row) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.item_count ?? '—'}
-        </span>
+      // val = row['item_count'] (number|null) — use directly
+      render: (val) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{val ?? '—'}</span>
       ),
     },
     {
       key: 'vendor_count',
       label: 'Vendors',
-      render: (row) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.vendor_count ?? '—'}
-        </span>
+      // val = row['vendor_count'] (number|null) — use directly
+      render: (val) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{val ?? '—'}</span>
       ),
     },
     {
       key: 'created_by_name',
       label: 'Created By',
-      render: (row) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.created_by_name || '—'}
-        </span>
+      // val = row['created_by_name'] (string|null) — use directly
+      render: (val) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{val || '—'}</span>
       ),
     },
     {
       key: 'created_at',
       label: 'Created',
-      render: (row) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>
-          {formatDate(row.created_at)}
-        </span>
+      // val = row['created_at'] (string|null) — use directly
+      render: (val) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>{formatDate(val)}</span>
       ),
     },
     {
       key: 'actions',
       label: '',
       width: 80,
-      render: (row) => (
+      // val = row['actions'] (undefined — no such field), need row.id → use (_val, row)
+      render: (_val, row) => (
         <button
           onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/rfqs/${row.id}`); }}
           style={{

@@ -113,7 +113,8 @@ export default function UsersPage() {
     {
       key: 'name',
       label: 'Name',
-      render: (row) => (
+      // ✅ DataTable calls render(row['name'], row) — we ignore val and use row
+      render: (_val, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -122,7 +123,6 @@ export default function UsersPage() {
             fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.64rem',
             color: 'var(--ink-soft)', flexShrink: 0,
           }}>
-            {/* ✅ null-safe initials via helper */}
             {getInitials(row.name)}
           </div>
           <div>
@@ -136,15 +136,17 @@ export default function UsersPage() {
       key: 'role',
       label: 'Role',
       width: 160,
-      render: (row) => <Badge variant={row.role}>{row.role}</Badge>,
+      // ✅ val IS the role string here (row['role']) — safe to use directly
+      render: (val) => <Badge variant={val}>{val}</Badge>,
     },
     {
       key: 'created_at',
       label: 'Joined',
       width: 130,
-      render: (row) => (
+      // ✅ val IS the date string (row['created_at'])
+      render: (val) => (
         <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {formatDate(row.created_at)}
+          {formatDate(val)}
         </span>
       ),
     },
@@ -152,7 +154,8 @@ export default function UsersPage() {
       key: 'actions',
       label: '',
       width: 80,
-      render: (row) => (
+      // ✅ need full row to check role and pass to openEdit — use (_val, row)
+      render: (_val, row) => (
         row.role === 'vendor_user' ? null : (
           <button
             onClick={() => openEdit(row)}
@@ -288,7 +291,6 @@ export default function UsersPage() {
                 fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.7rem',
                 color: '#fff', flexShrink: 0,
               }}>
-                {/* ✅ null-safe initials in modal too */}
                 {getInitials(editUser.name)}
               </div>
               <div>
