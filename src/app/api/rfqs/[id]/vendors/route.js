@@ -70,6 +70,14 @@ export async function POST(request, { params }) {
       return Response.json({ error: 'RFQ not found' }, { status: 404 });
     }
     const rfq = rfqRows[0];
+
+    if (rfq.status !== 'published') {
+      return Response.json(
+        { error: `Vendors can only be invited to a published RFQ (current status: ${rfq.status})` },
+        { status: 422 }
+      );
+    }
+
     if (rfq.status === 'closed' || rfq.status === 'cancelled') {
       return Response.json(
         { error: `Cannot invite vendors to a ${rfq.status} RFQ` },

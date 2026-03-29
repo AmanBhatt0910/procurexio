@@ -39,7 +39,7 @@ export default function VendorInvitePanel({ rfqId, rfqStatus, invitedVendors, ca
   const [loadingMore, setLoadingMore] = useState(false);
   const debounceRef = useRef(null);
 
-  const canInvite = canWrite && rfqStatus !== 'closed' && rfqStatus !== 'cancelled';
+  const canInvite = canWrite && rfqStatus === 'published';
   const invitedVendorIds = new Set(invitedVendors.map(v => v.vendor_id));
 
   // Fetch vendors (with search, pagination)
