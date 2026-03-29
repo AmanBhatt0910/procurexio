@@ -1,8 +1,6 @@
 // src/app/api/auth/invite/validate/route.js
 //
 // GET /api/auth/invite/validate?token=<token>
-// Returns the invitation details (email, role, company) so the
-// register page can pre-fill fields and confirm the token is valid.
 
 import pool from '@/lib/db';
 
@@ -16,10 +14,17 @@ export async function GET(request) {
 
   try {
     const [rows] = await pool.query(
-      `SELECT i.email, i.role, i.expires_at, i.accepted_at,
-              c.name AS company_name
+      `SELECT
+         i.email,
+         i.role,
+         i.vendor_id,
+         i.expires_at,
+         i.accepted_at,
+         c.name  AS company_name,
+         v.name  AS vendor_name
        FROM   invitations i
        JOIN   companies   c ON c.id = i.company_id
+       LEFT JOIN vendors  v ON v.id = i.vendor_id
        WHERE  i.token = ?
        LIMIT  1`,
       [token]
@@ -44,6 +49,9 @@ export async function GET(request) {
         email:       invite.email,
         role:        invite.role,
         companyName: invite.company_name,
+        // vendor-specific fields (null for non-vendor invites)
+        vendorId:    invite.vendor_id   ?? null,
+        vendorName:  invite.vendor_name ?? null,
       },
     });
 

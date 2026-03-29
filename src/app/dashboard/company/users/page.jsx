@@ -1,5 +1,9 @@
 'use client';
 // src/app/dashboard/company/users/page.jsx
+//
+// Team Members management page.
+// vendor_user is intentionally excluded — vendors are invited from
+// the Vendor detail page (dashboard/vendors/[id]) instead.
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -8,7 +12,8 @@ import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 
-const ROLES = ['company_admin', 'manager', 'employee', 'vendor_user'];
+// vendor_user deliberately omitted — vendor invites go through the Vendors module
+const ROLES = ['company_admin', 'manager', 'employee'];
 
 export default function UsersPage() {
   const [users,   setUsers]   = useState([]);
@@ -90,7 +95,13 @@ export default function UsersPage() {
   }
 
   function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+  }
+
+  function roleLabel(r) {
+    return r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
   const columns = [
@@ -100,7 +111,7 @@ export default function UsersPage() {
       render: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 30, height: 30, borderRadius: '50%',
+            width: 32, height: 32, borderRadius: '50%',
             background: 'var(--surface)', border: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.64rem',
@@ -126,7 +137,9 @@ export default function UsersPage() {
       label: 'Joined',
       width: 130,
       render: (row) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{formatDate(row.created_at)}</span>
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
+          {formatDate(row.created_at)}
+        </span>
       ),
     },
     {
@@ -134,19 +147,22 @@ export default function UsersPage() {
       label: '',
       width: 80,
       render: (row) => (
-        <button
-          onClick={() => openEdit(row)}
-          style={{
-            background: 'none', border: '1px solid var(--border)',
-            borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-            fontFamily: 'DM Sans, sans-serif', fontSize: '.78rem',
-            color: 'var(--ink-soft)', transition: 'background .12s, color .12s',
-          }}
-          onMouseEnter={e => { e.target.style.background = 'var(--surface)'; e.target.style.color = 'var(--ink)'; }}
-          onMouseLeave={e => { e.target.style.background = 'none'; e.target.style.color = 'var(--ink-soft)'; }}
-        >
-          Edit
-        </button>
+        // Don't allow editing vendor_user accounts from here
+        row.role === 'vendor_user' ? null : (
+          <button
+            onClick={() => openEdit(row)}
+            style={{
+              background: 'none', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif', fontSize: '.78rem',
+              color: 'var(--ink-soft)', transition: 'background .12s, color .12s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--ink)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--ink-soft)'; }}
+          >
+            Edit
+          </button>
+        )
       ),
     },
   ];
@@ -158,7 +174,8 @@ export default function UsersPage() {
         background: 'var(--accent)', color: '#fff', border: 'none',
         padding: '10px 18px', borderRadius: 8,
         fontFamily: 'DM Sans, sans-serif', fontWeight: 500, fontSize: '.855rem',
-        cursor: 'pointer', transition: 'background .15s', display: 'flex', alignItems: 'center', gap: 7,
+        cursor: 'pointer', transition: 'background .15s',
+        display: 'flex', alignItems: 'center', gap: 7,
       }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
       onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
@@ -166,7 +183,7 @@ export default function UsersPage() {
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
         <path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
       </svg>
-      Invite User
+      Invite Member
     </button>
   );
 
@@ -176,7 +193,7 @@ export default function UsersPage() {
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap');
         .field { margin-bottom: 16px; }
         .field-label { display: block; font-size: .8rem; font-weight: 500; color: var(--ink); margin-bottom: 6px; font-family: 'DM Sans', sans-serif; }
-        .field-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: .875rem; color: var(--ink); background: var(--white); outline: none; transition: border-color .15s, box-shadow .15s; }
+        .field-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: .875rem; color: var(--ink); background: var(--white); outline: none; transition: border-color .15s, box-shadow .15s; box-sizing: border-box; }
         .field-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(15,14,13,.06); }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
         .btn-secondary { background: none; border: 1px solid var(--border); padding: 9px 16px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: .855rem; color: var(--ink-soft); cursor: pointer; transition: background .12s; }
@@ -184,6 +201,7 @@ export default function UsersPage() {
         .btn-primary { background: var(--accent); color: #fff; border: none; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: .855rem; cursor: pointer; transition: background .15s; }
         .btn-primary:hover:not(:disabled) { background: var(--accent-h); }
         .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+        .info-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; font-size: .8rem; color: var(--ink-faint); line-height: 1.5; margin-bottom: 4px; }
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: .855rem; font-weight: 500; z-index: 999; box-shadow: var(--shadow); animation: toastIn .2s ease; }
         .toast--success { background: #166534; color: #fff; }
         .toast--error   { background: #991b1b; color: #fff; }
@@ -192,7 +210,7 @@ export default function UsersPage() {
 
       <PageHeader
         title="Team Members"
-        subtitle={`${users.length} user${users.length !== 1 ? 's' : ''} in your organization`}
+        subtitle={`${users.length} member${users.length !== 1 ? 's' : ''} in your organization`}
         action={inviteBtn}
       />
 
@@ -200,7 +218,7 @@ export default function UsersPage() {
         columns={columns}
         rows={users}
         loading={loading}
-        emptyMessage="No users yet. Invite your first team member."
+        emptyMessage="No team members yet. Invite your first colleague."
       />
 
       {/* Invite Modal */}
@@ -226,17 +244,23 @@ export default function UsersPage() {
               onChange={e => setInviteRole(e.target.value)}
             >
               {ROLES.map(r => (
-                <option key={r} value={r}>
-                  {r.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                </option>
+                <option key={r} value={r}>{roleLabel(r)}</option>
               ))}
             </select>
           </div>
-          <div style={{ fontSize: '.8rem', color: 'var(--ink-faint)', marginBottom: 4 }}>
-            An invitation link will be generated. Share it with the invitee to complete signup.
+          <div className="info-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>
+              An invitation link will be emailed. The invitee uses it to create their account.
+              To invite vendors, go to <strong>Vendors → Add Vendor</strong>.
+            </span>
           </div>
           <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={() => setInviteOpen(false)}>Cancel</button>
+            <button type="button" className="btn-secondary" onClick={() => setInviteOpen(false)}>
+              Cancel
+            </button>
             <button type="submit" className="btn-primary" disabled={inviting}>
               {inviting ? 'Sending…' : 'Send Invitation'}
             </button>
@@ -245,19 +269,31 @@ export default function UsersPage() {
       </Modal>
 
       {/* Edit Role Modal */}
-      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Edit User Role">
+      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Edit Member Role">
         {editUser && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.7rem', color: '#fff', flexShrink: 0 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              marginBottom: 20, padding: '12px 14px',
+              background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', background: 'var(--ink)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.7rem',
+                color: '#fff', flexShrink: 0,
+              }}>
                 {editUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 500, fontSize: '.9rem', fontFamily: 'DM Sans' }}>{editUser.name}</div>
-                <div style={{ fontSize: '.78rem', color: 'var(--ink-faint)', fontFamily: 'DM Sans' }}>{editUser.email}</div>
+                <div style={{ fontWeight: 500, fontSize: '.9rem', fontFamily: 'DM Sans' }}>
+                  {editUser.name}
+                </div>
+                <div style={{ fontSize: '.78rem', color: 'var(--ink-faint)', fontFamily: 'DM Sans' }}>
+                  {editUser.email}
+                </div>
               </div>
             </div>
-
             <div className="field">
               <label className="field-label">Role</label>
               <select
@@ -266,15 +302,14 @@ export default function UsersPage() {
                 onChange={e => setEditRole(e.target.value)}
               >
                 {ROLES.map(r => (
-                  <option key={r} value={r}>
-                    {r.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                  </option>
+                  <option key={r} value={r}>{roleLabel(r)}</option>
                 ))}
               </select>
             </div>
-
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => setEditUser(null)}>Cancel</button>
+              <button type="button" className="btn-secondary" onClick={() => setEditUser(null)}>
+                Cancel
+              </button>
               <button className="btn-primary" onClick={handleEditSave} disabled={editSaving}>
                 {editSaving ? 'Saving…' : 'Save Changes'}
               </button>

@@ -1,13 +1,11 @@
 'use client';
 // src/app/(auth)/register/page.jsx
 //
-// Supports TWO modes — UI/CSS identical to original in both cases:
+// Supports THREE modes — visually distinct for each:
 //
-//   /register              → New-company signup (companyName + name + email + password)
-//   /register?token=<tok>  → Accept invitation  (name + password only; email locked)
-//
-// vendor_user invites never see the companyName field (it's an invite-only role).
-// company_admin / manager / employee invites also skip companyName (they join an existing company).
+//   /register                    → New-company signup
+//   /register?token=<tok>        → Team invite  (company_admin / manager / employee)
+//   /register?token=<tok>        → Vendor invite (vendor_user) — different left-panel + badge
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams }    from 'next/navigation';
@@ -15,24 +13,24 @@ import Link                              from 'next/link';
 import AuthInput                         from '@/components/auth/AuthInput';
 import AuthButton                        from '@/components/auth/AuthButton';
 
-// ─── Inner component — uses useSearchParams, must live inside <Suspense> ─────
+// ─── Inner component — uses useSearchParams ────────────────────────────────
 function RegisterInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const token        = searchParams.get('token');
 
-  // ── Invite validation state ──────────────────────────────────────────────
-  const [inviteData,    setInviteData]    = useState(null); // { email, role, companyName }
+  // Invite state
+  const [inviteData,    setInviteData]    = useState(null);
   const [inviteError,   setInviteError]   = useState(null);
   const [inviteLoading, setInviteLoading] = useState(!!token);
 
-  // ── Form state ───────────────────────────────────────────────────────────
+  // Form state
   const [form, setForm] = useState({ companyName: '', name: '', email: '', password: '' });
   const [errors,   setErrors]   = useState({});
   const [loading,  setLoading]  = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // ── Validate token on mount ──────────────────────────────────────────────
+  // Validate token on mount
   useEffect(() => {
     if (!token) return;
     async function run() {
@@ -54,7 +52,6 @@ function RegisterInner() {
     run();
   }, [token]);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
   function setField(key) {
     return (e) => {
       setForm(prev => ({ ...prev, [key]: e.target.value }));
@@ -81,8 +78,6 @@ function RegisterInner() {
 
     setLoading(true);
     try {
-      // Invite mode: only send token + name + password
-      // New-company mode: send full form
       const payload = token
         ? { token, name: form.name, password: form.password }
         : form;
@@ -109,10 +104,11 @@ function RegisterInner() {
     }
   }
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-  const isInvite = !!token;
+  const isInvite       = !!token;
+  const isVendorInvite = isInvite && inviteData?.role === 'vendor_user';
+  const isTeamInvite   = isInvite && !isVendorInvite;
 
-  // ── Render: validating token spinner ─────────────────────────────────────
+  // ── Loading spinner ──────────────────────────────────────────────────────
   if (inviteLoading) {
     return (
       <div style={{
@@ -131,7 +127,7 @@ function RegisterInner() {
     );
   }
 
-  // ── Render: invalid / expired token ──────────────────────────────────────
+  // ── Invalid / expired token ──────────────────────────────────────────────
   if (isInvite && inviteError) {
     return (
       <div style={{
@@ -179,12 +175,104 @@ function RegisterInner() {
     );
   }
 
-  // ── Render: main form ─────────────────────────────────────────────────────
+  // ── Left panel content (varies by mode) ─────────────────────────────────
+  const leftBg          = isVendorInvite ? '#0d5c46' : '#0f0e0d';
+  const leftAccent      = isVendorInvite ? '#34d399' : '#c8501a';
+
+  const leftSteps = isVendorInvite
+    ? [
+        { n: '1', title: 'Verify invitation',  desc: 'Confirm your contact email' },
+        { n: '2', title: 'Set your password',  desc: 'Secure your vendor account' },
+        { n: '3', title: 'Access the portal',  desc: 'View RFQs and submit bids' },
+      ]
+    : isTeamInvite
+    ? [
+        { n: '1', title: 'Verify invitation',  desc: 'Confirm your email and role' },
+        { n: '2', title: 'Set your password',  desc: 'Choose a secure password' },
+        { n: '3', title: 'Access workspace',   desc: 'Start collaborating immediately' },
+      ]
+    : [
+        { n: '1', title: 'Create workspace',   desc: 'Register your company & admin account' },
+        { n: '2', title: 'Add vendors',        desc: 'Invite & approve your vendor list' },
+        { n: '3', title: 'Run your first RFQ', desc: 'Create, publish, and compare bids' },
+      ];
+
+  const leftTagline = isVendorInvite
+    ? (<>You&apos;ve been<br /><em>invited to access</em><br />{inviteData?.companyName}&apos;s portal.</>)
+    : isTeamInvite
+    ? (<>You&apos;ve been<br /><em>invited to join</em><br />{inviteData?.companyName}.</>)
+    : (<>Set up your<br /><em>procurement workspace</em><br />in minutes.</>);
+
+  const leftSub = isVendorInvite
+    ? 'Create your vendor account to view RFQs, submit bids, and collaborate directly with the procurement team.'
+    : isTeamInvite
+    ? 'Set your name and password to activate your account and start collaborating with your team.'
+    : 'Create your company account, invite vendors, and start running RFQs today.';
+
+  // ── Context badge shown under "Accept your invitation" heading ───────────
+  const ContextBadge = () => {
+    if (!isInvite) return null;
+
+    if (isVendorInvite) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          padding: '12px 14px', background: '#f0fdf4',
+          border: '1px solid #bbf7d0', borderRadius: 10,
+          fontSize: '.84rem', color: '#374151',
+        }}>
+          {/* Vendor icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="#059669" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <div>
+            <div style={{ fontWeight: 600, color: '#065f46', marginBottom: 2 }}>
+              Vendor Portal Invitation
+            </div>
+            <div>
+              Joining as the vendor contact for{' '}
+              <strong style={{ color: '#0f0e0d' }}>{inviteData?.vendorName}</strong>
+              {' '}—{' '}invited by{' '}
+              <strong style={{ color: '#0f0e0d' }}>{inviteData?.companyName}</strong>.
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Team invite badge (original)
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 14px', background: '#faf9f7',
+        border: '1px solid #e4e0db', borderRadius: 10,
+        fontSize: '.84rem', color: '#4b4845',
+      }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+          stroke="#6b6660" strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>
+          Joining{' '}
+          <strong style={{ color: '#0f0e0d' }}>{inviteData?.companyName}</strong>
+          {' '}as{' '}
+          <strong style={{ color: '#0f0e0d' }}>
+            {inviteData?.role?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          </strong>
+        </span>
+      </div>
+    );
+  };
+
+  // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <div className="page">
 
-      {/* ── Left panel ── */}
-      <div className="panel-left">
+      {/* Left panel */}
+      <div className="panel-left" style={{ '--left-bg': leftBg, '--left-accent': leftAccent }}>
         <div className="panel-left-grid" />
 
         <div className="panel-top">
@@ -201,59 +289,36 @@ function RegisterInner() {
         </div>
 
         <div className="panel-bottom">
-          {isInvite ? (
-            <>
-              <h2 className="panel-tagline">
-                You&apos;ve been<br /><em>invited to join</em><br />{inviteData?.companyName}.
-              </h2>
-              <p className="panel-sub" style={{ marginTop: 12, marginBottom: 40 }}>
-                Set your name and password to activate your account and get started.
-              </p>
-              <div className="steps">
-                {[
-                  { n: '1', title: 'Verify invitation', desc: 'Confirm your email and assigned role' },
-                  { n: '2', title: 'Set your password', desc: 'Choose a secure password' },
-                  { n: '3', title: 'Access workspace',  desc: 'Start collaborating immediately' },
-                ].map((s, i) => (
-                  <div className={`step ${i === 0 ? 'active' : ''}`} key={s.n}>
-                    <div className="step-num">{s.n}</div>
-                    <div className="step-label">
-                      <span className="step-title">{s.title}</span>
-                      {s.desc}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="panel-tagline">
-                Set up your<br /><em>procurement workspace</em><br />in minutes.
-              </h2>
-              <p className="panel-sub" style={{ marginTop: 12, marginBottom: 40 }}>
-                Create your company account, invite vendors, and start running RFQs today.
-              </p>
-              <div className="steps">
-                {[
-                  { n: '1', title: 'Create workspace',  desc: 'Register your company & admin account' },
-                  { n: '2', title: 'Add vendors',        desc: 'Invite & approve your vendor list' },
-                  { n: '3', title: 'Run your first RFQ', desc: 'Create, publish, and compare bids' },
-                ].map((s, i) => (
-                  <div className={`step ${i === 0 ? 'active' : ''}`} key={s.n}>
-                    <div className="step-num">{s.n}</div>
-                    <div className="step-label">
-                      <span className="step-title">{s.title}</span>
-                      {s.desc}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
+          {/* Vendor-invite label pill */}
+          {isVendorInvite && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(52,211,153,.15)', border: '1px solid rgba(52,211,153,.3)',
+              borderRadius: 20, padding: '4px 12px', marginBottom: 20,
+              fontSize: '.75rem', fontWeight: 600, color: '#6ee7b7',
+              letterSpacing: '.05em', textTransform: 'uppercase',
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
+              Vendor Portal
+            </div>
           )}
+          <h2 className="panel-tagline">{leftTagline}</h2>
+          <p className="panel-sub" style={{ marginTop: 12, marginBottom: 40 }}>{leftSub}</p>
+          <div className="steps">
+            {leftSteps.map((s, i) => (
+              <div className={`step ${i === 0 ? 'active' : ''}`} key={s.n}>
+                <div className="step-num">{s.n}</div>
+                <div className="step-label">
+                  <span className="step-title">{s.title}</span>
+                  {s.desc}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Right panel ── */}
+      {/* Right panel */}
       <div className="panel-right">
         <Link href="/" className="mobile-logo">
           <div className="mobile-logo-mark">
@@ -270,29 +335,11 @@ function RegisterInner() {
         <div className="form-header">
           {isInvite ? (
             <>
-              <h1 className="form-title">Accept your invitation</h1>
-              {/* Invite context badge — shows company + role */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 14px', background: '#faf9f7',
-                border: '1px solid #e4e0db', borderRadius: 10,
-                fontSize: '.84rem', color: '#4b4845',
-              }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke="#6b6660" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-                <span>
-                  Joining{' '}
-                  <strong style={{ color: '#0f0e0d' }}>{inviteData?.companyName}</strong>
-                  {' '}as{' '}
-                  <strong style={{ color: '#0f0e0d' }}>
-                    {inviteData?.role
-                      ?.replace(/_/g, ' ')
-                      .replace(/\b\w/g, c => c.toUpperCase())}
-                  </strong>
-                </span>
+              <h1 className="form-title">
+                {isVendorInvite ? 'Set up your vendor account' : 'Accept your invitation'}
+              </h1>
+              <div style={{ marginTop: 12 }}>
+                <ContextBadge />
               </div>
             </>
           ) : (
@@ -318,7 +365,7 @@ function RegisterInner() {
             </div>
           )}
 
-          {/* Company name — only for new-company signup, never for any invite role */}
+          {/* Company name — only for new-company flow */}
           {!isInvite && (
             <>
               <p className="form-section">Company</p>
@@ -364,13 +411,13 @@ function RegisterInner() {
             }
           />
 
-          {/* Email — editable for new-company, locked/read-only for invite */}
+          {/* Email — locked for all invites */}
           <AuthInput
-            label="Work email"
+            label={isVendorInvite ? 'Vendor contact email' : 'Work email'}
             type="email"
             value={form.email}
             onChange={isInvite ? undefined : setField('email')}
-            placeholder="ravi@company.com"
+            placeholder="contact@vendor.com"
             required
             autoComplete="email"
             error={errors.email}
@@ -404,10 +451,13 @@ function RegisterInner() {
           />
 
           <AuthButton loading={loading}>
-            {isInvite ? 'Accept & activate account' : 'Create workspace'}
+            {isVendorInvite
+              ? 'Activate vendor account'
+              : isTeamInvite
+              ? 'Accept & activate account'
+              : 'Create workspace'}
           </AuthButton>
 
-          {/* Terms — only relevant for new-company flow */}
           {!isInvite && (
             <p className="form-terms">
               By creating an account you agree to our{' '}
@@ -418,7 +468,7 @@ function RegisterInner() {
         </form>
 
         <div className="form-footer">
-          Already have a workspace?{' '}
+          Already have an account?{' '}
           <Link href="/login">Sign in</Link>
         </div>
       </div>
@@ -426,7 +476,7 @@ function RegisterInner() {
   );
 }
 
-// ─── Page export — all CSS lives here so it applies regardless of mode ────────
+// ─── Page export ──────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   return (
     <>
@@ -458,8 +508,12 @@ export default function RegisterPage() {
 
         /* ── Left panel ── */
         .panel-left {
-          flex: 1; background: var(--ink);
-          display: none; position: relative; overflow: hidden;
+          flex: 1;
+          background: var(--left-bg, #0f0e0d);
+          display: none;
+          position: relative;
+          overflow: hidden;
+          transition: background .3s;
         }
         @media (min-width: 900px) {
           .panel-left {
@@ -470,8 +524,8 @@ export default function RegisterPage() {
         .panel-left::before {
           content: ''; position: absolute; inset: 0;
           background:
-            radial-gradient(ellipse 50% 40% at 80% 10%, rgba(200,80,26,.14) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 10% 90%, rgba(200,80,26,.12) 0%, transparent 70%);
+            radial-gradient(ellipse 50% 40% at 80% 10%, color-mix(in srgb, var(--left-accent, #c8501a) 20%, transparent) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 10% 90%, color-mix(in srgb, var(--left-accent, #c8501a) 15%, transparent) 0%, transparent 70%);
         }
         .panel-left-grid {
           position: absolute; inset: 0;
@@ -493,7 +547,7 @@ export default function RegisterPage() {
           font-family: 'Syne', sans-serif; font-weight: 700;
           font-size: 1.1rem; color: #fff; letter-spacing: -.01em;
         }
-        .logo-name span { color: var(--accent); }
+        .logo-name span { color: var(--left-accent, #c8501a); }
 
         .steps { display: flex; flex-direction: column; gap: 28px; }
         .step { display: flex; gap: 16px; align-items: flex-start; }
@@ -504,7 +558,11 @@ export default function RegisterPage() {
           font-family: 'Syne', sans-serif; font-size: .75rem; font-weight: 700;
           color: rgba(255,255,255,.5); flex-shrink: 0; margin-top: 2px;
         }
-        .step.active .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .step.active .step-num {
+          background: var(--left-accent, #c8501a);
+          border-color: var(--left-accent, #c8501a);
+          color: #fff;
+        }
         .step-label { font-size: .88rem; color: rgba(255,255,255,.4); line-height: 1.4; }
         .step-title { display: block; font-weight: 500; margin-bottom: 2px; }
         .step.active .step-label { color: rgba(255,255,255,.75); }
@@ -516,16 +574,16 @@ export default function RegisterPage() {
           font-weight: 700; color: #fff;
           line-height: 1.2; letter-spacing: -.02em; margin-bottom: 12px;
         }
-        .panel-tagline em { font-style: normal; color: var(--accent); }
+        .panel-tagline em { font-style: normal; color: var(--left-accent, #c8501a); }
         .panel-sub { color: rgba(255,255,255,.4); font-size: .88rem; line-height: 1.6; }
 
         /* ── Right panel ── */
         .panel-right {
-          width: 100%; max-width: 480px; margin: 0 auto;
+          width: 100%; max-width: 500px; margin: 0 auto;
           display: flex; flex-direction: column; justify-content: center;
           padding: 48px 40px;
         }
-        @media (min-width: 900px) { .panel-right { flex: none; width: 480px; margin: 0; } }
+        @media (min-width: 900px) { .panel-right { flex: none; width: 500px; margin: 0; } }
         @media (max-width: 480px) { .panel-right { padding: 40px 24px; } }
 
         .mobile-logo {
@@ -544,12 +602,12 @@ export default function RegisterPage() {
         .mobile-logo-name span { color: var(--accent); }
         @media (min-width: 900px) { .mobile-logo { display: none; } }
 
-        .form-header { margin-bottom: 32px; }
+        .form-header { margin-bottom: 28px; }
         .form-title {
           font-family: 'Syne', sans-serif; font-size: 1.65rem; font-weight: 700;
-          letter-spacing: -.03em; color: var(--ink); margin-bottom: 8px;
+          letter-spacing: -.03em; color: var(--ink); margin-bottom: 0;
         }
-        .form-subtitle { color: var(--ink-soft); font-size: .92rem; line-height: 1.5; }
+        .form-subtitle { color: var(--ink-soft); font-size: .92rem; line-height: 1.5; margin-top: 6px; }
 
         .form-section {
           font-size: .72rem; font-weight: 600; letter-spacing: .08em;
@@ -560,7 +618,7 @@ export default function RegisterPage() {
         .auth-form { display: flex; flex-direction: column; gap: 18px; }
         .form-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-        /* Input styles (used by AuthInput component) */
+        /* AuthInput component styles */
         .auth-input-wrapper { display: flex; flex-direction: column; gap: 5px; }
         .auth-input-label { font-size: .79rem; font-weight: 500; color: var(--ink); letter-spacing: .01em; }
         .auth-input-required { color: var(--accent); margin-left: 2px; }

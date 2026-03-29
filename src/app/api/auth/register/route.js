@@ -1,47 +1,45 @@
 // src/app/api/auth/register/route.js
 //
-// Handles TWO registration modes:
+// Handles THREE registration modes:
 //
-//   1. INVITE MODE  — body contains { token, name, password }
-//      Validates the invitation token, creates the user under the
-//      invited company, marks the invitation accepted, then auto-logs
-//      the user in by setting the auth cookie.
+//   1. VENDOR INVITE  — body contains { token, name, password }
+//      where invite.role === 'vendor_user'
+//      Creates user with vendor_id set, marks invitation accepted.
 //
-//   2. COMPANY MODE — body contains { companyName, name, email, password }
-//      Creates a brand-new company + first company_admin. (original flow, unchanged)
+//   2. TEAM INVITE    — body contains { token, name, password }
+//      where invite.role is company_admin / manager / employee
+//      Creates user under the invited company.
+//
+//   3. COMPANY MODE   — body contains { companyName, name, email, password }
+//      Creates a brand-new company + first company_admin.
+//      Fires a welcome email immediately after commit.
 
-import { NextResponse }          from 'next/server';
-import { query, getConnection }  from '@/lib/db';
-import { hashPassword }          from '@/lib/password';
-import { signToken, buildAuthCookie } from '@/lib/jwt';
+import { NextResponse }                              from 'next/server';
+import { query, getConnection }                      from '@/lib/db';
+import { hashPassword }                              from '@/lib/password';
+import { signToken, buildAuthCookie }                from '@/lib/jwt';
+import { sendWelcomeEmail }                          from '@/lib/mailer';
 
 export async function POST(request) {
-  let conn;
   try {
     const body = await request.json();
 
-    // ── Branch: invite-based registration ─────────────────────────────────────
     if (body.token) {
       return handleInviteRegister(body, request);
     }
 
-    // ── Branch: new-company registration (original) ────────────────────────────
     return handleCompanyRegister(body, request);
 
   } catch (err) {
-    if (conn) await conn.rollback();
     console.error('[POST /api/auth/register]', err);
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 });
-  } finally {
-    if (conn) conn.release();
   }
 }
 
-// ─── Invite-based registration ────────────────────────────────────────────────
+// ─── Invite-based registration (team + vendor) ────────────────────────────────
 async function handleInviteRegister(body, request) {
   const { token, name, password } = body;
 
-  // Validate inputs
   const errors = {};
   if (!name?.trim())  errors.name     = 'Your full name is required.';
   if (!password)      errors.password = 'Password is required.';
@@ -52,12 +50,17 @@ async function handleInviteRegister(body, request) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
-  // Look up the invitation
-  const [rows] = await (await import('@/lib/db')).default.query(
-    `SELECT i.id, i.email, i.role, i.company_id, i.expires_at, i.accepted_at,
-            c.name AS company_name
+  const pool = (await import('@/lib/db')).default;
+
+  const [rows] = await pool.query(
+    `SELECT
+       i.id, i.email, i.role, i.company_id, i.vendor_id,
+       i.expires_at, i.accepted_at,
+       c.name  AS company_name,
+       v.name  AS vendor_name
      FROM   invitations i
      JOIN   companies   c ON c.id = i.company_id
+     LEFT JOIN vendors  v ON v.id = i.vendor_id
      WHERE  i.token = ?
      LIMIT  1`,
     [token]
@@ -75,8 +78,10 @@ async function handleInviteRegister(body, request) {
   if (new Date(invite.expires_at) < new Date()) {
     return NextResponse.json({ error: 'This invitation has expired.' }, { status: 410 });
   }
+  if (invite.role === 'vendor_user' && !invite.vendor_id) {
+    return NextResponse.json({ error: 'This vendor invitation is no longer valid.' }, { status: 410 });
+  }
 
-  // Check the email isn't already registered (edge case: duplicate invite)
   const existing = await query(
     'SELECT id FROM users WHERE email = ? LIMIT 1',
     [invite.email]
@@ -89,17 +94,21 @@ async function handleInviteRegister(body, request) {
   }
 
   const hashed = await hashPassword(password);
-
-  // Transaction: insert user + mark invitation accepted
-  const pool = (await import('@/lib/db')).default;
-  const conn = await pool.getConnection();
+  const conn   = await pool.getConnection();
   await conn.beginTransaction();
 
   try {
     const [userResult] = await conn.execute(
-      `INSERT INTO users (company_id, name, email, password, role, created_at)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [invite.company_id, name.trim(), invite.email, hashed, invite.role]
+      `INSERT INTO users (company_id, vendor_id, name, email, password, role, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        invite.company_id,
+        invite.vendor_id ?? null,
+        name.trim(),
+        invite.email,
+        hashed,
+        invite.role,
+      ]
     );
     const userId = userResult.insertId;
 
@@ -110,13 +119,15 @@ async function handleInviteRegister(body, request) {
 
     await conn.commit();
 
-    // Sign JWT + set cookie
-    const jwtToken = await signToken({
+    const jwtPayload = {
       userId,
       companyId: invite.company_id,
       role:      invite.role,
       email:     invite.email,
-    });
+    };
+    if (invite.vendor_id) jwtPayload.vendorId = invite.vendor_id;
+
+    const jwtToken = await signToken(jwtPayload);
 
     const isSecure =
       process.env.NODE_ENV === 'production' &&
@@ -129,6 +140,10 @@ async function handleInviteRegister(body, request) {
       role:        invite.role,
       companyId:   invite.company_id,
       companyName: invite.company_name,
+      ...(invite.vendor_id && {
+        vendorId:   invite.vendor_id,
+        vendorName: invite.vendor_name,
+      }),
     };
 
     const response = NextResponse.json(
@@ -146,7 +161,7 @@ async function handleInviteRegister(body, request) {
   }
 }
 
-// ─── New-company registration (original logic, unchanged) ─────────────────────
+// ─── New-company registration ─────────────────────────────────────────────────
 async function handleCompanyRegister(body, request) {
   let conn;
   try {
@@ -190,14 +205,24 @@ async function handleCompanyRegister(body, request) {
     const companyId = companyResult.insertId;
 
     const [userResult] = await conn.execute(
-      `INSERT INTO users (company_id, name, email, password, role, created_at)
-       VALUES (?, ?, ?, ?, 'company_admin', NOW())`,
+      `INSERT INTO users (company_id, vendor_id, name, email, password, role, created_at)
+       VALUES (?, NULL, ?, ?, ?, 'company_admin', NOW())`,
       [companyId, name.trim(), normalizedEmail, hashed]
     );
     const userId = userResult.insertId;
 
     await conn.commit();
 
+    // ── Fire welcome email (non-blocking — don't fail registration if mail fails) ──
+    sendWelcomeEmail({
+      to:          normalizedEmail,
+      name:        name.trim(),
+      companyName: companyName.trim(),
+    }).catch(err => {
+      console.error('[register] Welcome email failed (non-fatal):', err.message);
+    });
+
+    // ── Build JWT & response ──
     const token = await signToken({
       userId,
       companyId,
