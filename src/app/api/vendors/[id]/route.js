@@ -130,8 +130,9 @@ export async function DELETE(request, { params }) {
   if (!hasPermission(role, PERMISSIONS.MANAGE_VENDORS))
     return Response.json({ error: 'Forbidden' }, { status: 403 });
 
+  const conn = await getConnection();
   try {
-    const [result] = await query(
+    const [result] = await conn.execute(
       'UPDATE vendors SET status = ? WHERE id = ? AND company_id = ?',
       ['inactive', id, companyId]
     );
@@ -143,5 +144,7 @@ export async function DELETE(request, { params }) {
   } catch (err) {
     console.error('[DELETE /api/vendors/[id]]', err);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    conn.release();
   }
 }
