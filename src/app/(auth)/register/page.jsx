@@ -349,7 +349,7 @@ export default function RegisterPage() {
                   <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
               </div>
-              <span className="logo-name">Procure<span>IQ</span></span>
+              <span className="logo-name">Procure<span>xio</span></span>
             </a>
           </div>
           <div className="panel-bottom">
@@ -386,7 +386,7 @@ export default function RegisterPage() {
                 <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
             </div>
-            <span className="mobile-logo-name">Procure<span>IQ</span></span>
+            <span className="mobile-logo-name">Procure<span>xio</span></span>
           </a>
 
           <div className="form-header">

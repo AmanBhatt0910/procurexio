@@ -1,12 +1,13 @@
 'use client';
-// src/components/layout/Sidebar.jsx
+// src/components/Layout/Sidebar.jsx
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useNotifications } from '@/context/NotificationContext';
 
 // ------------------------------------------------------------------
-// Navigation items with role‑based visibility
+// Navigation items with role-based visibility
 // ------------------------------------------------------------------
 const NAV_ITEMS = [
   {
@@ -21,7 +22,20 @@ const NAV_ITEMS = [
         <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
-    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
+  },
+  // Notifications — visible to ALL roles, injected right after Overview
+  {
+    label: 'Notifications',
+    href: '/dashboard/notifications',
+    isNotifications: true, // flag so NavLink can render the live badge
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    ),
+    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
   },
   {
     section: 'Company',
@@ -53,7 +67,7 @@ const NAV_ITEMS = [
       },
     ],
   },
-  // New Vendors item (top‑level, after Company section)
+  // Vendors (top-level, after Company section)
   {
     label: 'Vendors',
     href: '/dashboard/vendors',
@@ -73,13 +87,23 @@ const NAV_ITEMS = [
       {
         label: 'RFQs',
         href: '/dashboard/rfqs',
-        
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2" />
             <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+        ),
+        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+      },
+      {
+        label: 'Contracts',
+        href: '/dashboard/contracts',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
         allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
@@ -92,37 +116,33 @@ const NAV_ITEMS = [
             <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
       },
     ],
   },
 ];
 
-// Helper to filter items based on user role
 function filterNavItems(items, userRole) {
-  if (!userRole) return items; // No filtering if no user
-
+  if (!userRole) return items;
   return items
     .map(item => {
       if (item.section) {
-        // Section: filter its items
         const filteredItems = filterNavItems(item.items, userRole);
-        if (filteredItems.length === 0) return null; // Hide empty sections
+        if (filteredItems.length === 0) return null;
         return { ...item, items: filteredItems };
-      } else {
-        // Single item: check allowedRoles
-        const allowed = item.allowedRoles ? item.allowedRoles.includes(userRole) : true;
-        return allowed ? item : null;
       }
+      const allowed = item.allowedRoles ? item.allowedRoles.includes(userRole) : true;
+      return allowed ? item : null;
     })
     .filter(Boolean);
 }
 
 export default function Sidebar({ company, user }) {
-  const pathname = usePathname();
+  const pathname     = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { unreadCount } = useNotifications();
 
-  const userRole = user?.role; // e.g., 'super_admin', 'company_admin', etc.
+  const userRole     = user?.role;
   const filteredItems = filterNavItems(NAV_ITEMS, userRole);
 
   function isActive(href, exact = false) {
@@ -206,7 +226,6 @@ export default function Sidebar({ company, user }) {
           font-family: 'DM Sans', sans-serif;
           font-size: .855rem;
           font-weight: 400;
-          border-radius: 0;
           transition: color .15s, background .15s;
           cursor: pointer;
           white-space: nowrap;
@@ -257,6 +276,17 @@ export default function Sidebar({ company, user }) {
           font-weight: 500;
           opacity: ${collapsed ? 0 : 1};
         }
+        /* Notification unread count badge — uses accent colour */
+        .nav-badge--notif {
+          font-size: .58rem;
+          background: var(--accent);
+          color: #fff;
+          padding: 1px 6px;
+          border-radius: 20px;
+          font-weight: 700;
+          opacity: ${collapsed ? 0 : 1};
+          transition: opacity .1s;
+        }
         .sidebar-footer {
           padding: ${collapsed ? '16px 0' : '16px 20px'};
           border-top: 1px solid rgba(255,255,255,.07);
@@ -298,7 +328,7 @@ export default function Sidebar({ company, user }) {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-mark">P</div>
-          <span className="sidebar-logo-text">ProcureIQ</span>
+          <span className="sidebar-logo-text">Procurexio</span>
         </div>
 
         <nav className="sidebar-nav">
@@ -313,6 +343,7 @@ export default function Sidebar({ company, user }) {
                       item={sub}
                       active={isActive(sub.href, sub.exact)}
                       collapsed={collapsed}
+                      unreadCount={sub.isNotifications ? unreadCount : 0}
                     />
                   ))}
                 </div>
@@ -324,6 +355,7 @@ export default function Sidebar({ company, user }) {
                 item={item}
                 active={isActive(item.href, item.exact)}
                 collapsed={collapsed}
+                unreadCount={item.isNotifications ? unreadCount : 0}
               />
             );
           })}
@@ -331,9 +363,16 @@ export default function Sidebar({ company, user }) {
 
         <div className="sidebar-footer">
           <span className="sidebar-company-name">{company?.name ?? 'Your Company'}</span>
-          <button className="collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
+          <button
+            className="collapse-btn"
+            onClick={() => setCollapsed(c => !c)}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'}
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -342,12 +381,20 @@ export default function Sidebar({ company, user }) {
   );
 }
 
-function NavLink({ item, active, collapsed }) {
+function NavLink({ item, active, collapsed, unreadCount = 0 }) {
   const cls = [
     'nav-item',
-    active ? 'nav-item--active' : '',
+    active  ? 'nav-item--active'   : '',
     item.disabled ? 'nav-item--disabled' : '',
   ].filter(Boolean).join(' ');
+
+  const badge = item.disabled ? (
+    <span className="nav-badge">Soon</span>
+  ) : unreadCount > 0 ? (
+    <span className="nav-badge--notif">
+      {unreadCount > 99 ? '99+' : unreadCount}
+    </span>
+  ) : null;
 
   if (item.disabled) {
     return (
@@ -363,6 +410,7 @@ function NavLink({ item, active, collapsed }) {
     <Link href={item.href} className={cls} title={collapsed ? item.label : undefined}>
       <span className="nav-icon">{item.icon}</span>
       <span className="nav-label">{item.label}</span>
+      {badge}
     </Link>
   );
 }

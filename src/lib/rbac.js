@@ -166,3 +166,16 @@ export function requirePermission(user, requiredPermissions = []) {
 export function requireRole(role, allowedRoles = []) {
   return allowedRoles.includes(role);
 }
+
+// ------------------------------------------------------------------
+// New helper function for RFQ management
+// ------------------------------------------------------------------
+
+/**
+ * Check if a role can manage RFQs (create, edit, award).
+ * @param {string} role
+ * @returns {boolean}
+ */
+export function canManageRFQ(role) {
+  return [ROLES.SUPER_ADMIN, ROLES.COMPANY_ADMIN, ROLES.MANAGER].includes(role);
+}

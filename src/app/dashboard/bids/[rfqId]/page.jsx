@@ -8,6 +8,81 @@ import BidItemsForm from '@/components/bids/BidItemsForm';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import Modal from '@/components/ui/Modal';
 
+// OutcomeBanner component (defined inside the file)
+function OutcomeBanner({ outcome }) {
+  if (!outcome || outcome.bidStatus === 'submitted' || outcome.bidStatus === 'draft') return null;
+
+  function fmt(amount, currency) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
+  }
+
+  const awarded = outcome.awarded;
+
+  return (
+    <>
+      <style>{`
+        .outcome-banner {
+          border-radius: 10px;
+          padding: 20px 24px;
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          font-family: 'DM Sans', sans-serif;
+          animation: fadeUp .3s ease both;
+        }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .outcome-banner.awarded {
+          background: #d1fae5;
+          border: 1px solid #6ee7b7;
+          color: #065f46;
+        }
+        .outcome-banner.rejected {
+          background: var(--surface, #faf9f7);
+          border: 1px solid var(--border, #e4e0db);
+          color: var(--ink-soft, #6b6660);
+        }
+        .outcome-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+        .outcome-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 1rem;
+          font-weight: 700;
+          letter-spacing: -.02em;
+          margin-bottom: 2px;
+        }
+        .outcome-sub { font-size: .85rem; opacity: .8; }
+        .outcome-amount {
+          margin-left: auto;
+          font-family: 'Syne', sans-serif;
+          font-size: 1.4rem;
+          font-weight: 700;
+          letter-spacing: -.02em;
+          flex-shrink: 0;
+        }
+      `}</style>
+
+      <div className={`outcome-banner ${awarded ? 'awarded' : 'rejected'}`}>
+        <div className="outcome-icon">{awarded ? '🎉' : '📋'}</div>
+        <div>
+          <div className="outcome-title">
+            {awarded ? 'You won this contract!' : 'Contract awarded to another vendor'}
+          </div>
+          <div className="outcome-sub">
+            {awarded
+              ? `Contract ref: ${outcome.contractReference || '—'}`
+              : 'Thank you for participating. This RFQ has been closed.'}
+          </div>
+        </div>
+        {awarded && outcome.totalAmount && (
+          <div className="outcome-amount">
+            {fmt(outcome.totalAmount, outcome.currency)}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
   const router    = useRouter();
@@ -21,6 +96,9 @@ export default function VendorBidWorkspacePage() {
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
+
+  // Outcome state (added per patch)
+  const [outcome, setOutcome] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -40,6 +118,14 @@ export default function VendorBidWorkspacePage() {
   }, [rfqId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Fetch outcome (added per patch)
+  useEffect(() => {
+    fetch(`/api/bids/rfqs/${rfqId}/outcome`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.data) setOutcome(d.data); })
+      .catch(() => {});
+  }, [rfqId]);
 
   const rfq = data?.rfq;
   const bid = data?.bid;
@@ -288,6 +374,9 @@ export default function VendorBidWorkspacePage() {
             {isPastDeadline && (
               <div className="warning-banner">⚠ The deadline for this RFQ has passed. Bid editing is locked.</div>
             )}
+
+            {/* Outcome Banner (added per patch) */}
+            <OutcomeBanner outcome={outcome} />
 
             {/* Bid section */}
             {!bid ? (

@@ -423,7 +423,7 @@ export default function LoginPage() {
                 <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
             </div>
-            <span className="logo-name">Procure<span>IQ</span></span>
+            <span className="logo-name">Procure<span>xio</span></span>
           </Link>
 
           <div className="form-header">

@@ -1,12 +1,16 @@
 'use client';
-// src/components/layout/TopBar.jsx
+// src/components/Layout/TopBar.jsx
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNotifications } from '@/context/NotificationContext';
 
 export default function TopBar({ user, title }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { unreadCount } = useNotifications();
+
+  const badgeLabel = unreadCount > 99 ? '99+' : unreadCount > 0 ? String(unreadCount) : null;
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -43,9 +47,53 @@ export default function TopBar({ user, title }) {
         .topbar-right {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           position: relative;
         }
+
+        /* ── Bell button ── */
+        .topbar-bell-btn {
+          position: relative;
+          background: none;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--ink-soft);
+          transition: background .15s, border-color .15s, color .15s;
+          flex-shrink: 0;
+        }
+        .topbar-bell-btn:hover {
+          background: var(--surface);
+          border-color: #d1ccc7;
+          color: var(--ink);
+        }
+        .topbar-bell-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          min-width: 16px;
+          height: 16px;
+          padding: 0 4px;
+          border-radius: 999px;
+          background: var(--accent);
+          color: #fff;
+          font-family: 'DM Sans', sans-serif;
+          font-size: .58rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          pointer-events: none;
+          border: 2px solid var(--white);
+        }
+
+        /* ── User button ── */
         .topbar-user-btn {
           display: flex;
           align-items: center;
@@ -102,6 +150,7 @@ export default function TopBar({ user, title }) {
           min-width: 180px;
           padding: 6px;
           animation: fadeDown .12s ease;
+          z-index: 20;
         }
         @keyframes fadeDown {
           from { opacity: 0; transform: translateY(-4px); }
@@ -138,6 +187,23 @@ export default function TopBar({ user, title }) {
         <span className="topbar-title">{title}</span>
 
         <div className="topbar-right">
+          {/* Bell / notifications */}
+          <button
+            className="topbar-bell-btn"
+            onClick={() => router.push('/dashboard/notifications')}
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+            title="Notifications"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {badgeLabel && (
+              <span className="topbar-bell-badge" aria-hidden="true">{badgeLabel}</span>
+            )}
+          </button>
+
+          {/* User menu */}
           <button className="topbar-user-btn" onClick={() => setMenuOpen(o => !o)}>
             <div className="topbar-avatar">{initials}</div>
             <div>

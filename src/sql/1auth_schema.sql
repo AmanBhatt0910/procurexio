@@ -51,7 +51,7 @@ VALUES (
   1,
   NULL,
   'Super Admin',
-  'admin@procureiq.com',
+  'admin@procurexio.com',
   '$2b$12$K7rdBF2oMQUCJFHFkYiH7OAfXZe5G9RkPkFNq4OHkGHqJhVRU3.Hy',
   'super_admin'
 );

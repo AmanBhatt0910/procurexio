@@ -1,9 +1,10 @@
 'use client';
-// src/components/layout/DashboardLayout.jsx
+// src/components/Layout/DashboardLayout.jsx
 
 import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import { NotificationProvider } from '@/context/NotificationContext';
 
 export default function DashboardLayout({ children, pageTitle }) {
   const [user,    setUser]    = useState(null);
@@ -18,7 +19,6 @@ export default function DashboardLayout({ children, pageTitle }) {
         ]);
         if (uRes.ok) {
           const u = await uRes.json();
-          // /api/auth/me returns { user: {...} } — not { data: {...} }
           setUser(u.user ?? u.data ?? null);
         }
         if (cRes.ok) {
@@ -31,7 +31,7 @@ export default function DashboardLayout({ children, pageTitle }) {
   }, []);
 
   return (
-    <>
+    <NotificationProvider>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
@@ -78,7 +78,7 @@ export default function DashboardLayout({ children, pageTitle }) {
       `}</style>
 
       <div className="dashboard-shell">
-        <Sidebar company={company} />
+        <Sidebar company={company} user={user} />
         <div className="dashboard-main">
           <TopBar user={user} title={pageTitle} />
           <main className="dashboard-content">
@@ -86,6 +86,6 @@ export default function DashboardLayout({ children, pageTitle }) {
           </main>
         </div>
       </div>
-    </>
+    </NotificationProvider>
   );
 }
