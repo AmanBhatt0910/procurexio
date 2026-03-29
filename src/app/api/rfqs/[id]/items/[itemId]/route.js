@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 
 async function loadEditableRfq(rfqId, companyId) {
-  const [rows] = await query(
+  const rows = await query(
     `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
     [rfqId, companyId]
   );
@@ -30,7 +30,7 @@ export async function PUT(request, { params }) {
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
   // Verify item belongs to this RFQ
-  const [itemRows] = await query(
+  const itemRows = await query(
     `SELECT * FROM rfq_items WHERE id = ? AND rfq_id = ? AND company_id = ?`,
     [itemId, id, companyId]
   );
@@ -60,8 +60,8 @@ export async function PUT(request, { params }) {
       [...Object.values(updates), itemId, id]
     );
 
-    const [updated] = await query(`SELECT * FROM rfq_items WHERE id = ?`, [itemId]);
-    return Response.json({ message: 'Item updated', data: { item: updated[0] } });
+    const updatedRows = await query(`SELECT * FROM rfq_items WHERE id = ?`, [itemId]);
+    return Response.json({ message: 'Item updated', data: { item: updatedRows[0] } });
   } catch (err) {
     console.error('PUT /api/rfqs/[id]/items/[itemId] error:', err);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
@@ -83,7 +83,7 @@ export async function DELETE(request, { params }) {
   if (check.error) return Response.json({ error: check.error }, { status: check.status });
 
   try {
-    const [result] = await query(
+    const result = await query(
       `DELETE FROM rfq_items WHERE id = ? AND rfq_id = ? AND company_id = ?`,
       [itemId, id, companyId]
     );

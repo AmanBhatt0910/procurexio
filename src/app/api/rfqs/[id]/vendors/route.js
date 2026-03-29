@@ -1,4 +1,3 @@
-// src/app/api/rfqs/[id]/vendors/route.js
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 
@@ -14,7 +13,7 @@ export async function GET(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    const [rfqRows] = await query(
+    const rfqRows = await query(
       `SELECT id FROM rfqs WHERE id = ? AND company_id = ?`,
       [id, companyId]
     );
@@ -22,7 +21,7 @@ export async function GET(request, { params }) {
       return Response.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
-    const [vendors] = await query(
+    const vendors = await query(
       `SELECT rv.id, rv.vendor_id, rv.status AS invite_status,
               rv.invited_at, rv.updated_at,
               v.name AS vendor_name, v.email AS vendor_email,
@@ -42,7 +41,6 @@ export async function GET(request, { params }) {
 }
 
 // ── POST /api/rfqs/[id]/vendors ─────────────────────────────────────────────
-// Body: { vendorIds: [id, id, ...] }
 export async function POST(request, { params }) {
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
@@ -64,7 +62,7 @@ export async function POST(request, { params }) {
 
   try {
     // Validate RFQ exists and is in an invitable state
-    const [rfqRows] = await query(
+    const rfqRows = await query(
       `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
       [id, companyId]
     );
@@ -81,13 +79,12 @@ export async function POST(request, { params }) {
 
     // Validate all vendorIds belong to the company and are active
     const placeholders = vendorIds.map(() => '?').join(', ');
-    const [vendorRows] = await query(
+    const vendorRows = await query(
       `SELECT id, name, status FROM vendors
         WHERE id IN (${placeholders}) AND company_id = ?`,
       [...vendorIds, companyId]
     );
 
-    // Build results map
     const found = new Map(vendorRows.map(v => [v.id, v]));
     const warnings = [];
     const toInvite = [];
@@ -109,8 +106,7 @@ export async function POST(request, { params }) {
     let skippedAlreadyInvited = 0;
 
     for (const vid of toInvite) {
-      // Use INSERT IGNORE to skip duplicates gracefully
-      const [result] = await query(
+      const result = await query(
         `INSERT IGNORE INTO rfq_vendors (rfq_id, vendor_id, company_id)
          VALUES (?, ?, ?)`,
         [id, vid, companyId]

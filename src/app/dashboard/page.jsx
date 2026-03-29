@@ -1,31 +1,34 @@
 'use client';
-// src/app/dashboard/page.jsx
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Badge from '@/components/ui/Badge';
 
-const STAT_PLACEHOLDERS = [
-  { label: 'Total Vendors',   value: '—', icon: '🏢', note: 'Module 3' },
-  { label: 'Active RFQs',     value: '—', icon: '📋', note: 'Module 4' },
-  { label: 'Open Bids',       value: '—', icon: '⭐', note: 'Module 5' },
-  { label: 'Awarded Contracts', value: '—', icon: '✅', note: 'Module 6' },
-];
-
 export default function DashboardPage() {
   const [company, setCompany] = useState(null);
-  const [users, setUsers]     = useState([]);
+  const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState({
+    vendors: null,
+    activeRfqs: null,
+    openBids: null,
+    awardedContracts: null,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [cRes, uRes] = await Promise.all([
+        const [cRes, uRes, sRes] = await Promise.all([
           fetch('/api/company'),
           fetch('/api/company/users'),
+          fetch('/api/dashboard/stats'),
         ]);
-        if (cRes.ok)  setCompany((await cRes.json()).data);
-        if (uRes.ok)  setUsers((await uRes.json()).data);
+
+        if (cRes.ok) setCompany((await cRes.json()).data);
+        if (uRes.ok) setUsers((await uRes.json()).data);
+        if (sRes.ok) setStats((await sRes.json()).data);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
       } finally {
         setLoading(false);
       }
@@ -33,9 +36,13 @@ export default function DashboardPage() {
     load();
   }, []);
 
+  // Helper to display count or placeholder
+  const formatCount = (value) => (value !== null ? value : '—');
+
   return (
     <DashboardLayout pageTitle="Dashboard">
       <style>{`
+        /* (keep existing styles, unchanged) */
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
         .overview-grid {
@@ -219,7 +226,7 @@ export default function DashboardPage() {
         <div className="welcome-banner">
           <div>
             <div className="welcome-text">Welcome back to {company.name}</div>
-            <div className="welcome-sub">Here's a summary of your procurement workspace.</div>
+            <div className="welcome-sub">Here&apos;s a summary of your procurement workspace.</div>
           </div>
           <a href="/dashboard/company" className="welcome-btn">Manage Company →</a>
         </div>
@@ -241,7 +248,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stats row */}
+      {/* Stats row – now using real data */}
       <div className="overview-grid">
         <div className="stat-card">
           <div className="stat-card-label">Team Members</div>
@@ -249,17 +256,37 @@ export default function DashboardPage() {
           <div className="stat-card-note">Active users</div>
           <div className="stat-card-icon">👥</div>
         </div>
-        {STAT_PLACEHOLDERS.map((s) => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-card-label">{s.label}</div>
-            <div className="stat-card-value" style={{ color: 'var(--ink-faint)' }}>{s.value}</div>
-            <div className="stat-card-note">Coming in {s.note}</div>
-            <div className="stat-card-icon">{s.icon}</div>
-          </div>
-        ))}
+
+        <div className="stat-card">
+          <div className="stat-card-label">Total Vendors</div>
+          <div className="stat-card-value">{loading ? '—' : formatCount(stats.vendors)}</div>
+          <div className="stat-card-note">Registered vendors</div>
+          <div className="stat-card-icon">🏢</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-label">Active RFQs</div>
+          <div className="stat-card-value">{loading ? '—' : formatCount(stats.activeRfqs)}</div>
+          <div className="stat-card-note">Open for bidding</div>
+          <div className="stat-card-icon">📋</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-label">Open Bids</div>
+          <div className="stat-card-value">{loading ? '—' : formatCount(stats.openBids)}</div>
+          <div className="stat-card-note">Submitted, awaiting evaluation</div>
+          <div className="stat-card-icon">⭐</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-label">Awarded Contracts</div>
+          <div className="stat-card-value">{loading ? '—' : formatCount(stats.awardedContracts)}</div>
+          <div className="stat-card-note">Active agreements</div>
+          <div className="stat-card-icon">✅</div>
+        </div>
       </div>
 
-      {/* Recent users panel */}
+      {/* Rest of the page remains unchanged: Team + Modules sections */}
       <div className="two-col">
         <div>
           <div className="section-title">Team</div>
