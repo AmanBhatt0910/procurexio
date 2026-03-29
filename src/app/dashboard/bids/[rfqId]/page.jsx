@@ -160,7 +160,6 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid created! Fill in your prices below.');
       await fetchData(companyCurrency);
-      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -180,7 +179,6 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid saved successfully.');
       await fetchData(companyCurrency);
-      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -204,7 +202,6 @@ export default function VendorBidWorkspacePage() {
       setSuccess('Bid submitted successfully!');
       setConfirmModal({ open: false, action: '' });
       await fetchData(companyCurrency);
-      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -221,7 +218,6 @@ export default function VendorBidWorkspacePage() {
       setSuccess('Bid withdrawn.');
       setConfirmModal({ open: false, action: '' });
       await fetchData(companyCurrency);
-      await fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
