@@ -1,5 +1,3 @@
-// src/app/dashboard/bids/page.jsx:
-
 'use client';
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
@@ -10,26 +8,24 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import { useRouter } from 'next/navigation';
 
 export default function VendorBidsPage() {
-  const [rfqs, setRfqs]       = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
+  const [rfqs, setRfqs]           = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [companyCurrency, setCompanyCurrency] = useState('USD');
   const router = useRouter();
 
-  useEffect(() => { fetchRFQs(); }, []);
-
-  async function fetchRFQs() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/bids/rfqs');
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to load');
-      setRfqs(json.data.rfqs);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    // Fetch company currency setting alongside RFQs
+    Promise.all([
+      fetch('/api/bids/rfqs').then(r => r.json()),
+      fetch('/api/company/settings').then(r => r.ok ? r.json() : null),
+    ]).then(([rfqJson, settingsJson]) => {
+      if (rfqJson.data?.rfqs) setRfqs(rfqJson.data.rfqs);
+      else setError(rfqJson.error || 'Failed to load');
+      if (settingsJson?.data?.currency) setCompanyCurrency(settingsJson.data.currency);
+    }).catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
 
@@ -52,7 +48,7 @@ export default function VendorBidsPage() {
     {
       key: 'deadline',
       label: 'Deadline',
-      render: (val, row) => {
+      render: (val) => {
         if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
         const past = isPastDeadline(val);
         return (
@@ -72,11 +68,16 @@ export default function VendorBidsPage() {
     {
       key: 'total_amount',
       label: 'Bid Total',
-      render: (val, row) => val ? (
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-          {row.currency} {parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </span>
-      ) : <span style={{ color: 'var(--ink-faint)' }}>—</span>,
+      render: (val, row) => {
+        if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
+        // Use row currency, fall back to company currency, then USD
+        const currency = row?.currency || companyCurrency || 'USD';
+        return (
+          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+            {currency} {parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          </span>
+        );
+      },
     },
     {
       key: 'id',

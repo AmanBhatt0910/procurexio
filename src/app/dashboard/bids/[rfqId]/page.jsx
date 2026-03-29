@@ -96,11 +96,12 @@ export default function VendorBidWorkspacePage() {
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
+  const [companyCurrency, setCompanyCurrency] = useState('USD');
 
   // Outcome state (added per patch)
   const [outcome, setOutcome] = useState(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (overrideCurrency) => {
     try {
       const res = await fetch(`/api/bids/rfqs/${rfqId}`);
       const json = await res.json();
@@ -108,7 +109,11 @@ export default function VendorBidWorkspacePage() {
       setData(json.data);
       if (json.data.bid) {
         setNotes(json.data.bid.notes || '');
-        setCurrency(json.data.bid.currency || 'USD');
+        // Use saved bid currency, then company currency, then USD
+        setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
+      } else {
+        // No bid yet — pre-select company currency
+        setCurrency(overrideCurrency || 'USD');
       }
     } catch (e) {
       setError(e.message);
@@ -117,15 +122,21 @@ export default function VendorBidWorkspacePage() {
     }
   }, [rfqId]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Fetch outcome (added per patch)
   useEffect(() => {
-    fetch(`/api/bids/rfqs/${rfqId}/outcome`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.data) setOutcome(d.data); })
-      .catch(() => {});
-  }, [rfqId]);
+    // Fetch company settings first, then load RFQ data with the correct currency default
+    Promise.all([
+      fetch('/api/company/settings').then(r => r.ok ? r.json() : null),
+      fetch(`/api/bids/rfqs/${rfqId}/outcome`).then(r => r.ok ? r.json() : null),
+    ]).then(([settingsJson, outcomeJson]) => {
+      const resolved = settingsJson?.data?.currency || 'USD';
+      setCompanyCurrency(resolved);
+      if (outcomeJson?.data) setOutcome(outcomeJson.data);
+      // Now fetch RFQ data, passing the resolved currency so the fallback is correct
+      fetchData(resolved);
+    }).catch(() => {
+      fetchData('USD');
+    });
+  }, [rfqId, fetchData]);
 
   const rfq = data?.rfq;
   const bid = data?.bid;
@@ -148,6 +159,7 @@ export default function VendorBidWorkspacePage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid created! Fill in your prices below.');
+      await fetchData(companyCurrency);
       await fetchData();
     } catch (e) {
       setError(e.message);
@@ -167,6 +179,7 @@ export default function VendorBidWorkspacePage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid saved successfully.');
+      await fetchData(companyCurrency);
       await fetchData();
     } catch (e) {
       setError(e.message);
@@ -190,6 +203,7 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid submitted successfully!');
       setConfirmModal({ open: false, action: '' });
+      await fetchData(companyCurrency);
       await fetchData();
     } catch (e) {
       setError(e.message);
@@ -206,6 +220,7 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid withdrawn.');
       setConfirmModal({ open: false, action: '' });
+      await fetchData(companyCurrency);
       await fetchData();
     } catch (e) {
       setError(e.message);
@@ -410,9 +425,8 @@ export default function VendorBidWorkspacePage() {
                       onChange={e => setCurrency(e.target.value)}
                       disabled={!canEdit}
                     >
-                      {['USD','EUR','GBP','INR','AED','SGD','CAD','AUD'].map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
+                        .map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{ flex: 3 }}>
