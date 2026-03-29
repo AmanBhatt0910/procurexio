@@ -20,7 +20,6 @@ export default function VendorBidsPage() {
       .then(rfqJson => {
         if (rfqJson.data?.rfqs) setRfqs(rfqJson.data.rfqs);
         else setError(rfqJson.error || 'Failed to load');
-        // Currency now comes from the RFQ API — no separate settings call needed
         if (rfqJson.data?.companyCurrency) setCompanyCurrency(rfqJson.data.companyCurrency);
       })
       .catch(e => setError(e.message))
@@ -29,21 +28,28 @@ export default function VendorBidsPage() {
 
   const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
 
+  // ✅ All render functions use (val, row) signature — row is always the full
+  //    object. Never access properties on val when you need the full row.
   const columns = [
     {
       key: 'reference_number',
       label: 'Reference',
       render: (val) => (
         <span style={{ fontFamily: 'monospace', fontSize: '.82rem', color: 'var(--ink-soft)', fontWeight: 600 }}>
-          {val}
+          {val ?? '—'}
         </span>
       ),
     },
-    { key: 'title', label: 'RFQ Title', render: (val) => <span style={{ fontWeight: 500 }}>{val}</span> },
+    {
+      key: 'title',
+      label: 'RFQ Title',
+      // ✅ null-safe: show em-dash if title is missing
+      render: (val) => <span style={{ fontWeight: 500 }}>{val ?? '—'}</span>,
+    },
     {
       key: 'rfq_status',
       label: 'RFQ Status',
-      render: (val) => <RFQStatusBadge status={val} />,
+      render: (val) => val ? <RFQStatusBadge status={val} /> : <span style={{ color: 'var(--ink-faint)' }}>—</span>,
     },
     {
       key: 'deadline',
@@ -53,7 +59,8 @@ export default function VendorBidsPage() {
         const past = isPastDeadline(val);
         return (
           <span style={{ color: past ? 'var(--accent)' : 'var(--ink)', fontSize: '.86rem' }}>
-            {past && '⚠ '}{new Date(val).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+            {past && '⚠ '}
+            {new Date(val).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
         );
       },
@@ -61,16 +68,16 @@ export default function VendorBidsPage() {
     {
       key: 'bid_status',
       label: 'My Bid',
-      render: (val) => val ? <BidStatusBadge status={val} /> : (
-        <span style={{ color: 'var(--ink-faint)', fontSize: '.82rem' }}>Not started</span>
-      ),
+      render: (val) => val
+        ? <BidStatusBadge status={val} />
+        : <span style={{ color: 'var(--ink-faint)', fontSize: '.82rem' }}>Not started</span>,
     },
     {
       key: 'total_amount',
       label: 'Bid Total',
+      // ✅ use (val, row) so we can read row.currency safely
       render: (val, row) => {
-        if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
-        // Use row currency, fall back to company currency, then USD
+        if (val == null) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
         const currency = row?.currency || companyCurrency || 'USD';
         return (
           <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
@@ -82,16 +89,20 @@ export default function VendorBidsPage() {
     {
       key: 'id',
       label: '',
+      // ✅ use (val, row) to read bid_status from the full row, not from `val`
+      //    (val here would be row.id — a number, not an object)
       render: (val, row) => (
         <button
-          onClick={() => router.push(`/dashboard/bids/${row.id}`)}
+          onClick={() => router.push(`/dashboard/bids/${val}`)}
           style={{
             padding: '6px 16px', background: 'var(--ink)', color: '#fff',
             border: 'none', borderRadius: 6, fontSize: '.8rem',
             fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          {row.bid_status === 'submitted' ? 'View' : row.bid_status === 'draft' ? 'Continue' : 'Open'}
+          {row?.bid_status === 'submitted' ? 'View'
+            : row?.bid_status === 'draft'     ? 'Continue'
+            : 'Open'}
         </button>
       ),
     },

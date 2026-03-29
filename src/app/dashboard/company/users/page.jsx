@@ -1,9 +1,5 @@
 'use client';
 // src/app/dashboard/company/users/page.jsx
-//
-// Team Members management page.
-// vendor_user is intentionally excluded — vendors are invited from
-// the Vendor detail page (dashboard/vendors/[id]) instead.
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -12,21 +8,29 @@ import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 
-// vendor_user deliberately omitted — vendor invites go through the Vendors module
 const ROLES = ['company_admin', 'manager', 'employee'];
+
+function getInitials(name) {
+  if (!name) return '??';
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export default function UsersPage() {
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
 
-  // Invite modal
   const [inviteOpen,  setInviteOpen]  = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole,  setInviteRole]  = useState('employee');
   const [inviting,    setInviting]    = useState(false);
 
-  // Edit role modal
   const [editUser,   setEditUser]   = useState(null);
   const [editRole,   setEditRole]   = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -95,6 +99,7 @@ export default function UsersPage() {
   }
 
   function formatDate(dateStr) {
+    if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
     });
@@ -117,10 +122,11 @@ export default function UsersPage() {
             fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.64rem',
             color: 'var(--ink-soft)', flexShrink: 0,
           }}>
-            {row.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+            {/* ✅ null-safe initials via helper */}
+            {getInitials(row.name)}
           </div>
           <div>
-            <div style={{ fontWeight: 500, fontSize: '.87rem' }}>{row.name}</div>
+            <div style={{ fontWeight: 500, fontSize: '.87rem' }}>{row.name || '—'}</div>
             <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{row.email}</div>
           </div>
         </div>
@@ -147,7 +153,6 @@ export default function UsersPage() {
       label: '',
       width: 80,
       render: (row) => (
-        // Don't allow editing vendor_user accounts from here
         row.role === 'vendor_user' ? null : (
           <button
             onClick={() => openEdit(row)}
@@ -283,11 +288,12 @@ export default function UsersPage() {
                 fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.7rem',
                 color: '#fff', flexShrink: 0,
               }}>
-                {editUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                {/* ✅ null-safe initials in modal too */}
+                {getInitials(editUser.name)}
               </div>
               <div>
                 <div style={{ fontWeight: 500, fontSize: '.9rem', fontFamily: 'DM Sans' }}>
-                  {editUser.name}
+                  {editUser.name || '—'}
                 </div>
                 <div style={{ fontSize: '.78rem', color: 'var(--ink-faint)', fontFamily: 'DM Sans' }}>
                   {editUser.email}

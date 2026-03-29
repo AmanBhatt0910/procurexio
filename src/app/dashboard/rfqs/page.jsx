@@ -17,8 +17,11 @@ function formatDate(d) {
 }
 
 function formatCurrency(value, currency = 'USD') {
-  if (!value && value !== 0) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+  // ✅ Guard: value must be a real number — null/undefined/0 all return '—'
+  if (value == null || value === '') return '—';
+  const num = parseFloat(value);
+  if (isNaN(num)) return '—';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 0 }).format(num);
 }
 
 const pageBtn = {
@@ -68,33 +71,34 @@ export default function RFQsPage() {
     fetchRfqs(page);
   }, [status, search, page, fetchRfqs]);
 
-  // Memoize so canWrite closure is always fresh after auth resolves
   const columns = useMemo(() => [
     {
       key: 'reference_number',
       label: 'Reference',
       render: (row) => (
         <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {row.reference_number}
+          {row.reference_number || '—'}
         </span>
       ),
     },
     {
       key: 'title',
       label: 'Title',
-      render: (row) => <span style={{ fontWeight: 500 }}>{row.title}</span>,
+      render: (row) => <span style={{ fontWeight: 500 }}>{row.title || '—'}</span>,
     },
     {
       key: 'status',
       label: 'Status',
-      render: (row) => <RFQStatusBadge status={row.status} />,
+      render: (row) => row.status ? <RFQStatusBadge status={row.status} /> : null,
     },
     {
       key: 'deadline',
       label: 'Deadline',
       render: (row) => {
         if (!row.deadline) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
-        const isOverdue = new Date(row.deadline) < new Date() && !['closed', 'cancelled'].includes(row.status);
+        // ✅ Guard status before calling .includes() — it could be null
+        const safeStatus = row.status || '';
+        const isOverdue = new Date(row.deadline) < new Date() && !['closed', 'cancelled'].includes(safeStatus);
         return (
           <span style={{ color: isOverdue ? 'var(--accent)' : 'var(--ink)', fontWeight: isOverdue ? 600 : 400 }}>
             {formatDate(row.deadline)}{isOverdue && ' ⚠'}
@@ -110,22 +114,38 @@ export default function RFQsPage() {
     {
       key: 'item_count',
       label: 'Items',
-      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.item_count}</span>,
+      render: (row) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
+          {row.item_count ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'vendor_count',
       label: 'Vendors',
-      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.vendor_count}</span>,
+      render: (row) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
+          {row.vendor_count ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'created_by_name',
       label: 'Created By',
-      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{row.created_by_name}</span>,
+      render: (row) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
+          {row.created_by_name || '—'}
+        </span>
+      ),
     },
     {
       key: 'created_at',
       label: 'Created',
-      render: (row) => <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>{formatDate(row.created_at)}</span>,
+      render: (row) => (
+        <span style={{ fontSize: '.82rem', color: 'var(--ink-faint)' }}>
+          {formatDate(row.created_at)}
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -148,7 +168,6 @@ export default function RFQsPage() {
     },
   ], [canWrite, router]);
 
-  // ✅ action must be JSX, not a plain object {label, onClick}
   const addBtn = !authLoading && canWrite ? (
     <button
       onClick={() => router.push('/dashboard/rfqs/new')}

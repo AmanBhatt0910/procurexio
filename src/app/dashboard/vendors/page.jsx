@@ -18,7 +18,6 @@ export default function VendorsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
-  // Only compute canWrite after auth has resolved so the button actually appears.
   const canWrite =
     !authLoading &&
     !!user &&
@@ -30,13 +29,11 @@ export default function VendorsPage() {
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [toast,      setToast]      = useState(null);
 
-  // Filters
   const [search,   setSearch]   = useState('');
   const [status,   setStatus]   = useState('');
   const [category, setCategory] = useState('');
   const [page,     setPage]     = useState(1);
 
-  // Deactivate confirm modal
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating,     setDeactivating]     = useState(false);
 
@@ -45,7 +42,6 @@ export default function VendorsPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  // Debounced search
   const [searchInput, setSearchInput] = useState('');
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
@@ -94,35 +90,37 @@ export default function VendorsPage() {
     }
   }
 
-  // ⚠️ Wrap columns in useMemo so the canWrite closure is always the latest
-  // value. Without this, canWrite is captured as `false` on first render
-  // and the Deactivate button never appears even after auth resolves.
   const columns = useMemo(() => [
     {
       key: 'name',
       label: 'Vendor',
-      render: (row) => (
-        <div
-          onClick={() => router.push(`/dashboard/vendors/${row.id}`)}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-        >
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.62rem',
-            color: 'var(--ink-soft)', flexShrink: 0,
-          }}>
-            {row.name.slice(0, 2).toUpperCase()}
+      render: (row) => {
+        // ✅ null-safe: guard against missing name before calling .slice()
+        const name = row.name || '';
+        const initials = name.slice(0, 2).toUpperCase() || '??';
+        return (
+          <div
+            onClick={() => router.push(`/dashboard/vendors/${row.id}`)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.62rem',
+              color: 'var(--ink-soft)', flexShrink: 0,
+            }}>
+              {initials}
+            </div>
+            <div>
+              <div style={{ fontWeight: 500, fontSize: '.875rem', color: 'var(--ink)' }}>{name || '—'}</div>
+              {row.email && (
+                <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{row.email}</div>
+              )}
+            </div>
           </div>
-          <div>
-            <div style={{ fontWeight: 500, fontSize: '.875rem', color: 'var(--ink)' }}>{row.name}</div>
-            {row.email && (
-              <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{row.email}</div>
-            )}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'status',
@@ -191,11 +189,8 @@ export default function VendorsPage() {
         </div>
       ),
     },
-  // Re-derive columns whenever canWrite or router changes
   ], [canWrite, router, setDeactivateTarget]);
 
-  // addBtn is also derived from canWrite — same concern, keep it in render scope
-  // (it's not memoised, it's just JSX computed each render which is fine)
   const addBtn = !authLoading ? (
     canWrite ? (
       <button
