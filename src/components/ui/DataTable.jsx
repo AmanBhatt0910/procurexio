@@ -89,7 +89,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage = 'No d
                   <tr key={row.id ?? i} className="dt-tr">
                     {columns.map((col) => (
                       <td key={col.key} className="dt-td">
-                        {col.render ? col.render(row) : row[col.key] ?? '—'}
+                        {col.render ? col.render(row[col.key], row) : row[col.key] ?? '—'}
                       </td>
                     ))}
                   </tr>
