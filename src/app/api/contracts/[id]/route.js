@@ -1,5 +1,5 @@
 // src/app/api/contracts/[id]/route.js
-import { db } from '@/lib/db';
+import db from '@/lib/db';
 
 export async function GET(request, { params }) {
   const { id } = await params;

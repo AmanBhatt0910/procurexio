@@ -1,5 +1,5 @@
 // src/app/api/rfqs/[id]/bids/[bidId]/evaluate/route.js
-import { db } from '@/lib/db';
+import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
 
 export async function POST(request, { params }) {

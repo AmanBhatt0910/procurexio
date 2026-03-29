@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import ContractCard from '@/components/award/ContractCard';
 import RoleGuard from '@/components/auth/RoleGuard';
-import useAuth from '@/hooks/useAuth';
+import {useAuth} from '@/hooks/useAuth';
 
 function fmt(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
