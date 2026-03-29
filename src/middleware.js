@@ -89,6 +89,7 @@ export async function middleware(request) {
   requestHeaders.set('x-user-id',    String(decoded.userId));
   requestHeaders.set('x-company-id', String(decoded.companyId ?? ''));
   requestHeaders.set('x-user-role',  decoded.role);
+  requestHeaders.set('x-user-name',  decoded.name ?? '');   // ← added: used by invite email
 
   return NextResponse.next({ request: { headers: requestHeaders } });
 }

@@ -5,3 +5,4 @@ mysql -u root -p procurement_db < 2vendor_schema.sql
 mysql -u root -p procurement_db < 3rfq_schema.sql
 mysql -u root -p procurement_db < 4bidding_schema.sql
 mysql -u root -p procurement_db < 5evaluation_schema.sql
+mysql -u root -p procurement_db < 6notification_schema.sql
