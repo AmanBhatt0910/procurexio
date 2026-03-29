@@ -51,6 +51,12 @@ export async function GET(request) {
     const vendorId  = userRows[0].vendor_id;
     const companyId = userRows[0].company_id;
 
+    const [[settingsRow]] = await pool.query(
+      `SELECT currency FROM company_settings WHERE company_id = ? LIMIT 1`,
+      [companyId]
+    );
+    const companyCurrency = settingsRow?.currency || 'USD';
+
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total
          FROM rfq_vendors rv
@@ -83,6 +89,7 @@ export async function GET(request) {
       data: {
         rfqs: rows,
         vendorId,
+        companyCurrency,
         pagination: { page, limit, total: Number(total), pages: Math.ceil(Number(total) / limit) },
       },
     });

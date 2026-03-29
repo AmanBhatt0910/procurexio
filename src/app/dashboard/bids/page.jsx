@@ -15,15 +15,15 @@ export default function VendorBidsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Fetch company currency setting alongside RFQs
-    Promise.all([
-      fetch('/api/bids/rfqs').then(r => r.json()),
-      fetch('/api/company/settings').then(r => r.ok ? r.json() : null),
-    ]).then(([rfqJson, settingsJson]) => {
-      if (rfqJson.data?.rfqs) setRfqs(rfqJson.data.rfqs);
-      else setError(rfqJson.error || 'Failed to load');
-      if (settingsJson?.data?.currency) setCompanyCurrency(settingsJson.data.currency);
-    }).catch(e => setError(e.message))
+    fetch('/api/bids/rfqs')
+      .then(r => r.json())
+      .then(rfqJson => {
+        if (rfqJson.data?.rfqs) setRfqs(rfqJson.data.rfqs);
+        else setError(rfqJson.error || 'Failed to load');
+        // Currency now comes from the RFQ API — no separate settings call needed
+        if (rfqJson.data?.companyCurrency) setCompanyCurrency(rfqJson.data.companyCurrency);
+      })
+      .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
