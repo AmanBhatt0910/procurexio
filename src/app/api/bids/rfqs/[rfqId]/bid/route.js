@@ -3,10 +3,8 @@ import pool from '@/lib/db';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
-    `SELECT u.id, u.company_id, v.id AS vendor_id
+    `SELECT u.id, u.company_id, u.vendor_id
      FROM users u
-     LEFT JOIN vendor_contacts vc ON vc.email = u.email AND vc.company_id = u.company_id
-     LEFT JOIN vendors v ON v.id = vc.vendor_id AND v.company_id = u.company_id
      WHERE u.id = ? LIMIT 1`,
     [userId]
   );
