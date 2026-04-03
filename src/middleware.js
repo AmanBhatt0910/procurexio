@@ -19,12 +19,14 @@ import { jwtVerify } from 'jose';
  * prefix → { roles: string[] | 'any' }
  */
 const PROTECTED_ROUTES = {
-  '/dashboard':     { roles: 'any' },
-  '/rfq':           { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
-  '/vendors':       { roles: ['super_admin', 'company_admin', 'manager'] },
-  '/bids':          { roles: ['super_admin', 'company_admin', 'manager', 'vendor_user'] },
-  '/admin':         { roles: ['super_admin'] },
-  '/vendor-portal': { roles: ['vendor_user'] },
+  '/dashboard/bids':    { roles: ['vendor_user'] },
+  '/dashboard/vendors': { roles: ['super_admin', 'company_admin', 'manager'] },
+  '/dashboard/rfqs':    { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
+  '/dashboard':         { roles: 'any' },
+  '/rfq':               { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
+  '/vendors':           { roles: ['super_admin', 'company_admin', 'manager'] },
+  '/admin':             { roles: ['super_admin'] },
+  '/vendor-portal':     { roles: ['vendor_user'] },
 };
 
 const PUBLIC_PREFIXES = [
