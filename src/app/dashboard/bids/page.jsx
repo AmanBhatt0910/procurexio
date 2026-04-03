@@ -1,11 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
-import { useRouter } from 'next/navigation';
+import RoleGuard from '@/components/auth/RoleGuard';
+
+function RedirectToDashboard() {
+  const router = useRouter();
+  useEffect(() => { router.replace('/dashboard'); }, [router]);
+  return null;
+}
 
 export default function VendorBidsPage() {
   const [rfqs, setRfqs]           = useState([]);
@@ -109,43 +116,45 @@ export default function VendorBidsPage() {
   ];
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
-        :root {
-          --ink:#0f0e0d;--ink-soft:#6b6660;--ink-faint:#b8b3ae;
-          --surface:#faf9f7;--white:#ffffff;--accent:#c8501a;--accent-h:#a83e12;
-          --border:#e4e0db;--radius:10px;
-          --shadow:0 1px 3px rgba(15,14,13,.06),0 8px 32px rgba(15,14,13,.08);
-        }
-        body { font-family: 'DM Sans', sans-serif; }
-        .error-box {
-          background: #fdf0eb; border: 1px solid #f5c9b6; border-radius: var(--radius);
-          padding: 14px 18px; color: var(--accent); font-size: .88rem; margin-bottom: 20px;
-        }
-        .info-banner {
-          background: #f0f5ff; border: 1px solid #c3d5f8; border-radius: var(--radius);
-          padding: 12px 18px; color: #2d5bb8; font-size: .85rem; margin-bottom: 20px;
-        }
-      `}</style>
-      <DashboardLayout>
-        <PageHeader
-          title="My Bid Invitations"
-          subtitle="RFQs you have been invited to respond to"
-        />
-        {error && <div className="error-box">{error}</div>}
-        {!loading && rfqs.length === 0 && !error && (
-          <div className="info-banner">
-            You haven&apos;t been invited to any open RFQs yet. Check back later.
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          rows={rfqs}
-          loading={loading}
-          emptyMessage="No RFQ invitations found"
-        />
-      </DashboardLayout>
-    </>
+    <RoleGuard roles={['vendor_user']} fallback={<RedirectToDashboard />}>
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
+          :root {
+            --ink:#0f0e0d;--ink-soft:#6b6660;--ink-faint:#b8b3ae;
+            --surface:#faf9f7;--white:#ffffff;--accent:#c8501a;--accent-h:#a83e12;
+            --border:#e4e0db;--radius:10px;
+            --shadow:0 1px 3px rgba(15,14,13,.06),0 8px 32px rgba(15,14,13,.08);
+          }
+          body { font-family: 'DM Sans', sans-serif; }
+          .error-box {
+            background: #fdf0eb; border: 1px solid #f5c9b6; border-radius: var(--radius);
+            padding: 14px 18px; color: var(--accent); font-size: .88rem; margin-bottom: 20px;
+          }
+          .info-banner {
+            background: #f0f5ff; border: 1px solid #c3d5f8; border-radius: var(--radius);
+            padding: 12px 18px; color: #2d5bb8; font-size: .85rem; margin-bottom: 20px;
+          }
+        `}</style>
+        <DashboardLayout>
+          <PageHeader
+            title="My Bid Invitations"
+            subtitle="RFQs you have been invited to respond to"
+          />
+          {error && <div className="error-box">{error}</div>}
+          {!loading && rfqs.length === 0 && !error && (
+            <div className="info-banner">
+              You haven&apos;t been invited to any open RFQs yet. Check back later.
+            </div>
+          )}
+          <DataTable
+            columns={columns}
+            rows={rfqs}
+            loading={loading}
+            emptyMessage="No RFQ invitations found"
+          />
+        </DashboardLayout>
+      </>
+    </RoleGuard>
   );
 }
