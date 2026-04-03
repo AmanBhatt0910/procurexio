@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter }           from 'next/navigation';
-import DashboardLayout         from '@/components/layout/DashboardLayout';
+import DashboardLayout         from '@/components/Layout/DashboardLayout';
 import PageHeader              from '@/components/ui/PageHeader';
 
 const STATUSES = ['pending', 'active', 'inactive'];
@@ -26,8 +26,8 @@ export default function NewVendorPage() {
 
   // ── Vendor form state ─────────────────────────────────────────────────────
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', address: '',
-    status: 'pending', notes: '',
+    name: '', email: '', phone: '', gst: '', address: '',
+    status: 'active', notes: '',
   });
   const [categories,    setCategories]    = useState([]);
   const [selectedCats,  setSelectedCats]  = useState([]);
@@ -471,13 +471,14 @@ export default function NewVendorPage() {
                 </div>
 
                 <div className="field">
-                  <label className="field-label">Website <span>(optional)</span></label>
+                  <label className="field-label">GST Number <span>(optional)</span></label>
                   <input
                     className="field-input"
-                    type="url"
-                    value={form.website}
-                    onChange={e => setField('website', e.target.value)}
-                    placeholder="https://vendor.com"
+                    type="text"
+                    value={form.gst}
+                    onChange={e => setField('gst', e.target.value)}
+                    placeholder="e.g. 22AAAAA0000A1Z5"
+                    maxLength={15}
                   />
                 </div>
 

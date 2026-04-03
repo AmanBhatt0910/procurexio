@@ -80,7 +80,7 @@ export async function POST(request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await request.json();
-  const { name, email, phone, website, address, status = 'pending', notes, category_ids = [] } = body;
+  const { name, email, phone, gst, website, address, status = 'active', notes, category_ids = [] } = body;
 
   if (!name?.trim()) return Response.json({ error: 'Vendor name is required' }, { status: 400 });
 
@@ -92,7 +92,7 @@ export async function POST(request) {
       `INSERT INTO vendors (company_id, name, email, phone, website, address, status, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [companyId, name.trim(), email?.trim().toLowerCase() || null, phone?.trim() || null,
-       website?.trim() || null, address?.trim() || null, status, notes?.trim() || null]
+       (gst?.trim() || website?.trim() || null), address?.trim() || null, status, notes?.trim() || null]
     );
     const vendorId = result.insertId;
 

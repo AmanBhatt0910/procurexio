@@ -1,6 +1,22 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { jwtVerify } from 'jose';
 
-export default function Home() {
+export default async function Home() {
+  // If user has a valid auth token, redirect to dashboard
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value;
+  if (token) {
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      await jwtVerify(token, secret);
+      redirect('/dashboard');
+    } catch {
+      // Invalid or expired token — show landing page
+    }
+  }
+
   return (
     <>
       <style>{`

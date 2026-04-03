@@ -13,7 +13,10 @@ export default function RFQBidsPage() {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
-  const [activeTab, setActiveTab] = useState('comparison'); // 'comparison' | 'list'
+  const [activeTab, setActiveTab] = useState('comparison'); // 'comparison' | 'list' | 'report'
+  const [report, setReport]   = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError]     = useState('');
 
   const fetchBids = useCallback(async () => {
     try {
@@ -29,6 +32,37 @@ export default function RFQBidsPage() {
   }, [rfqId]);
 
   useEffect(() => { fetchBids(); }, [fetchBids]);
+
+  const fetchReport = async () => {
+    setReportLoading(true);
+    setReportError('');
+    try {
+      const res = await fetch(`/api/rfqs/${rfqId}/report`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to generate report');
+      setReport(json.data);
+    } catch (e) {
+      setReportError(e.message);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleReportTab = () => {
+    setActiveTab('report');
+    if (!report) fetchReport();
+  };
+
+  const downloadReport = () => {
+    if (!report) return;
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rfq-report-${report.rfq?.reference || rfqId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const rfq     = data?.rfq;
   const items   = data?.items || [];
@@ -194,11 +228,97 @@ export default function RFQBidsPage() {
               >
                 All Bids ({totalBids})
               </button>
+              <button
+                className={`tab-btn ${activeTab === 'report' ? 'active' : ''}`}
+                onClick={handleReportTab}
+              >
+                📄 Report
+              </button>
             </div>
 
             {activeTab === 'comparison' ? (
               <div className="main-card">
                 <BidComparisonTable rfqItems={items} bids={bids} currency={rfq.currency} />
+              </div>
+            ) : activeTab === 'report' ? (
+              <div className="main-card">
+                {reportLoading ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-faint)' }}>Generating report…</div>
+                ) : reportError ? (
+                  <div style={{ color: 'var(--accent)', fontSize: '.86rem' }}>{reportError}</div>
+                ) : report ? (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                      <div>
+                        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>
+                          RFQ Report
+                        </div>
+                        <div style={{ fontSize: '.76rem', color: 'var(--ink-faint)', marginTop: 2 }}>
+                          Generated at {new Date(report.generatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </div>
+                      </div>
+                      <button className="btn" onClick={downloadReport} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        ⬇ Download JSON
+                      </button>
+                    </div>
+
+                    {/* Summary cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 24 }}>
+                      {[
+                        { label: 'Total Bids', value: report.summary.totalBids },
+                        { label: 'Submitted', value: report.summary.submittedBids },
+                        { label: 'Lowest Bid', value: report.summary.lowestBid ? `${rfq.currency} ${report.summary.lowestBid.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—' },
+                        { label: 'Average Bid', value: report.summary.averageBid ? `${rfq.currency} ${report.summary.averageBid.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—' },
+                      ].map(card => (
+                        <div key={card.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+                          <div style={{ fontSize: '.7rem', fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 4 }}>{card.label}</div>
+                          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--ink)' }}>{card.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bids table */}
+                    <div style={{ fontSize: '.8rem', fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 10 }}>
+                      Bid Rankings
+                    </div>
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                      {report.bids.length === 0 ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-faint)' }}>No bids received</div>
+                      ) : (
+                        report.bids.map((bid, i) => {
+                          const lvlColors = { L1: { bg: '#e8f5ee', color: '#1a7a4a' }, L2: { bg: '#e8edf5', color: '#2a4a8c' }, L3: { bg: '#f0ede8', color: '#6b6660' } };
+                          const lc = bid.level && lvlColors[bid.level] ? lvlColors[bid.level] : { bg: '#f5f4f2', color: '#b8b3ae' };
+                          return (
+                            <div key={bid.bidId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: i < report.bids.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                              {bid.level && (
+                                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: '.72rem', fontWeight: 700, background: lc.bg, color: lc.color, letterSpacing: '.04em', minWidth: 28, textAlign: 'center' }}>
+                                  {bid.level}
+                                </span>
+                              )}
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: '.88rem', color: 'var(--ink)' }}>
+                                  {bid.vendorName}
+                                  {bid.status === 'awarded' && <span style={{ marginLeft: 6, fontSize: '.72rem', background: '#e8f5ee', color: '#1a7a4a', padding: '1px 7px', borderRadius: 4, fontWeight: 700 }}>★ Awarded</span>}
+                                </div>
+                                {bid.submittedAt && (
+                                  <div style={{ fontSize: '.76rem', color: 'var(--ink-faint)' }}>
+                                    {new Date(bid.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ fontWeight: 600, fontSize: '.92rem', color: 'var(--ink)' }}>
+                                {bid.totalAmount > 0 ? fmtAmount(bid.totalAmount, bid.currency) : '—'}
+                              </div>
+                              <span style={{ fontSize: '.74rem', padding: '2px 8px', borderRadius: 4, background: bid.status === 'submitted' ? '#e8f2ea' : bid.status === 'awarded' ? '#e8f5ee' : '#f5f4f2', color: bid.status === 'submitted' ? '#2d7a3a' : bid.status === 'awarded' ? '#1a7a4a' : '#6b6660', fontWeight: 600, textTransform: 'uppercase' }}>
+                                {bid.status}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="bid-list-card">
@@ -209,40 +329,61 @@ export default function RFQBidsPage() {
                     Vendors will appear here once they start bidding.
                   </div>
                 ) : (
-                  bids.map(bid => {
-                    const lowestTotal = submitted.length ? Math.min(...submitted.map(b => b.totalAmount)) : null;
-                    const isLowest = bid.status === 'submitted' && bid.totalAmount === lowestTotal;
-                    return (
-                      <div key={bid.bidId} className="bid-list-item">
-                        <div className="vendor-avatar">
-                          {bid.vendorName.charAt(0)}
-                        </div>
-                        <div className="bid-list-info">
-                          <div className="bid-vendor-name">
-                            {bid.vendorName}
-                            {isLowest && <span className="lowest-badge" style={{ marginLeft: 8 }}>★ Lowest</span>}
+                  (() => {
+                    // Compute L-levels from submitted bids sorted by totalAmount ASC
+                    const rankedSubmitted = [...submitted].sort((a, b) => a.totalAmount - b.totalAmount);
+                    const levelMap = {};
+                    rankedSubmitted.forEach((b, i) => { levelMap[b.bidId] = `L${i + 1}`; });
+                    const levelColors = {
+                      L1: { bg: '#e8f5ee', color: '#1a7a4a' },
+                      L2: { bg: '#e8edf5', color: '#2a4a8c' },
+                      L3: { bg: '#f0ede8', color: '#6b6660' },
+                    };
+                    return bids.map(bid => {
+                      const level = levelMap[bid.bidId];
+                      const lvlCfg = level && levelColors[level] ? levelColors[level] : null;
+                      return (
+                        <div key={bid.bidId} className="bid-list-item">
+                          <div className="vendor-avatar">
+                            {bid.vendorName.charAt(0)}
                           </div>
-                          <div className="bid-meta">
-                            {bid.submittedAt
-                              ? `Submitted ${new Date(bid.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`
-                              : `Updated ${bid.status}`}
+                          <div className="bid-list-info">
+                            <div className="bid-vendor-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {bid.vendorName}
+                              {level && (
+                                <span style={{
+                                  display: 'inline-block', padding: '1px 7px',
+                                  borderRadius: 4, fontSize: '.7rem', fontWeight: 700,
+                                  background: lvlCfg ? lvlCfg.bg : '#f0ede8',
+                                  color: lvlCfg ? lvlCfg.color : '#6b6660',
+                                  letterSpacing: '.04em',
+                                }}>
+                                  {level}
+                                </span>
+                              )}
+                            </div>
+                            <div className="bid-meta">
+                              {bid.submittedAt
+                                ? `Submitted ${new Date(bid.submittedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`
+                                : `Updated ${bid.status}`}
+                            </div>
                           </div>
+                          <div>
+                            <BidStatusBadge status={bid.status} />
+                          </div>
+                          <div className="bid-total">
+                            {bid.totalAmount > 0 ? fmtAmount(bid.totalAmount, bid.currency) : '—'}
+                          </div>
+                          <button
+                            className="btn"
+                            onClick={() => router.push(`/dashboard/rfqs/${rfqId}/bids/${bid.bidId}`)}
+                          >
+                            View →
+                          </button>
                         </div>
-                        <div>
-                          <BidStatusBadge status={bid.status} />
-                        </div>
-                        <div className="bid-total">
-                          {bid.totalAmount > 0 ? fmtAmount(bid.totalAmount, bid.currency) : '—'}
-                        </div>
-                        <button
-                          className="btn"
-                          onClick={() => router.push(`/dashboard/rfqs/${rfqId}/bids/${bid.bidId}`)}
-                        >
-                          View →
-                        </button>
-                      </div>
-                    );
-                  })
+                      );
+                    });
+                  })()
                 )}
               </div>
             )}

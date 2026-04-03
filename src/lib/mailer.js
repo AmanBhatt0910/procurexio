@@ -4,7 +4,13 @@
 
 import { Resend } from 'resend';
 
-const resend    = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization — avoids build-time errors when RESEND_API_KEY is absent
+let _resend = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
+
 const FROM      = process.env.INVITE_FROM_EMAIL || 'Procurexio <no-reply@procurexio.com>';
 const APP_NAME  = process.env.NEXT_PUBLIC_APP_NAME  || 'Procurexio';
 const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
@@ -20,7 +26,7 @@ export async function sendInviteEmail({ to, token, role, companyName, invitedBy 
 
   const html = buildTeamInviteHtml({ inviteUrl, companyName, invitedBy, formattedRole, appName: APP_NAME });
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from:    FROM,
     to,
     subject: `You've been invited to join ${companyName} on ${APP_NAME}`,
@@ -39,7 +45,7 @@ export async function sendVendorInviteEmail({ to, token, vendorName, companyName
 
   const html = buildVendorInviteHtml({ inviteUrl, vendorName, companyName, invitedBy, appName: APP_NAME });
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from:    FROM,
     to,
     subject: `${companyName} has invited ${vendorName} to join ${APP_NAME}`,
@@ -60,7 +66,7 @@ export async function sendWelcomeEmail({ to, name, companyName }) {
 
   const html = buildWelcomeHtml({ name, companyName, dashboardUrl, vendorsUrl, rfqUrl, appName: APP_NAME });
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from:    FROM,
     to,
     subject: `Welcome to ${APP_NAME}, ${name.split(' ')[0]}! Your workspace is ready.`,
@@ -451,6 +457,103 @@ function buildWelcomeHtml({ name, companyName, dashboardUrl, vendorsUrl, rfqUrl,
             </td>
           </tr>
 
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// sendVendorRFQInviteEmail — notify vendor when invited to an RFQ
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendVendorRFQInviteEmail({ to, vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink }) {
+  const html = buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink, appName: APP_NAME });
+
+  const { data, error } = await getResend().emails.send({
+    from:    FROM,
+    to,
+    subject: `${companyName} has invited you to bid on: ${rfqTitle}`,
+    html,
+  });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+function buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink, appName }) {
+  const deadlineText = deadline
+    ? new Date(deadline).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : 'No deadline specified';
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RFQ Invitation</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+          <tr>
+            <td style="background:#0f0e0d;padding:28px 36px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p></td>
+                  <td align="right"><span style="display:inline-block;background:rgba(200,80,26,.25);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#f5a07a;letter-spacing:.05em;text-transform:uppercase;">RFQ Invitation</span></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 36px 28px;">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">You've been invited to bid</h1>
+              <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+                <strong style="color:#0f0e0d;">${companyName}</strong> has invited
+                <strong style="color:#0f0e0d;">${vendorName}</strong> to submit a quotation for the following RFQ.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ Title</p>
+                    <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#0f0e0d;">${rfqTitle}</p>
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">Reference</p>
+                    <p style="margin:0 0 14px;font-size:14px;color:#6b6660;font-family:monospace;">${rfqReference}</p>
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">Submission Deadline</p>
+                    <p style="margin:0;font-size:14px;color:#0f0e0d;font-weight:500;">${deadlineText}</p>
+                  </td>
+                </tr>
+              </table>
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#c8501a;border-radius:8px;">
+                    <a href="${inviteLink}" style="display:inline-block;padding:13px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:-0.1px;">
+                      View RFQ &amp; Submit Bid &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:13px;color:#9d9894;">
+                Log in to the ${appName} vendor portal to review the RFQ details and submit your quotation before the deadline.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 36px 28px;">
+              <p style="margin:0;font-size:12px;color:#b8b4b0;">
+                Or copy this link:<br />
+                <a href="${inviteLink}" style="color:#0f0e0d;word-break:break-all;">${inviteLink}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f5f4f2;padding:18px 36px;border-top:1px solid #e5e3df;">
+              <p style="margin:0;font-size:12px;color:#b8b4b0;">&copy; ${year} ${appName}. All rights reserved.</p>
+            </td>
+          </tr>
         </table>
       </td>
     </tr>

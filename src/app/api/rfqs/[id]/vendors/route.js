@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
+import { sendVendorRFQInviteEmail } from '@/lib/mailer';
 
 // ── GET /api/rfqs/[id]/vendors ──────────────────────────────────────────────
 export async function GET(request, { params }) {
@@ -88,7 +89,7 @@ export async function POST(request, { params }) {
     // Validate all vendorIds belong to the company and are active
     const placeholders = vendorIds.map(() => '?').join(', ');
     const vendorRows = await query(
-      `SELECT id, name, status FROM vendors
+      `SELECT id, name, email, status FROM vendors
         WHERE id IN (${placeholders}) AND company_id = ?`,
       [...vendorIds, companyId]
     );
@@ -103,7 +104,7 @@ export async function POST(request, { params }) {
         warnings.push({ vendorId: vid, warning: 'Vendor not found' });
         continue;
       }
-      if (v.status !== 'active') {
+      if (v.status === 'inactive') {
         warnings.push({ vendorId: vid, vendorName: v.name, warning: `Vendor is ${v.status} — invite skipped` });
         continue;
       }
@@ -112,6 +113,10 @@ export async function POST(request, { params }) {
 
     let invited = 0;
     let skippedAlreadyInvited = 0;
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+    // Fetch company name for the email
+    const companyRows = await query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
+    const companyName = companyRows[0]?.name || 'Procurexio';
 
     for (const vid of toInvite) {
       const result = await query(
@@ -119,8 +124,29 @@ export async function POST(request, { params }) {
          VALUES (?, ?, ?)`,
         [id, vid, companyId]
       );
-      if (result.affectedRows > 0) invited++;
-      else skippedAlreadyInvited++;
+      if (result.affectedRows > 0) {
+        invited++;
+        // Send invite email if vendor has an email address
+        const vendor = found.get(Number(vid));
+        if (vendor?.email) {
+          try {
+            await sendVendorRFQInviteEmail({
+              to:           vendor.email,
+              vendorName:   vendor.name,
+              companyName,
+              rfqTitle:     rfq.title,
+              rfqReference: rfq.reference_number,
+              deadline:     rfq.deadline,
+              inviteLink:   `${BASE_URL}/dashboard/bids/${id}`,
+            });
+          } catch (emailErr) {
+            console.error(`Failed to send RFQ invite email to vendor ${vendor.id}:`, emailErr);
+            // Email failure is non-fatal — continue
+          }
+        }
+      } else {
+        skippedAlreadyInvited++;
+      }
     }
 
     return Response.json({
