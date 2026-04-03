@@ -2,7 +2,7 @@
 // src/app/dashboard/company/users/page.jsx
 
 import { useEffect, useState } from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';

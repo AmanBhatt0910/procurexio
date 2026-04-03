@@ -1,6 +1,6 @@
 // src/app/dashboard/rfqs/new/page.jsx
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -112,6 +112,18 @@ export default function NewRFQPage() {
   const [items, setItems]   = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState('');
+
+  // Auto-fill currency from company settings
+  useEffect(() => {
+    fetch('/api/company/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.data?.currency) {
+          setForm(f => ({ ...f, currency: d.data.currency }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Role guard
   if (user && !['company_admin', 'manager'].includes(user.role)) {

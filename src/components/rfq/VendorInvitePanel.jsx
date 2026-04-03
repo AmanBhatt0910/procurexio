@@ -47,7 +47,6 @@ export default function VendorInvitePanel({ rfqId, rfqStatus, invitedVendors, ca
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        status: 'active',
         page: page.toString(),
         limit: 20,
       });

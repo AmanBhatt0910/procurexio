@@ -100,6 +100,7 @@ export default function VendorBidWorkspacePage() {
 
   // Outcome state (added per patch)
   const [outcome, setOutcome] = useState(null);
+  const [bidRank, setBidRank] = useState(null);
 
   const fetchData = useCallback(async (overrideCurrency) => {
     try {
@@ -127,10 +128,12 @@ export default function VendorBidWorkspacePage() {
     Promise.all([
       fetch('/api/company/settings').then(r => r.ok ? r.json() : null),
       fetch(`/api/bids/rfqs/${rfqId}/outcome`).then(r => r.ok ? r.json() : null),
-    ]).then(([settingsJson, outcomeJson]) => {
+      fetch(`/api/bids/rfqs/${rfqId}/rank`).then(r => r.ok ? r.json() : null),
+    ]).then(([settingsJson, outcomeJson, rankJson]) => {
       const resolved = settingsJson?.data?.currency || 'USD';
       setCompanyCurrency(resolved);
       if (outcomeJson?.data) setOutcome(outcomeJson.data);
+      if (rankJson?.data?.rank) setBidRank(rankJson.data);
       // Now fetch RFQ data, passing the resolved currency so the fallback is correct
       fetchData(resolved);
     }).catch(() => {
@@ -170,6 +173,23 @@ export default function VendorBidWorkspacePage() {
   async function handleSave() {
     setSaving(true); setError(''); setSuccess('');
     try {
+      // Calculate new total from bidItems
+      const newTotal = bidItems.reduce((sum, item) => {
+        const up  = parseFloat(item.unit_price) || 0;
+        const qty = parseFloat(item.quantity)   || 1;
+        return sum + (up * qty);
+      }, 0);
+
+      // Enforce ₹100 minimum increment when editing a previously submitted bid
+      if (bid?.status === 'submitted' && bid?.total_amount != null) {
+        const prevTotal = parseFloat(bid.total_amount);
+        if (newTotal > 0 && newTotal >= prevTotal - 99.99) {
+          setError(`Your revised bid (₹${newTotal.toFixed(2)}) must be at least ₹100 lower than your previous bid (₹${prevTotal.toFixed(2)}). Minimum new bid: ₹${(prevTotal - 100).toFixed(2)}.`);
+          setSaving(false);
+          return;
+        }
+      }
+
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -408,7 +428,19 @@ export default function VendorBidWorkspacePage() {
               <div className="bid-card">
                 <div className="bid-card-header">
                   <span className="section-label">Your Bid</span>
-                  <BidStatusBadge status={bid.status} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {bidRank?.rank && (
+                      <span style={{
+                        display: 'inline-block', padding: '3px 10px',
+                        borderRadius: 6, fontSize: '.78rem', fontWeight: 700, letterSpacing: '.04em',
+                        background: bidRank.rank === 'L1' ? '#e8f5ee' : bidRank.rank === 'L2' ? '#e8edf5' : '#f0ede8',
+                        color: bidRank.rank === 'L1' ? '#1a7a4a' : bidRank.rank === 'L2' ? '#2a4a8c' : '#6b6660',
+                      }}>
+                        {bidRank.rank} · {bidRank.rank === 'L1' ? 'Lowest bid' : bidRank.rank === 'L2' ? '2nd lowest' : `${bidRank.rank} of ${bidRank.totalBids}`}
+                      </span>
+                    )}
+                    <BidStatusBadge status={bid.status} />
+                  </div>
                 </div>
 
                 {/* Header fields */}

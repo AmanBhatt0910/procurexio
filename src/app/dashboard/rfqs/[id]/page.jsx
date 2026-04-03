@@ -46,6 +46,7 @@ export default function RFQDetailPage({ params }) {
   const router   = useRouter();
 
   const canWrite = user && ['company_admin', 'manager'].includes(user.role);
+  const canViewBids = user && ['company_admin', 'manager', 'employee'].includes(user.role);
 
   const [rfq, setRfq]           = useState(null);
   const [items, setItems]       = useState([]);
@@ -231,6 +232,29 @@ export default function RFQDetailPage({ params }) {
                 {t.label}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* View Bids — visible to admin, manager, employee */}
+        {canViewBids && (
+          <div style={{ marginBottom: 20 }}>
+            <button
+              onClick={() => router.push(`/dashboard/rfqs/${id}/bids`)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 18px', background: 'var(--accent)', color: '#fff',
+                border: 'none', borderRadius: 'var(--radius)', fontSize: '.84rem',
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+              View Bids
+            </button>
           </div>
         )}
 
