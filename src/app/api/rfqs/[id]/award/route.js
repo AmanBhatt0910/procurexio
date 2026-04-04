@@ -1,6 +1,7 @@
 // src/app/api/rfqs/[id]/award/route.js
 import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
+import { createNotification } from '@/lib/notifications';
 
 // Helper: generate contract reference
 async function generateContractRef(conn, companyId) {
@@ -100,13 +101,34 @@ export async function POST(request, { params }) {
 
     // Fetch the full contract
     const [[contract]] = await conn.query(
-      `SELECT c.*, v.name AS vendor_name, u.name AS awarded_by_name
+      `SELECT c.*, v.name AS vendor_name, u.name AS awarded_by_name,
+              r.title AS rfq_title
        FROM contracts c
        JOIN vendors v ON v.id = c.vendor_id
        JOIN users u ON u.id = c.awarded_by
+       JOIN rfqs r ON r.id = c.rfq_id
        WHERE c.id = ?`,
       [contractResult.insertId]
     );
+
+    // Notify vendor user that they won the contract
+    try {
+      const [vendorUsers] = await db.query(
+        `SELECT id AS userId, company_id AS companyId
+           FROM users WHERE vendor_id = ? AND role = 'vendor_user' LIMIT 10`,
+        [bid.vendor_id]
+      );
+      for (const vu of vendorUsers) {
+        await createNotification({
+          userId:    vu.userId,
+          companyId: vu.companyId,
+          type:      'contract_awarded',
+          title:     `You won the contract for "${contract.rfq_title}"`,
+          body:      `Congratulations! Your bid has been selected. Contract reference: ${contract.contract_reference}.`,
+          link:      `/dashboard/bids/${id}`,
+        });
+      }
+    } catch (_) { /* notification errors must not fail the request */ }
 
     return Response.json({ message: 'Contract awarded', data: contract }, { status: 201 });
   } catch (err) {
