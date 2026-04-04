@@ -27,7 +27,7 @@ export async function POST(request) {
 
     if (typeof password !== 'string') {
       return NextResponse.json(
-        { error: 'Email and password are required.' },
+        { error: 'Invalid request.' },
         { status: 400 }
       );
     }
