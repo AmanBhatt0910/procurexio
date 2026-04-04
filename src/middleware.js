@@ -20,6 +20,7 @@ import { jwtVerify } from 'jose';
  */
 const PROTECTED_ROUTES = {
   '/dashboard/bids':    { roles: ['vendor_user'] },
+  '/dashboard/admin':   { roles: ['super_admin'] },
   '/dashboard/vendors': { roles: ['super_admin', 'company_admin', 'manager'] },
   '/dashboard/rfqs':    { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
   '/dashboard':         { roles: 'any' },

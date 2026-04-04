@@ -41,7 +41,15 @@ export async function GET(request, { params }) {
     }
 
     const rankIndex = bids.findIndex(b => b.vendor_id === vendorId);
-    const rank = rankIndex >= 0 ? `L${rankIndex + 1}` : null;
+    let rank = null;
+    if (rankIndex >= 0) {
+      const position = rankIndex + 1;
+      if (position <= 3) {
+        rank = `L${position}`;
+      } else {
+        rank = `Rank #${position}`;
+      }
+    }
 
     return NextResponse.json({
       message: 'ok',

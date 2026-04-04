@@ -101,6 +101,17 @@ export default function VendorBidWorkspacePage() {
   // Outcome state (added per patch)
   const [outcome, setOutcome] = useState(null);
   const [bidRank, setBidRank] = useState(null);
+  const [updateMode, setUpdateMode] = useState(false);
+
+  const refreshRank = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/rank`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) setBidRank(json.data);
+      }
+    } catch { /* ignore */ }
+  }, [rfqId]);
 
   const fetchData = useCallback(async (overrideCurrency) => {
     try {
@@ -133,7 +144,7 @@ export default function VendorBidWorkspacePage() {
       const resolved = settingsJson?.data?.currency || 'USD';
       setCompanyCurrency(resolved);
       if (outcomeJson?.data) setOutcome(outcomeJson.data);
-      if (rankJson?.data?.rank) setBidRank(rankJson.data);
+      if (rankJson?.data) setBidRank(rankJson.data);
       // Now fetch RFQ data, passing the resolved currency so the fallback is correct
       fetchData(resolved);
     }).catch(() => {
@@ -146,7 +157,8 @@ export default function VendorBidWorkspacePage() {
   const rfqItems = data?.items || [];
 
   const isPastDeadline = rfq?.deadline && new Date() > new Date(rfq.deadline);
-  const canEdit = bid && bid.status === 'draft' && !isPastDeadline;
+  const canEdit   = bid && bid.status === 'draft'      && !isPastDeadline;
+  const canUpdate = bid && bid.status === 'submitted'  && !isPastDeadline;
   const canSubmit = canEdit && bidItems.length > 0;
   const canWithdraw = bid?.status === 'submitted' && !isPastDeadline;
   const showForm = bid && (bid.status === 'draft' || bid.status === 'submitted');
@@ -221,6 +233,33 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid submitted successfully!');
       setConfirmModal({ open: false, action: '' });
+      await fetchData(companyCurrency);
+      await refreshRank();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUpdate() {
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes, currency, items: bidItems }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSuccess('Bid updated successfully!');
+      setUpdateMode(false);
+      setConfirmModal({ open: false, action: '' });
+      if (json.data?.rank !== undefined) {
+        setBidRank({ rank: json.data.rank, totalBids: json.data.totalBids });
+      } else {
+        await refreshRank();
+      }
       await fetchData(companyCurrency);
     } catch (e) {
       setError(e.message);
@@ -343,6 +382,45 @@ export default function VendorBidWorkspacePage() {
         .confirm-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
         .skeleton { background: linear-gradient(90deg, #f0ede9 25%, #faf9f7 50%, #f0ede9 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 6px; }
         @keyframes shimmer { to { background-position: -200% 0; } }
+        /* Ranking card */
+        .rank-card {
+          border-radius: var(--radius); padding: 20px 24px;
+          margin-bottom: 24px; box-shadow: var(--shadow);
+          display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+        }
+        .rank-card--l1 { background: #e8f5ee; border: 1.5px solid #6ee7b7; }
+        .rank-card--l2 { background: #e8edf9; border: 1.5px solid #93c5fd; }
+        .rank-card--l3 { background: #f4f4f5; border: 1.5px solid #d4d4d8; }
+        .rank-card--other { background: var(--white); border: 1px solid var(--border); }
+        .rank-badge-large {
+          font-family: 'Syne', sans-serif; font-weight: 800;
+          font-size: 2rem; letter-spacing: -.04em; line-height: 1;
+          flex-shrink: 0;
+        }
+        .rank-badge-large--l1 { color: #1a7a4a; }
+        .rank-badge-large--l2 { color: #2563eb; }
+        .rank-badge-large--l3 { color: #6b7280; }
+        .rank-badge-large--other { color: var(--ink); }
+        .rank-label {
+          font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+          text-transform: uppercase; margin-bottom: 2px;
+        }
+        .rank-label--l1 { color: #1a7a4a; }
+        .rank-label--l2 { color: #2563eb; }
+        .rank-label--l3 { color: #6b7280; }
+        .rank-label--other { color: var(--ink-soft); }
+        .rank-desc { font-size: .88rem; color: var(--ink-soft); }
+        .rank-total { font-size: .78rem; color: var(--ink-faint); margin-top: 2px; }
+        /* Update bid panel */
+        .update-panel {
+          background: #fff8e8; border: 1px solid #f5dfa0; border-radius: var(--radius);
+          padding: 16px 20px; margin-bottom: 16px;
+        }
+        .update-panel-title {
+          font-family: 'Syne', sans-serif; font-weight: 700; font-size: .9rem;
+          color: #8a6500; margin-bottom: 4px;
+        }
+        .update-panel-sub { font-size: .82rem; color: #8a6500; opacity: .8; }
       `}</style>
 
       <DashboardLayout>
@@ -425,96 +503,130 @@ export default function VendorBidWorkspacePage() {
                 </div>
               </div>
             ) : (
-              <div className="bid-card">
-                <div className="bid-card-header">
-                  <span className="section-label">Your Bid</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {bidRank?.rank && (
-                      <span style={{
-                        display: 'inline-block', padding: '3px 10px',
-                        borderRadius: 6, fontSize: '.78rem', fontWeight: 700, letterSpacing: '.04em',
-                        background: bidRank.rank === 'L1' ? '#e8f5ee' : bidRank.rank === 'L2' ? '#e8edf5' : '#f0ede8',
-                        color: bidRank.rank === 'L1' ? '#1a7a4a' : bidRank.rank === 'L2' ? '#2a4a8c' : '#6b6660',
-                      }}>
-                        {bidRank.rank} · {bidRank.rank === 'L1' ? 'Lowest bid' : bidRank.rank === 'L2' ? '2nd lowest' : `${bidRank.rank} of ${bidRank.totalBids}`}
-                      </span>
-                    )}
+              <>
+                {/* ── Ranking Card (shown when bid is submitted) ── */}
+                {bid.status === 'submitted' && bidRank && (
+                  <RankCard rank={bidRank.rank} totalBids={bidRank.totalBids} currency={currency} />
+                )}
+
+                <div className="bid-card">
+                  <div className="bid-card-header">
+                    <span className="section-label">Your Bid</span>
                     <BidStatusBadge status={bid.status} />
                   </div>
-                </div>
 
-                {/* Header fields */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Currency</label>
-                    <select
-                      className="form-control"
-                      value={currency}
-                      onChange={e => setCurrency(e.target.value)}
-                      disabled={!canEdit}
-                    >
-                      {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
-                        .map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                  {/* Update-mode notice */}
+                  {updateMode && (
+                    <div className="update-panel">
+                      <div className="update-panel-title">✏️ Updating Your Submitted Bid</div>
+                      <div className="update-panel-sub">
+                        Minimum change: ₹100 from your current bid of{' '}
+                        {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
+                        Adjust your item prices below, then click &ldquo;Save Update&rdquo;.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Header fields */}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Currency</label>
+                      <select
+                        className="form-control"
+                        value={currency}
+                        onChange={e => setCurrency(e.target.value)}
+                        disabled={!canEdit && !updateMode}
+                      >
+                        {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
+                          .map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ flex: 3 }}>
+                      <label>Notes / Cover Message (optional)</label>
+                      <textarea
+                        className="form-control"
+                        rows={2}
+                        placeholder="Any overall notes for the buyer…"
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        disabled={!canEdit && !updateMode}
+                        style={{ resize: 'vertical' }}
+                      />
+                    </div>
                   </div>
-                  <div className="form-group" style={{ flex: 3 }}>
-                    <label>Notes / Cover Message (optional)</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      placeholder="Any overall notes for the buyer…"
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
-                      disabled={!canEdit}
-                      style={{ resize: 'vertical' }}
+
+                  {/* Items table */}
+                  <div style={{ marginBottom: 20 }}>
+                    <BidItemsForm
+                      rfqItems={rfqItems}
+                      initialItems={bid.items || []}
+                      onChange={setBidItems}
+                      readOnly={!canEdit && !updateMode}
                     />
                   </div>
-                </div>
 
-                {/* Items table */}
-                <div style={{ marginBottom: 20 }}>
-                  <BidItemsForm
-                    rfqItems={rfqItems}
-                    initialItems={bid.items || []}
-                    onChange={setBidItems}
-                    readOnly={!canEdit}
-                  />
-                </div>
-
-                {/* Actions */}
-                {(canEdit || canWithdraw) && (
-                  <div className="actions-bar">
-                    {canEdit && (
-                      <>
-                        <button className="btn btn-outline" disabled={saving} onClick={handleSave}>
-                          {saving ? 'Saving…' : 'Save Draft'}
-                        </button>
+                  {/* Actions */}
+                  {(canEdit || canUpdate || canWithdraw) && (
+                    <div className="actions-bar">
+                      {canEdit && (
+                        <>
+                          <button className="btn btn-outline" disabled={saving} onClick={handleSave}>
+                            {saving ? 'Saving…' : 'Save Draft'}
+                          </button>
+                          <button
+                            className="btn btn-accent"
+                            disabled={saving || bidItems.length === 0}
+                            onClick={() => setConfirmModal({ open: true, action: 'submit' })}
+                          >
+                            Submit Bid
+                          </button>
+                        </>
+                      )}
+                      {canUpdate && !updateMode && (
                         <button
-                          className="btn btn-accent"
-                          disabled={saving || bidItems.length === 0}
-                          onClick={() => setConfirmModal({ open: true, action: 'submit' })}
+                          className="btn btn-outline"
+                          disabled={saving}
+                          onClick={() => { setUpdateMode(true); setError(''); setSuccess(''); }}
                         >
-                          Submit Bid
+                          ✏️ Update Bid
                         </button>
-                      </>
-                    )}
-                    {canWithdraw && (
-                      <button
-                        className="btn btn-danger"
-                        disabled={saving}
-                        onClick={() => setConfirmModal({ open: true, action: 'withdraw' })}
-                      >
-                        Withdraw Bid
-                      </button>
-                    )}
-                    {bid.submitted_at && (
-                      <span style={{ marginLeft: 'auto', color: 'var(--ink-soft)', fontSize: '.8rem' }}>
-                        Submitted {new Date(bid.submitted_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+                      )}
+                      {canUpdate && updateMode && (
+                        <>
+                          <button
+                            className="btn btn-accent"
+                            disabled={saving || bidItems.length === 0}
+                            onClick={() => setConfirmModal({ open: true, action: 'update' })}
+                          >
+                            {saving ? 'Saving…' : 'Save Update'}
+                          </button>
+                          <button
+                            className="btn btn-outline"
+                            disabled={saving}
+                            onClick={() => { setUpdateMode(false); setError(''); setSuccess(''); }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {canWithdraw && (
+                        <button
+                          className="btn btn-danger"
+                          disabled={saving}
+                          onClick={() => setConfirmModal({ open: true, action: 'withdraw' })}
+                        >
+                          Withdraw Bid
+                        </button>
+                      )}
+                      {bid.submitted_at && (
+                        <span style={{ marginLeft: 'auto', color: 'var(--ink-soft)', fontSize: '.8rem' }}>
+                          Submitted {new Date(bid.submitted_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </>
         ) : null}
@@ -523,7 +635,11 @@ export default function VendorBidWorkspacePage() {
         <Modal
           open={confirmModal.open}
           onClose={() => setConfirmModal({ open: false, action: '' })}
-          title={confirmModal.action === 'submit' ? 'Submit Bid' : 'Withdraw Bid'}
+          title={
+            confirmModal.action === 'submit'   ? 'Submit Bid'  :
+            confirmModal.action === 'update'   ? 'Update Bid'  :
+            'Withdraw Bid'
+          }
           width={460}
         >
           {confirmModal.action === 'submit' ? (
@@ -536,6 +652,19 @@ export default function VendorBidWorkspacePage() {
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
                 <button className="btn btn-accent" disabled={saving} onClick={handleSubmit}>
                   {saving ? 'Submitting…' : 'Yes, Submit Bid'}
+                </button>
+              </div>
+            </>
+          ) : confirmModal.action === 'update' ? (
+            <>
+              <p className="confirm-text">
+                Are you sure you want to update your submitted bid? Your new prices will replace your current submission.
+                A minimum change of ₹100 is required.
+              </p>
+              <div className="confirm-actions">
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
+                <button className="btn btn-accent" disabled={saving} onClick={handleUpdate}>
+                  {saving ? 'Updating…' : 'Yes, Update Bid'}
                 </button>
               </div>
             </>
@@ -555,5 +684,38 @@ export default function VendorBidWorkspacePage() {
         </Modal>
       </DashboardLayout>
     </>
+  );
+}
+
+// ── Standalone Ranking Card Component ──────────────────────────────────────
+function RankCard({ rank, totalBids }) {
+  if (!rank) return null;
+
+  const isL1 = rank === 'L1';
+  const isL2 = rank === 'L2';
+  const isL3 = rank === 'L3';
+  const tier = isL1 ? 'l1' : isL2 ? 'l2' : isL3 ? 'l3' : 'other';
+
+  const rankDesc = isL1
+    ? 'You have the lowest bid — best position! 🎉'
+    : isL2
+    ? 'Second lowest bid — strong position!'
+    : isL3
+    ? 'Third lowest bid — in the top 3!'
+    : `Your position among ${totalBids} submitted bid${totalBids !== 1 ? 's' : ''}`;
+
+  return (
+    <div className={`rank-card rank-card--${tier}`}>
+      <div>
+        <div className={`rank-label rank-label--${tier}`}>Your Current Rank</div>
+        <div className={`rank-badge-large rank-badge-large--${tier}`}>{rank}</div>
+      </div>
+      <div>
+        <div className="rank-desc">{rankDesc}</div>
+        {totalBids > 0 && (
+          <div className="rank-total">{totalBids} bid{totalBids !== 1 ? 's' : ''} submitted in total</div>
+        )}
+      </div>
+    </div>
   );
 }
