@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS companies (
   name       VARCHAR(255) NOT NULL,
   email      VARCHAR(255),
   plan       ENUM('free','pro','enterprise') NOT NULL DEFAULT 'free',
+  status     ENUM('active','inactive','pending') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  INDEX idx_companies_email (email)
+  INDEX idx_companies_email (email),
+  INDEX idx_companies_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
