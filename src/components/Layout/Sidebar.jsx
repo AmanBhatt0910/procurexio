@@ -1,7 +1,7 @@
 'use client';
 // src/components/Layout/Sidebar.jsx
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
@@ -249,17 +249,19 @@ function filterNavItems(items, userRole) {
     .filter(Boolean);
 }
 
-export default function Sidebar({ company, user }) {
+const Sidebar = memo(function Sidebar({ company, user }) {
   const pathname     = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { unreadCount } = useNotifications();
 
   const userRole     = user?.role;
   // Super admin gets its own dedicated platform nav; other roles use the company nav
-  const navSource    = userRole === 'super_admin' ? SUPER_ADMIN_NAV : NAV_ITEMS;
-  const filteredItems = userRole === 'super_admin'
-    ? navSource
-    : filterNavItems(navSource, userRole);
+  const filteredItems = useMemo(
+    () => userRole === 'super_admin'
+      ? SUPER_ADMIN_NAV
+      : filterNavItems(NAV_ITEMS, userRole),
+    [userRole]
+  );
 
   function isActive(href, exact = false) {
     if (exact) return pathname === href;
@@ -497,7 +499,9 @@ export default function Sidebar({ company, user }) {
       </aside>
     </>
   );
-}
+});
+
+export default Sidebar;
 
 function NavLink({ item, active, collapsed, unreadCount = 0 }) {
   const cls = [

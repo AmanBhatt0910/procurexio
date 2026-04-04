@@ -62,13 +62,13 @@ export async function GET(request) {
            'bid_submitted'    AS action_type,
            b.id               AS resource_id,
            r.title            AS resource_name,
-           u.name             AS actor_name,
-           u.email            AS actor_email,
+           v.name             AS actor_name,
+           v.email            AS actor_email,
            c.name             AS company_name,
            b.created_at       AS occurred_at
          FROM bids b
          LEFT JOIN rfqs       r ON r.id = b.rfq_id
-         LEFT JOIN users      u ON u.id = b.vendor_user_id
+         LEFT JOIN vendors    v ON v.id = b.vendor_id
          LEFT JOIN companies  c ON c.id = r.company_id
 
          UNION ALL
