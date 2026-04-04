@@ -116,9 +116,21 @@ const NAV_ITEMS = [
             <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
+        allowedRoles: ['vendor_user'],
       },
     ],
+  },
+  // Admin — super_admin only
+  {
+    label: 'Platform Admin',
+    href: '/dashboard/admin',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5L14 4.5V8C14 11.5 11.2 14.3 8 15C4.8 14.3 2 11.5 2 8V4.5L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M5.5 8l1.5 1.5L10.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    allowedRoles: ['super_admin'],
   },
 ];
 
