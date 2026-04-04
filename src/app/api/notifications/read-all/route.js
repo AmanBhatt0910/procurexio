@@ -5,17 +5,30 @@ import pool from '@/lib/db';
 export async function PATCH(request) {
   const userId    = request.headers.get('x-user-id');
   const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
 
-  if (!userId || !companyId) {
+  if (!userId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!companyId && role !== 'super_admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const [result] = await pool.execute(
-      `UPDATE notifications SET is_read = 1
-       WHERE user_id = ? AND company_id = ? AND is_read = 0`,
-      [userId, companyId]
-    );
+    let result;
+    if (role === 'super_admin' && !companyId) {
+      [result] = await pool.execute(
+        `UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0`,
+        [userId]
+      );
+    } else {
+      [result] = await pool.execute(
+        `UPDATE notifications SET is_read = 1
+         WHERE user_id = ? AND company_id = ? AND is_read = 0`,
+        [userId, companyId]
+      );
+    }
 
     return Response.json({
       message: 'All notifications marked as read',

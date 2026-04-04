@@ -225,6 +225,47 @@ export default function SuperAdminPage() {
 
           {error && <div className="error-box">{error}</div>}
 
+          {/* Quick access navigation cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 32 }}>
+            {[
+              { href: '/dashboard/admin/companies', icon: '🏢', label: 'Companies', sub: 'Manage all tenants' },
+              { href: '/dashboard/admin/users',     icon: '👥', label: 'Users',     sub: 'Global user management' },
+              { href: '/dashboard/vendors',         icon: '🤝', label: 'Vendors',   sub: 'Platform-wide overview' },
+              { href: '/dashboard/rfqs',            icon: '📋', label: 'RFQs',      sub: 'Analytics & read-only' },
+              { href: '/dashboard/admin/settings',  icon: '⚙️', label: 'Settings',  sub: 'Platform configuration' },
+              { href: '/dashboard/admin/activity-logs', icon: '📜', label: 'Activity Logs', sub: 'Audit trail' },
+            ].map(card => (
+              <a
+                key={card.href}
+                href={card.href}
+                style={{
+                  background: 'var(--white)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  padding: '16px 18px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  boxShadow: 'var(--shadow)',
+                  transition: 'border-color .15s, box-shadow .15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(200,80,26,.10)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow)';
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>{card.icon}</span>
+                <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.9rem', color: 'var(--ink)' }}>{card.label}</span>
+                <span style={{ fontSize: '.77rem', color: 'var(--ink-faint)' }}>{card.sub}</span>
+              </a>
+            ))}
+          </div>
+
           {/* Stats grid */}
           <div className="stats-grid">
             <div className="stat-card">

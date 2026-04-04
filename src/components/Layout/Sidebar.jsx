@@ -7,6 +7,118 @@ import { usePathname } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
 
 // ------------------------------------------------------------------
+// Super Admin navigation (platform-level only)
+// ------------------------------------------------------------------
+const SUPER_ADMIN_NAV = [
+  {
+    label: 'Dashboard',
+    href: '/dashboard/admin',
+    exact: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
+    section: 'Platform',
+    items: [
+      {
+        label: 'Companies',
+        href: '/dashboard/admin/companies',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="4" width="14" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M1 8h14" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        ),
+      },
+      {
+        label: 'Users (Global)',
+        href: '/dashboard/admin/users',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        ),
+      },
+      {
+        label: 'Vendors Overview',
+        href: '/dashboard/admin',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M5 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M1 7h14" stroke="currentColor" strokeWidth="1.4" />
+            <circle cx="5.5" cy="10" r="1" fill="currentColor" />
+          </svg>
+        ),
+      },
+      {
+        label: 'RFQs Analytics',
+        href: '/dashboard/rfqs',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    section: 'Settings',
+    items: [
+      {
+        label: 'Platform Settings',
+        href: '/dashboard/admin/settings',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+        ),
+      },
+      {
+        label: 'Activity Logs',
+        href: '/dashboard/admin/activity-logs',
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    section: 'Account',
+    items: [
+      {
+        label: 'Notifications',
+        href: '/dashboard/notifications',
+        isNotifications: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+];
+
+// ------------------------------------------------------------------
 // Navigation items with role-based visibility
 // ------------------------------------------------------------------
 const NAV_ITEMS = [
@@ -22,9 +134,9 @@ const NAV_ITEMS = [
         <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
-    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
+    allowedRoles: ['company_admin', 'manager', 'employee', 'vendor_user'],
   },
-  // Notifications — visible to ALL roles, injected right after Overview
+  // Notifications — visible to all non-super_admin roles (super_admin has its own nav)
   {
     label: 'Notifications',
     href: '/dashboard/notifications',
@@ -35,7 +147,7 @@ const NAV_ITEMS = [
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
     ),
-    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee', 'vendor_user'],
+    allowedRoles: ['company_admin', 'manager', 'employee', 'vendor_user'],
   },
   {
     section: 'Company',
@@ -50,7 +162,7 @@ const NAV_ITEMS = [
             <path d="M3.5 13c.8-2 2.5-3 4.5-3s3.7 1 4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin'],
+        allowedRoles: ['company_admin'],
       },
       {
         label: 'Users',
@@ -63,7 +175,7 @@ const NAV_ITEMS = [
             <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin'],
+        allowedRoles: ['company_admin'],
       },
     ],
   },
@@ -79,7 +191,7 @@ const NAV_ITEMS = [
         <circle cx="5.5" cy="10" r="1" fill="currentColor" />
       </svg>
     ),
-    allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+    allowedRoles: ['company_admin', 'manager', 'employee'],
   },
   {
     section: 'Procurement',
@@ -95,7 +207,7 @@ const NAV_ITEMS = [
             <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+        allowedRoles: ['company_admin', 'manager', 'employee'],
       },
       {
         label: 'Contracts',
@@ -106,7 +218,7 @@ const NAV_ITEMS = [
             <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         ),
-        allowedRoles: ['super_admin', 'company_admin', 'manager', 'employee'],
+        allowedRoles: ['company_admin', 'manager', 'employee'],
       },
       {
         label: 'Bids',
@@ -120,22 +232,10 @@ const NAV_ITEMS = [
       },
     ],
   },
-  // Admin — super_admin only
-  {
-    label: 'Platform Admin',
-    href: '/dashboard/admin',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5L14 4.5V8C14 11.5 11.2 14.3 8 15C4.8 14.3 2 11.5 2 8V4.5L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M5.5 8l1.5 1.5L10.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    allowedRoles: ['super_admin'],
-  },
 ];
 
 function filterNavItems(items, userRole) {
-  if (!userRole) return items;
+  if (!userRole) return [];
   return items
     .map(item => {
       if (item.section) {
@@ -155,7 +255,11 @@ export default function Sidebar({ company, user }) {
   const { unreadCount } = useNotifications();
 
   const userRole     = user?.role;
-  const filteredItems = filterNavItems(NAV_ITEMS, userRole);
+  // Super admin gets its own dedicated platform nav; other roles use the company nav
+  const navSource    = userRole === 'super_admin' ? SUPER_ADMIN_NAV : NAV_ITEMS;
+  const filteredItems = userRole === 'super_admin'
+    ? navSource
+    : filterNavItems(navSource, userRole);
 
   function isActive(href, exact = false) {
     if (exact) return pathname === href;
@@ -374,7 +478,9 @@ export default function Sidebar({ company, user }) {
         </nav>
 
         <div className="sidebar-footer">
-          <span className="sidebar-company-name">{company?.name ?? 'Your Company'}</span>
+          <span className="sidebar-company-name">
+            {userRole === 'super_admin' ? 'Platform Admin' : (company?.name ?? 'Your Company')}
+          </span>
           <button
             className="collapse-btn"
             onClick={() => setCollapsed(c => !c)}
