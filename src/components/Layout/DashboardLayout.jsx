@@ -6,10 +6,17 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { NotificationProvider } from '@/context/NotificationContext';
 
+// Module-level cache: persists across component mounts within the same browser session.
+// This prevents the skeleton from re-appearing on every sidebar navigation.
+// The cache is cleared if the session ends (401 from /api/auth/me).
+let sessionUserCache    = null;
+let sessionCompanyCache = null;
+
 export default function DashboardLayout({ children, pageTitle }) {
-  const [user,       setUser]       = useState(null);
-  const [company,    setCompany]    = useState(null);
-  const [userLoaded, setUserLoaded] = useState(false);
+  // Initialise state from cache so the sidebar renders immediately on re-navigation
+  const [user,       setUser]       = useState(sessionUserCache);
+  const [company,    setCompany]    = useState(sessionCompanyCache);
+  const [userLoaded, setUserLoaded] = useState(sessionUserCache !== null);
 
   useEffect(() => {
     async function load() {
@@ -20,10 +27,17 @@ export default function DashboardLayout({ children, pageTitle }) {
         ]);
         if (uRes.ok) {
           const u = await uRes.json();
-          setUser(u.user ?? u.data ?? null);
+          const userData = u.user ?? u.data ?? null;
+          sessionUserCache = userData;
+          setUser(userData);
+        } else {
+          // Session ended — clear cache so stale data isn't shown on next mount
+          sessionUserCache    = null;
+          sessionCompanyCache = null;
         }
         if (cRes.ok) {
           const c = await cRes.json();
+          sessionCompanyCache = c.data;
           setCompany(c.data);
         }
       } catch (_) {}

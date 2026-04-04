@@ -39,7 +39,11 @@ const PUBLIC_PREFIXES = [
   '/403',
 ];
 
+// Routes that are public with exact pathname matching
+const PUBLIC_EXACT = ['/'];
+
 function isPublic(pathname) {
+  if (PUBLIC_EXACT.includes(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
