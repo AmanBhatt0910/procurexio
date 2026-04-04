@@ -65,8 +65,8 @@ export default function AdminCompaniesPage() {
   }
 
   return (
-    <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
-      <>
+    <DashboardLayout pageTitle="Companies Management">
+      <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
         <style>{`
           .page-header { margin-bottom: 24px; }
           .page-title {
@@ -234,13 +234,12 @@ export default function AdminCompaniesPage() {
           @keyframes shimmer { to { background-position: -200% 0; } }
         `}</style>
 
-        <DashboardLayout pageTitle="Companies Management">
-          <div className="page-header">
-            <div className="page-title">Companies Management</div>
-            <div className="page-sub">View and manage all companies registered on the platform</div>
-          </div>
+        <div className="page-header">
+          <div className="page-title">Companies Management</div>
+          <div className="page-sub">View and manage all companies registered on the platform</div>
+        </div>
 
-          <form className="filter-bar" onSubmit={handleSearch}>
+        <form className="filter-bar" onSubmit={handleSearch}>
             <input
               className="filter-input"
               placeholder="Search by name or email…"
@@ -347,8 +346,7 @@ export default function AdminCompaniesPage() {
               <button className="page-btn" disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
             </div>
           )}
-        </DashboardLayout>
-      </>
-    </RoleGuard>
+        </RoleGuard>
+    </DashboardLayout>
   );
 }

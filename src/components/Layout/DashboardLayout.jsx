@@ -21,24 +21,27 @@ export default function DashboardLayout({ children, pageTitle }) {
   useEffect(() => {
     async function load() {
       try {
-        const [uRes, cRes] = await Promise.all([
-          fetch('/api/auth/me'),
-          fetch('/api/company'),
-        ]);
+        const uRes = await fetch('/api/auth/me');
         if (uRes.ok) {
           const u = await uRes.json();
           const userData = u.user ?? u.data ?? null;
           sessionUserCache = userData;
           setUser(userData);
+
+          // Only fetch company for roles that belong to a company tenant
+          const role = userData?.role;
+          if (!['super_admin', 'vendor_user'].includes(role)) {
+            const cRes = await fetch('/api/company');
+            if (cRes.ok) {
+              const c = await cRes.json();
+              sessionCompanyCache = c.data;
+              setCompany(c.data);
+            }
+          }
         } else {
           // Session ended — clear cache so stale data isn't shown on next mount
           sessionUserCache    = null;
           sessionCompanyCache = null;
-        }
-        if (cRes.ok) {
-          const c = await cRes.json();
-          sessionCompanyCache = c.data;
-          setCompany(c.data);
         }
       } catch (_) {}
       // Mark user as loaded regardless of success so the sidebar can render

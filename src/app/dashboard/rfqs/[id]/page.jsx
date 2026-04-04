@@ -392,7 +392,19 @@ export default function RFQDetailPage({ params }) {
         </SectionCard>
 
         {/* Vendor Invitations */}
-        <SectionCard title={`Vendor Invitations (${vendors.length})`}>
+        <SectionCard
+          title="Vendor Invitations"
+          action={
+            canWrite && rfq.status === 'published' && vendors.length > 0
+              ? (
+                <span style={{ fontSize: '.75rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'inline-block', width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%' }} />
+                  {vendors.length} invited
+                </span>
+              )
+              : undefined
+          }
+        >
           <VendorInvitePanel
             rfqId={id}
             rfqStatus={rfq.status}

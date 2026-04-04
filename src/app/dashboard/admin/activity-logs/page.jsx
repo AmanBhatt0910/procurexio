@@ -63,8 +63,8 @@ export default function ActivityLogsPage() {
   useEffect(() => { fetchLogs(page); }, [fetchLogs, page]);
 
   return (
-    <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
-      <>
+    <DashboardLayout pageTitle="Activity Logs">
+      <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
         <style>{`
           .page-header { margin-bottom: 24px; }
           .page-title {
@@ -147,8 +147,7 @@ export default function ActivityLogsPage() {
           @keyframes shimmer { to { background-position: -200% 0; } }
         `}</style>
 
-        <DashboardLayout pageTitle="Activity Logs">
-          <div className="page-header">
+        <div className="page-header">
             <div className="page-title">Activity Logs</div>
             <div className="page-sub">Platform-wide audit trail of recent actions</div>
           </div>
@@ -213,8 +212,7 @@ export default function ActivityLogsPage() {
               <button className="page-btn" disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
             </div>
           )}
-        </DashboardLayout>
-      </>
-    </RoleGuard>
+        </RoleGuard>
+    </DashboardLayout>
   );
 }

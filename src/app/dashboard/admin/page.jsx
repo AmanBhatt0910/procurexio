@@ -29,8 +29,8 @@ export default function SuperAdminPage() {
   }, []);
 
   return (
-    <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
-      <>
+    <DashboardLayout pageTitle="Platform Admin">
+      <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
           :root {
@@ -207,8 +207,7 @@ export default function SuperAdminPage() {
             gap: 8px;
           }
         `}</style>
-        <DashboardLayout pageTitle="Platform Admin">
-          {/* Hero banner */}
+        {/* Hero banner */}
           <div className="admin-hero">
             <div>
               <div className="admin-hero-title">Platform Administration</div>
@@ -364,8 +363,7 @@ export default function SuperAdminPage() {
               )}
             </div>
           </div>
-        </DashboardLayout>
-      </>
-    </RoleGuard>
+        </RoleGuard>
+    </DashboardLayout>
   );
 }

@@ -53,8 +53,8 @@ const SETTINGS_SECTIONS = [
 
 export default function AdminSettingsPage() {
   return (
-    <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
-      <>
+    <DashboardLayout pageTitle="Platform Settings">
+      <RoleGuard roles={['super_admin']} fallback={<RedirectToDashboard />}>
         <style>{`
           .page-header { margin-bottom: 28px; }
           .page-title {
@@ -107,8 +107,7 @@ export default function AdminSettingsPage() {
           }
         `}</style>
 
-        <DashboardLayout pageTitle="Platform Settings">
-          <div className="page-header">
+        <div className="page-header">
             <div className="page-title">Platform Settings</div>
             <div className="page-sub">Global configuration for the Procurexio platform</div>
           </div>
@@ -134,8 +133,7 @@ export default function AdminSettingsPage() {
               </div>
             ))}
           </div>
-        </DashboardLayout>
-      </>
-    </RoleGuard>
+        </RoleGuard>
+    </DashboardLayout>
   );
 }
