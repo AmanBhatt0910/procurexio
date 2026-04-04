@@ -12,13 +12,14 @@
 import { query } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
 import { sendPasswordResetEmail } from '@/lib/mailer';
+import { randomInt } from 'crypto';
 
 /** Generate a random alphanumeric password (16 chars, mixed case + digits). */
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let result = '';
   for (let i = 0; i < 16; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars[randomInt(chars.length)];
   }
   return result;
 }
