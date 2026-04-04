@@ -33,7 +33,9 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     const { email } = body;
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
+    // Basic email format validation (rejects obviously malformed inputs)
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
       return Response.json({ error: 'A valid email address is required.' }, { status: 400 });
     }
 
@@ -66,12 +68,12 @@ export async function POST(request) {
         tempPassword: tempPass,
       });
     } catch (mailErr) {
-      console.error('[forgot-password] mail error:', mailErr);
+      console.error('[forgot-password] mail error:', mailErr.message);
     }
 
     return Response.json(GENERIC_OK, { status: 200 });
   } catch (err) {
-    console.error('[POST /api/auth/forgot-password]', err);
+    console.error('[POST /api/auth/forgot-password]', err.message);
     return Response.json({ error: 'Internal server error.' }, { status: 500 });
   }
 }

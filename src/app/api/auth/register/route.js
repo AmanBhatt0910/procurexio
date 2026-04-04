@@ -124,6 +124,7 @@ async function handleInviteRegister(body, request) {
       companyId: invite.company_id,
       role:      invite.role,
       email:     invite.email,
+      name:      name.trim(),
     };
     if (invite.vendor_id) jwtPayload.vendorId = invite.vendor_id;
 
@@ -228,6 +229,7 @@ async function handleCompanyRegister(body, request) {
       companyId,
       role:  'company_admin',
       email: normalizedEmail,
+      name:  name.trim(),
     });
 
     const isSecure =

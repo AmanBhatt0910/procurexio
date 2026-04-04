@@ -56,10 +56,10 @@ Thumbs.db
 
 *.log
 
-# Database (if local files exist)
+# Database schema setup scripts (should not be committed to source control)
+dbprocesscode.tst
+*.tst
 
-*.sqlite
-*.db
 
 # Temporary files
 
