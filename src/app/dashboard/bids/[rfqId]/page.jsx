@@ -659,7 +659,7 @@ export default function VendorBidWorkspacePage() {
             <>
               <p className="confirm-text">
                 Are you sure you want to update your submitted bid? Your new prices will replace your current submission.
-                A minimum change of ₹100 is required.
+                A minimum change of ₹100 (platform minimum) is required.
               </p>
               <div className="confirm-actions">
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>

@@ -16,6 +16,9 @@ import { jwtVerify } from 'jose';
 
 /**
  * Route protection rules.
+ * IMPORTANT: More-specific paths must be defined BEFORE general prefixes.
+ * e.g. '/dashboard/admin' must come before '/dashboard' so the exact
+ * path is matched first (Object.entries preserves insertion order).
  * prefix → { roles: string[] | 'any' }
  */
 const PROTECTED_ROUTES = {
