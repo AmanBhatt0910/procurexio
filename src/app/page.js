@@ -14,7 +14,7 @@ import CTASection from '@/components/marketing/CTASection';
 import Footer from '@/components/marketing/Footer';
 
 export const metadata = {
-  title: 'ProcureIQ — Procurement Intelligence Platform',
+  title: 'Procurexio — Procurement Intelligence Platform',
   description: 'RFQs, vendor bids, and contract awards — all in one platform. Move faster, negotiate smarter, and close deals with confidence.',
 };
 

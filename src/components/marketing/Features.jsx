@@ -194,7 +194,7 @@ export default function Features() {
               Everything your procurement<br />team needs to move fast
             </h2>
             <p className="section-sub">
-              From the first RFQ to the final contract — ProcureIQ handles the entire sourcing cycle.
+              From the first RFQ to the final contract — Procurexio handles the entire sourcing cycle.
             </p>
           </div>
           <div className="features-header-right">

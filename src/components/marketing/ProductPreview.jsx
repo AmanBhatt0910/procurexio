@@ -331,7 +331,7 @@ export default function ProductPreview() {
               <div className="titlebar-dot" style={{ background: '#ff5f57' }} />
               <div className="titlebar-dot" style={{ background: '#ffbd2e' }} />
               <div className="titlebar-dot" style={{ background: '#28c840' }} />
-              <div className="titlebar-url">app.procureiq.com/dashboard/rfqs</div>
+              <div className="titlebar-url">procurexio.com/dashboard/rfqs</div>
             </div>
 
             <div className="mock-dash-body">
@@ -345,7 +345,7 @@ export default function ProductPreview() {
                       <path d="M2 12l10 5 10-5"/>
                     </svg>
                   </div>
-                  Procure<span>IQ</span>
+                  Procure<span>xio</span>
                 </div>
                 {[
                   { label: 'Dashboard', active: false },

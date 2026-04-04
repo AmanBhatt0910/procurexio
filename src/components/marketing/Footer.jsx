@@ -164,7 +164,7 @@ export default function Footer() {
                     <path d="M2 12l10 5 10-5"/>
                   </svg>
                 </div>
-                <span className="footer-logo-name">Procure<span>IQ</span></span>
+                <span className="footer-logo-name">Procure<span>xio</span></span>
               </Link>
               <p className="footer-tagline">
                 The procurement intelligence platform for modern sourcing teams.
@@ -206,7 +206,7 @@ export default function Footer() {
 
           <div className="footer-bottom">
             <p className="footer-copy">
-              © {new Date().getFullYear()} <span>ProcureIQ</span>. All rights reserved.
+              © {new Date().getFullYear()} <span>Procurexio</span>. All rights reserved.
             </p>
             <div className="footer-bottom-links">
               <a href="#" className="footer-bottom-link">Privacy</a>

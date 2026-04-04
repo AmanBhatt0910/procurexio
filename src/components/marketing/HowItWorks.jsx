@@ -162,7 +162,7 @@ export default function HowItWorks() {
             <div className="hiw-eyebrow">How it Works</div>
             <h2 className="hiw-heading">Three steps to smarter procurement</h2>
             <p className="hiw-sub">
-              From requirements to awarded contract — ProcureIQ cuts your sourcing cycle in half.
+              From requirements to awarded contract — Procurexio cuts your sourcing cycle in half.
             </p>
           </div>
 

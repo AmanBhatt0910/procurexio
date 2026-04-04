@@ -199,7 +199,7 @@ export default function Navbar() {
                 <path d="M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <span className="nav-logo-name">Procure<span>IQ</span></span>
+            <span className="nav-logo-name">Procure<span>xio</span></span>
           </Link>
 
           <nav className="nav-links">
