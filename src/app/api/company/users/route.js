@@ -6,10 +6,18 @@ export async function GET(request) {
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
 
+  // super_admin and vendor_user do not belong to a company tenant
+  if (['super_admin', 'vendor_user'].includes(role)) {
+    return Response.json(
+      { error: 'super_admin and vendor_user do not have a company context. Use /api/admin/users for platform-level access.' },
+      { status: 403 }
+    );
+  }
+
   if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   // employees can view the team list (read-only); they just can't edit roles
-  if (!['super_admin', 'company_admin', 'manager', 'employee'].includes(role)) {
+  if (!['company_admin', 'manager', 'employee'].includes(role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 

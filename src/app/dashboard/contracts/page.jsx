@@ -8,6 +8,12 @@ import DataTable from '@/components/ui/DataTable';
 import AwardStatusBadge from '@/components/award/AwardStatusBadge';
 import RoleGuard from '@/components/auth/RoleGuard';
 
+function RedirectToDashboard() {
+  const router = useRouter();
+  useEffect(() => { router.replace('/dashboard'); }, [router]);
+  return null;
+}
+
 function fmt(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
 }
@@ -100,8 +106,8 @@ export default function ContractsPage() {
   ];
 
   return (
-    <RoleGuard allowed={['company_admin', 'manager', 'employee', 'super_admin']}>
-      <DashboardLayout>
+    <DashboardLayout>
+      <RoleGuard roles={['company_admin', 'manager', 'employee', 'super_admin']} fallback={<RedirectToDashboard />}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap');
           :root {
@@ -169,7 +175,7 @@ export default function ContractsPage() {
             </div>
           )}
         </div>
-      </DashboardLayout>
-    </RoleGuard>
+      </RoleGuard>
+    </DashboardLayout>
   );
 }

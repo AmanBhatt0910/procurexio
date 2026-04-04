@@ -38,6 +38,25 @@ export async function sendInviteEmail({ to, token, role, companyName, invitedBy 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// sendPasswordResetEmail — send a newly-generated temporary password to user
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendPasswordResetEmail({ to, name, tempPassword }) {
+  const loginUrl = `${BASE_URL}/login`;
+
+  const html = buildPasswordResetHtml({ name, tempPassword, loginUrl, appName: APP_NAME });
+
+  const { data, error } = await getResend().emails.send({
+    from:    FROM,
+    to,
+    subject: `Your ${APP_NAME} password has been reset`,
+    html,
+  });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // sendVendorInviteEmail — vendor portal access invite
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendVendorInviteEmail({ to, token, vendorName, companyName, invitedBy }) {
@@ -552,6 +571,78 @@ function buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqRefere
           <tr>
             <td style="background:#f5f4f2;padding:18px 36px;border-top:1px solid #e5e3df;">
               <p style="margin:0;font-size:12px;color:#b8b4b0;">&copy; ${year} ${appName}. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTML: Password reset (temporary password)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildPasswordResetHtml({ name, tempPassword, loginUrl, appName }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Reset</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+          <tr>
+            <td style="background:#0f0e0d;padding:28px 36px;">
+              <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 36px 28px;">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">
+                Password Reset
+              </h1>
+              <p style="margin:0 0 20px;font-size:15px;color:#6b6660;line-height:1.6;">
+                Hi <strong style="color:#0f0e0d;">${name}</strong>, a temporary password has been generated for your account.
+                Use it to sign in, then change your password from your account settings.
+              </p>
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background:#faf9f7;border:1.5px dashed #e4e0db;border-radius:8px;padding:16px 20px;text-align:center;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#b8b3ae;">
+                      Temporary Password
+                    </p>
+                    <p style="margin:0;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:.1em;font-family:monospace;">
+                      ${tempPassword}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#c8501a;border-radius:8px;">
+                    <a href="${loginUrl}"
+                       style="display:inline-block;padding:13px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:-0.1px;">
+                      Sign in to ${appName} &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:13px;color:#9d9894;">
+                If you did not request a password reset, please contact support immediately.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f5f4f2;padding:18px 36px;border-top:1px solid #e5e3df;">
+              <p style="margin:0;font-size:12px;color:#b8b4b0;">
+                &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+              </p>
             </td>
           </tr>
         </table>
