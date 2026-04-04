@@ -256,12 +256,11 @@ const Sidebar = memo(function Sidebar({ company, user }) {
 
   const userRole     = user?.role;
   // Super admin gets its own dedicated platform nav; other roles use the company nav
-  const navSource    = userRole === 'super_admin' ? SUPER_ADMIN_NAV : NAV_ITEMS;
   const filteredItems = useMemo(
     () => userRole === 'super_admin'
-      ? navSource
-      : filterNavItems(navSource, userRole),
-    [navSource, userRole]
+      ? SUPER_ADMIN_NAV
+      : filterNavItems(NAV_ITEMS, userRole),
+    [userRole]
   );
 
   function isActive(href, exact = false) {
