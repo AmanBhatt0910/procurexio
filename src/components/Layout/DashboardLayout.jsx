@@ -7,8 +7,9 @@ import TopBar from './TopBar';
 import { NotificationProvider } from '@/context/NotificationContext';
 
 export default function DashboardLayout({ children, pageTitle }) {
-  const [user,    setUser]    = useState(null);
-  const [company, setCompany] = useState(null);
+  const [user,       setUser]       = useState(null);
+  const [company,    setCompany]    = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -26,6 +27,8 @@ export default function DashboardLayout({ children, pageTitle }) {
           setCompany(c.data);
         }
       } catch (_) {}
+      // Mark user as loaded regardless of success so the sidebar can render
+      setUserLoaded(true);
     }
     load();
   }, []);
@@ -75,10 +78,67 @@ export default function DashboardLayout({ children, pageTitle }) {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+
+        /* Sidebar skeleton shown before user role resolves */
+        .sidebar-skeleton {
+          width: 224px;
+          min-height: 100vh;
+          background: var(--ink);
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+        }
+        .sidebar-skeleton-logo {
+          height: 64px;
+          border-bottom: 1px solid rgba(255,255,255,.07);
+          display: flex;
+          align-items: center;
+          padding: 0 20px;
+          gap: 10px;
+        }
+        .sidebar-skeleton-mark {
+          width: 30px;
+          height: 30px;
+          background: var(--accent);
+          border-radius: 8px;
+          flex-shrink: 0;
+        }
+        .sidebar-skeleton-text {
+          width: 80px;
+          height: 14px;
+          background: rgba(255,255,255,.08);
+          border-radius: 4px;
+        }
+        .sidebar-skeleton-nav {
+          flex: 1;
+          padding: 20px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .sidebar-skeleton-item {
+          height: 32px;
+          background: rgba(255,255,255,.05);
+          border-radius: 6px;
+        }
       `}</style>
 
       <div className="dashboard-shell">
-        <Sidebar company={company} user={user} />
+        {userLoaded ? (
+          <Sidebar company={company} user={user} />
+        ) : (
+          <div className="sidebar-skeleton">
+            <div className="sidebar-skeleton-logo">
+              <div className="sidebar-skeleton-mark" />
+              <div className="sidebar-skeleton-text" />
+            </div>
+            <div className="sidebar-skeleton-nav">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="sidebar-skeleton-item" />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="dashboard-main">
           <TopBar user={user} title={pageTitle} />
           <main className="dashboard-content">

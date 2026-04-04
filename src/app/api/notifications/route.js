@@ -6,8 +6,14 @@ import pool from '@/lib/db';
 export async function GET(request) {
   const userId    = request.headers.get('x-user-id');
   const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
 
-  if (!userId || !companyId) {
+  if (!userId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // super_admin may not have a company — allow userId-only lookup
+  if (!companyId && role !== 'super_admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -17,8 +23,16 @@ export async function GET(request) {
   const limit      = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
   const offset     = (page - 1) * limit;
 
-  const conditions = ['user_id = ?', 'company_id = ?'];
-  const params     = [userId, companyId];
+  // Build query depending on whether companyId is present
+  const isSuperAdminNoCompany = role === 'super_admin' && !companyId;
+
+  const conditions = ['user_id = ?'];
+  const params     = [userId];
+
+  if (!isSuperAdminNoCompany) {
+    conditions.push('company_id = ?');
+    params.push(companyId);
+  }
 
   if (unreadOnly) {
     conditions.push('is_read = 0');
@@ -41,9 +55,16 @@ export async function GET(request) {
       params
     );
 
+    const countParams = isSuperAdminNoCompany
+      ? [userId]
+      : [userId, companyId];
+    const countWhere  = isSuperAdminNoCompany
+      ? 'user_id = ? AND is_read = 0'
+      : 'user_id = ? AND company_id = ? AND is_read = 0';
+
     const [[{ unreadCount }]] = await pool.execute(
-      `SELECT COUNT(*) AS unreadCount FROM notifications WHERE user_id = ? AND company_id = ? AND is_read = 0`,
-      [userId, companyId]
+      `SELECT COUNT(*) AS unreadCount FROM notifications WHERE ${countWhere}`,
+      countParams
     );
 
     return Response.json({
