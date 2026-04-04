@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -14,24 +14,38 @@ function RedirectToDashboard() {
   return null;
 }
 
+const PAGE_LIMIT = 20;
+
 export default function VendorBidsPage() {
   const [rfqs, setRfqs]           = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [companyCurrency, setCompanyCurrency] = useState('USD');
+  const [page, setPage]           = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const router = useRouter();
 
-  useEffect(() => {
-    fetch('/api/bids/rfqs')
-      .then(r => r.json())
-      .then(rfqJson => {
-        if (rfqJson.data?.rfqs) setRfqs(rfqJson.data.rfqs);
-        else setError(rfqJson.error || 'Failed to load');
-        if (rfqJson.data?.companyCurrency) setCompanyCurrency(rfqJson.data.companyCurrency);
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+  const fetchRfqs = useCallback(async (p = 1) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/bids/rfqs?page=${p}&limit=${PAGE_LIMIT}`);
+      const rfqJson = await res.json();
+      if (rfqJson.data?.rfqs) {
+        setRfqs(rfqJson.data.rfqs);
+        setPagination(rfqJson.data.pagination || { total: 0, pages: 1 });
+      } else {
+        setError(rfqJson.error || 'Failed to load');
+      }
+      if (rfqJson.data?.companyCurrency) setCompanyCurrency(rfqJson.data.companyCurrency);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchRfqs(page); }, [fetchRfqs, page]);
 
   const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
 
@@ -135,11 +149,24 @@ export default function VendorBidsPage() {
             background: #f0f5ff; border: 1px solid #c3d5f8; border-radius: var(--radius);
             padding: 12px 18px; color: #2d5bb8; font-size: .85rem; margin-bottom: 20px;
           }
+          .pagination {
+            display: flex; align-items: center; gap: 8px;
+            margin-top: 20px; justify-content: center;
+          }
+          .page-btn {
+            height: 32px; min-width: 32px; padding: 0 10px;
+            border: 1px solid var(--border); border-radius: 7px;
+            background: var(--white); font-family: 'DM Sans', sans-serif;
+            font-size: .82rem; color: var(--ink-soft); cursor: pointer;
+            transition: background .12s, color .12s;
+          }
+          .page-btn:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
+          .page-btn:disabled { opacity: .4; cursor: not-allowed; }
         `}</style>
         <DashboardLayout>
           <PageHeader
             title="My Bid Invitations"
-            subtitle="RFQs you have been invited to respond to"
+            subtitle={`${pagination.total} RFQ${pagination.total !== 1 ? 's' : ''} you have been invited to respond to`}
           />
           {error && <div className="error-box">{error}</div>}
           {!loading && rfqs.length === 0 && !error && (
@@ -153,6 +180,28 @@ export default function VendorBidsPage() {
             loading={loading}
             emptyMessage="No RFQ invitations found"
           />
+
+          {pagination.pages > 1 && (
+            <div className="pagination">
+              <button
+                className="page-btn"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+              >
+                ← Prev
+              </button>
+              <span style={{ fontSize: '.84rem', color: 'var(--ink-soft)' }}>
+                Page {page} of {pagination.pages}
+              </span>
+              <button
+                className="page-btn"
+                disabled={page >= pagination.pages}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </DashboardLayout>
       </>
     </RoleGuard>

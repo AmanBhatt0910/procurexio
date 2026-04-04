@@ -133,6 +133,7 @@ const PROTECTED_ROUTES = {
 const PUBLIC_PREFIXES = [
   '/login',
   '/register',
+  '/forgot-password',
   '/api/auth',
   '/_next',
   '/favicon',
@@ -154,6 +155,59 @@ function matchProtectedRoute(pathname) {
   return null;
 }
 
+// ── Security headers ─────────────────────────────────────────────────────────
+
+/**
+ * Apply security headers to a response.
+ * Works for both NextResponse.next() and NextResponse.redirect().
+ */
+function applySecurityHeaders(response) {
+  // Prevent clickjacking
+  response.headers.set('X-Frame-Options', 'DENY');
+  // Prevent MIME-type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  // Referrer policy — avoid leaking full URL in cross-origin requests
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Restrict browser features
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+  );
+  // Content Security Policy
+  // - default-src 'self': allow same-origin resources by default
+  // - script-src includes 'unsafe-inline' and 'unsafe-eval': required by Next.js for
+  //   server-side hydration scripts and dynamic code evaluation. Nonce-based CSP is not
+  //   yet supported by the Next.js App Router in all configurations. The auth cookie
+  //   (HttpOnly) and CSRF-resistant token-in-cookie approach provide complementary
+  //   XSS protection.
+  // - style-src includes 'unsafe-inline' for CSS-in-JS (inline <style>)
+  // - img-src includes data: for base64 images
+  // - connect-src allows the app to call its own API
+  // - font-src allows Google Fonts
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: https:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+  );
+  // HSTS — only set over HTTPS in production
+  if (process.env.NODE_ENV === 'production') {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=63072000; includeSubDomains; preload'
+    );
+  }
+  return response;
+}
+
 // ── Middleware entry point ───────────────────────────────────────────────────
 
 export async function middleware(request) {
@@ -162,11 +216,11 @@ export async function middleware(request) {
   // ── 1. Rate limiting (applies to all /api/* requests, including public auth routes)
   if (pathname.startsWith('/api/')) {
     const limited = applyRateLimit(request);
-    if (limited) return limited;
+    if (limited) return applySecurityHeaders(limited);
   }
 
   // ── 2. Always allow explicitly public routes
-  if (isPublic(pathname)) return NextResponse.next();
+  if (isPublic(pathname)) return applySecurityHeaders(NextResponse.next());
 
   // ── 3. Require authentication for everything else
   const token = request.cookies.get('auth_token')?.value;
@@ -174,14 +228,14 @@ export async function middleware(request) {
   if (!token) {
     // API routes must get a JSON 401 — not a browser redirect
     if (pathname.startsWith('/api/')) {
-      return new NextResponse(
+      return applySecurityHeaders(new NextResponse(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } },
-      );
+      ));
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   // ── 4. Verify JWT using jose (Edge-compatible)
@@ -193,14 +247,14 @@ export async function middleware(request) {
   } catch {
     // Invalid or expired token
     if (pathname.startsWith('/api/')) {
-      const res = new NextResponse(
+      const res = applySecurityHeaders(new NextResponse(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } },
-      );
+      ));
       res.cookies.delete('auth_token');
       return res;
     }
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    const response = applySecurityHeaders(NextResponse.redirect(new URL('/login', request.url)));
     response.cookies.delete('auth_token');
     return response;
   }
@@ -211,7 +265,7 @@ export async function middleware(request) {
     if (routeConfig) {
       const { roles } = routeConfig;
       if (roles !== 'any' && !roles.includes(decoded.role)) {
-        return NextResponse.redirect(new URL('/403', request.url));
+        return applySecurityHeaders(NextResponse.redirect(new URL('/403', request.url)));
       }
     }
   }
@@ -224,7 +278,7 @@ export async function middleware(request) {
   requestHeaders.set('x-user-role',  decoded.role);
   requestHeaders.set('x-user-name',  decoded.name ?? '');
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  return applySecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

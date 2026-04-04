@@ -21,15 +21,29 @@ export async function GET(request) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const page   = Math.max(1, parseInt(searchParams.get('page')  || '1', 10));
+  const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+  const offset = (page - 1) * limit;
+
   try {
-    const [users] = await pool.query(
-      `SELECT id, name, email, role, created_at
-       FROM   users
-       WHERE  company_id = ?
-       ORDER BY created_at DESC`,
+    const [[{ total }]] = await pool.execute(
+      'SELECT COUNT(*) AS total FROM users WHERE company_id = ?',
       [companyId]
     );
-    return Response.json({ message: 'OK', data: users });
+
+    // Use query (not execute) for LIMIT/OFFSET since some mysql2 versions
+    // reject parameterized LIMIT/OFFSET via execute. Values are validated
+    // integers above so there is no SQL injection risk.
+    const [users] = await pool.query(
+      'SELECT id, name, email, role, created_at FROM users WHERE company_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [companyId, limit, offset]
+    );
+    return Response.json({
+      message: 'OK',
+      data: users,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
   } catch (err) {
     console.error('[GET /api/company/users]', err);
     return Response.json({ error: 'Internal server error' }, { status: 500 });

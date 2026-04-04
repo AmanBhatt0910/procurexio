@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { comparePassword } from '@/lib/password';
 import { signToken, buildAuthCookie } from '@/lib/jwt';
+import { logAuthEvent, getRequestIP } from '@/lib/logger';
 
 // Basic email format check (rejects obviously malformed inputs)
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request) {
+  const ip = getRequestIP(request);
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -43,6 +45,7 @@ export async function POST(request) {
     );
 
     if (!rows.length) {
+      logAuthEvent('login_failure', { email: email.toLowerCase().trim(), ip, reason: 'user_not_found' });
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
@@ -52,6 +55,7 @@ export async function POST(request) {
     const user = rows[0];
     const valid = await comparePassword(password, user.password);
     if (!valid) {
+      logAuthEvent('login_failure', { email: user.email, userId: user.id, ip, reason: 'invalid_password' });
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
@@ -80,6 +84,8 @@ export async function POST(request) {
       companyId:   user.company_id,
       companyName: user.company_name,
     };
+
+    logAuthEvent('login_success', { email: user.email, userId: user.id, role: user.role, ip });
 
     const response = NextResponse.json(
       { message: 'Login successful.', user: safeUser },
