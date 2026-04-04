@@ -1,7 +1,7 @@
 // src/app/api/rfqs/[id]/award/route.js
 import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
-import { createNotification } from '@/lib/notifications';
+import { createNotifications } from '@/lib/notifications';
 
 // Helper: generate contract reference
 async function generateContractRef(conn, companyId) {
@@ -111,17 +111,15 @@ export async function POST(request, { params }) {
       [contractResult.insertId]
     );
 
-    // Notify vendor user that they won the contract
+    // Notify vendor user(s) that they won the contract
     try {
       const [vendorUsers] = await db.query(
         `SELECT id AS userId, company_id AS companyId
-           FROM users WHERE vendor_id = ? AND role = 'vendor_user' LIMIT 10`,
+           FROM users WHERE vendor_id = ? AND role = 'vendor_user'`,
         [bid.vendor_id]
       );
-      for (const vu of vendorUsers) {
-        await createNotification({
-          userId:    vu.userId,
-          companyId: vu.companyId,
+      if (vendorUsers.length) {
+        await createNotifications(vendorUsers, {
           type:      'contract_awarded',
           title:     `You won the contract for "${contract.rfq_title}"`,
           body:      `Congratulations! Your bid has been selected. Contract reference: ${contract.contract_reference}.`,

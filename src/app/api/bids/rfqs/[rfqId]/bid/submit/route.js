@@ -69,8 +69,8 @@ export async function POST(request, { params }) {
     try {
       const [managers] = await pool.query(
         `SELECT id AS userId FROM users
-         WHERE company_id = ? AND role IN ('company_admin', 'manager') AND id != ?`,
-        [companyId, userId]
+         WHERE company_id = ? AND role IN ('company_admin', 'manager')`,
+        [companyId]
       );
       if (managers.length) {
         await createNotifications(
