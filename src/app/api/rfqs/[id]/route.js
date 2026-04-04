@@ -1,6 +1,7 @@
 // src/app/api/rfqs/[id]/route.js
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
+import { createNotifications } from '@/lib/notifications';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
 const TRANSITIONS = {
@@ -131,6 +132,28 @@ export async function PUT(request, { params }) {
         WHERE r.id = ?`,
       [id]
     );
+
+    // When an RFQ is published, notify all invited vendor users
+    if (updates.status === 'published') {
+      try {
+        const vendorUsers = await query(
+          `SELECT u.id AS userId, u.company_id AS companyId
+             FROM rfq_vendors rv
+             JOIN vendors v ON v.id = rv.vendor_id
+             JOIN users   u ON u.vendor_id = v.id AND u.role = 'vendor_user'
+            WHERE rv.rfq_id = ?`,
+          [id]
+        );
+        if (vendorUsers.length) {
+          await createNotifications(vendorUsers, {
+            type:  'rfq_published',
+            title: `New RFQ available: "${rfq.title}"`,
+            body:  'You have been invited to submit a bid. Review the RFQ and place your bid before the deadline.',
+            link:  `/dashboard/bids/${id}`,
+          });
+        }
+      } catch (_) { /* notification errors must not fail the request */ }
+    }
 
     return Response.json({ message: 'RFQ updated', data: { rfq: updated[0] } });
   } catch (err) {

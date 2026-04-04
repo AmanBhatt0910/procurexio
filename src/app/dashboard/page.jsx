@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Badge from '@/components/ui/Badge';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [company, setCompany] = useState(null);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
@@ -18,11 +20,21 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [cRes, uRes, sRes] = await Promise.all([
+        const [meRes, cRes, uRes, sRes] = await Promise.all([
+          fetch('/api/auth/me'),
           fetch('/api/company'),
           fetch('/api/company/users'),
           fetch('/api/dashboard/stats'),
         ]);
+
+        if (meRes.ok) {
+          const me = await meRes.json();
+          const role = (me.user ?? me.data)?.role;
+          if (role === 'super_admin') {
+            router.replace('/dashboard/admin');
+            return;
+          }
+        }
 
         if (cRes.ok) setCompany((await cRes.json()).data);
         if (uRes.ok) setUsers((await uRes.json()).data);
@@ -34,7 +46,7 @@ export default function DashboardPage() {
       }
     }
     load();
-  }, []);
+  }, [router]);
 
   // Helper to display count or placeholder
   const formatCount = (value) => (value !== null ? value : '—');

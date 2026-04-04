@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { createNotifications } from '@/lib/notifications';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -25,7 +26,7 @@ export async function POST(request, { params }) {
     const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
     const [[rfq]] = await pool.query(
-      `SELECT deadline, status FROM rfqs WHERE id = ? AND company_id = ?`,
+      `SELECT r.deadline, r.status, r.title, r.created_by FROM rfqs r WHERE r.id = ? AND r.company_id = ?`,
       [rfqId, companyId]
     );
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
@@ -57,13 +58,34 @@ export async function POST(request, { params }) {
         [rfqId, vendorId, companyId]
       );
       await conn.commit();
-      return NextResponse.json({ message: 'Bid submitted successfully' });
     } catch (e) {
       await conn.rollback();
       throw e;
     } finally {
       conn.release();
     }
+
+    // Notify company admins and managers that a bid was submitted on their RFQ
+    try {
+      const [managers] = await pool.query(
+        `SELECT id AS userId FROM users
+         WHERE company_id = ? AND role IN ('company_admin', 'manager')`,
+        [companyId]
+      );
+      if (managers.length) {
+        await createNotifications(
+          managers.map(m => ({ userId: m.userId, companyId })),
+          {
+            type:  'bid_submitted',
+            title: `New bid received on "${rfq.title}"`,
+            body:  'A vendor has submitted a bid. Review it in the RFQ bids page.',
+            link:  `/dashboard/rfqs/${rfqId}/bids`,
+          }
+        );
+      }
+    } catch (_) { /* notification errors must not fail the request */ }
+
+    return NextResponse.json({ message: 'Bid submitted successfully' });
   } catch (err) {
     console.error('POST /api/bids/rfqs/[rfqId]/bid/submit', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

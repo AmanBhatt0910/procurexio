@@ -38,7 +38,10 @@ function LoginForm() {
         return;
       }
 
-      router.push(redirect);
+      // Redirect super_admin to their dedicated platform dashboard
+      const role = data.user?.role;
+      const destination = role === 'super_admin' ? '/dashboard/admin' : redirect;
+      router.push(destination);
       router.refresh();
     } catch {
       setError('Network error. Please check your connection.');
