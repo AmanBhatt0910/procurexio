@@ -133,6 +133,7 @@ const PROTECTED_ROUTES = {
 const PUBLIC_PREFIXES = [
   '/login',
   '/register',
+  '/forgot-password',
   '/api/auth',
   '/_next',
   '/favicon',
