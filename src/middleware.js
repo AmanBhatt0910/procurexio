@@ -14,6 +14,106 @@ import { jwtVerify } from 'jose';
  * Install: npm install jose
  */
 
+// ── Rate limiting ────────────────────────────────────────────────────────────
+// In-memory sliding-window rate limiter.
+// Works correctly for single-server (Node.js) deployments.
+// For multi-instance / serverless deployments, replace this store with
+// a shared Redis/Upstash client so limits are enforced globally.
+
+const _rlStore = new Map();
+let   _rlCleanupCounter = 0;
+
+/** Remove expired entries from the rate-limit store. */
+function _rlMaybeCleanup() {
+  _rlCleanupCounter += 1;
+  if (_rlCleanupCounter < 500) return;
+  _rlCleanupCounter = 0;
+  const now = Date.now();
+  for (const [k, v] of _rlStore) {
+    if (v.resetAt <= now) _rlStore.delete(k);
+  }
+}
+
+/**
+ * Evaluate rate-limit for the given (key, max, windowMs).
+ * @returns {{ allowed: boolean, remaining: number, resetAt: number }}
+ */
+function _rlCheck(key, max, windowMs) {
+  _rlMaybeCleanup();
+  const now   = Date.now();
+  const entry = _rlStore.get(key);
+
+  if (!entry || entry.resetAt <= now) {
+    _rlStore.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: max - 1, resetAt: now + windowMs };
+  }
+
+  entry.count += 1;
+  if (entry.count > max) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  }
+  return { allowed: true, remaining: max - entry.count, resetAt: entry.resetAt };
+}
+
+/** Extract client IP (handles reverse-proxy X-Forwarded-For). */
+function _getIP(request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+/**
+ * Rate-limit configuration.
+ * auth:    stricter limit for login / register / forgot-password / invite
+ * default: general limit for all other /api/* requests
+ */
+const RATE_LIMIT_CONFIGS = {
+  auth:    { max: 10,  windowMs: 60_000 },   // 10  req / min  (auth-sensitive)
+  default: { max: 60,  windowMs: 60_000 },   // 60  req / min  (general API)
+};
+
+/** Path prefixes that receive the stricter auth rate limit. */
+const AUTH_RATE_PATHS = [
+  '/api/auth/login',
+  '/api/auth/forgot-password',
+  '/api/auth/register',
+  '/api/auth/invite',
+];
+
+/**
+ * Apply rate limiting to an API request.
+ * Returns a 429 NextResponse if the limit is exceeded, otherwise null.
+ */
+function applyRateLimit(request) {
+  const { pathname } = request.nextUrl;
+  const ip           = _getIP(request);
+  const isAuth       = AUTH_RATE_PATHS.some(p => pathname.startsWith(p));
+  const cfg          = isAuth ? RATE_LIMIT_CONFIGS.auth : RATE_LIMIT_CONFIGS.default;
+  const key          = `${isAuth ? 'auth' : 'api'}:${ip}`;
+
+  const result = _rlCheck(key, cfg.max, cfg.windowMs);
+  if (result.allowed) return null;
+
+  const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+  return new NextResponse(
+    JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+    {
+      status: 429,
+      headers: {
+        'Content-Type':          'application/json',
+        'Retry-After':           String(retryAfter),
+        'X-RateLimit-Limit':     String(cfg.max),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset':     String(Math.ceil(result.resetAt / 1000)),
+      },
+    },
+  );
+}
+
+// ── Route protection ─────────────────────────────────────────────────────────
+
 /**
  * Route protection rules.
  * prefix → { roles: string[] | 'any' }
@@ -54,49 +154,75 @@ function matchProtectedRoute(pathname) {
   return null;
 }
 
+// ── Middleware entry point ───────────────────────────────────────────────────
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Always allow public routes
+  // ── 1. Rate limiting (applies to all /api/* requests, including public auth routes)
+  if (pathname.startsWith('/api/')) {
+    const limited = applyRateLimit(request);
+    if (limited) return limited;
+  }
+
+  // ── 2. Always allow explicitly public routes
   if (isPublic(pathname)) return NextResponse.next();
 
-  // Get token from httpOnly cookie
+  // ── 3. Require authentication for everything else
   const token = request.cookies.get('auth_token')?.value;
 
   if (!token) {
+    // API routes must get a JSON 401 — not a browser redirect
+    if (pathname.startsWith('/api/')) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Verify JWT using jose (Edge-compatible)
+  // ── 4. Verify JWT using jose (Edge-compatible)
   let decoded;
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
     decoded = payload;
   } catch {
-    // Invalid or expired token — clear cookie and redirect
+    // Invalid or expired token
+    if (pathname.startsWith('/api/')) {
+      const res = new NextResponse(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      );
+      res.cookies.delete('auth_token');
+      return res;
+    }
     const response = NextResponse.redirect(new URL('/login', request.url));
     response.cookies.delete('auth_token');
     return response;
   }
 
-  // Check role-based access
-  const routeConfig = matchProtectedRoute(pathname);
-  if (routeConfig) {
-    const { roles } = routeConfig;
-    if (roles !== 'any' && !roles.includes(decoded.role)) {
-      return NextResponse.redirect(new URL('/403', request.url));
+  // ── 5. Role-based access control (page routes only — API routes enforce their own RBAC)
+  if (!pathname.startsWith('/api/')) {
+    const routeConfig = matchProtectedRoute(pathname);
+    if (routeConfig) {
+      const { roles } = routeConfig;
+      if (roles !== 'any' && !roles.includes(decoded.role)) {
+        return NextResponse.redirect(new URL('/403', request.url));
+      }
     }
   }
 
-  // Forward user info as headers to API routes / server components
+  // ── 6. Forward verified user info as request headers
+  //    These values come from the server-validated JWT, not from the client.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-user-id',    String(decoded.userId));
   requestHeaders.set('x-company-id', String(decoded.companyId ?? ''));
   requestHeaders.set('x-user-role',  decoded.role);
-  requestHeaders.set('x-user-name',  decoded.name ?? '');   // ← added: used by invite email
+  requestHeaders.set('x-user-name',  decoded.name ?? '');
 
   return NextResponse.next({ request: { headers: requestHeaders } });
 }

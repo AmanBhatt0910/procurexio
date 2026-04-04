@@ -64,11 +64,15 @@ export function buildAuthCookie(token, options = {}) {
 }
 
 export function clearAuthCookie() {
+  const isSecure = process.env.NODE_ENV === 'production';
   return [
     'auth_token=',
     'HttpOnly',
     'Path=/',
     'Max-Age=0',
+    isSecure ? 'Secure' : '',
     'SameSite=Lax',
-  ].join('; ');
+  ]
+    .filter(Boolean)
+    .join('; ');
 }

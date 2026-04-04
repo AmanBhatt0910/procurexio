@@ -10,6 +10,11 @@ export async function GET(request, { params }) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // super_admin without a company context cannot use this tenant-scoped endpoint
+  if (!companyId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const [[contract]] = await db.query(
     `SELECT
        c.*,

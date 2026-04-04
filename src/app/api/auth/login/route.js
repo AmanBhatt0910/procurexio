@@ -1,9 +1,10 @@
-// src/app/api/auth/login/route.js
-
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { comparePassword } from '@/lib/password';
 import { signToken, buildAuthCookie } from '@/lib/jwt';
+
+// Basic email format check (rejects obviously malformed inputs)
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request) {
   try {
@@ -11,6 +12,20 @@ export async function POST(request) {
     const { email, password } = body;
 
     if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email and password are required.' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+      return NextResponse.json(
+        { error: 'A valid email address is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== 'string') {
       return NextResponse.json(
         { error: 'Email and password are required.' },
         { status: 400 }
@@ -48,6 +63,7 @@ export async function POST(request) {
       companyId: user.company_id,
       role:      user.role,
       email:     user.email,
+      name:      user.name,
     });
 
     // isSecure = true only when request actually arrived over HTTPS.
@@ -70,15 +86,11 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    // FIX: was buildAuthCookie(token, isSecure) — passing a boolean instead of
-    // an options object, so destructuring { isSecure = false } = false silently
-    // fell back to false, but the cookie still got Secure because NODE_ENV is
-    // 'production'.  Always pass the options object.
     response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 
   } catch (err) {
-    console.error('[POST /api/auth/login]', err);
+    console.error('[POST /api/auth/login]', err.message);
     return NextResponse.json(
       { error: 'Internal server error.' },
       { status: 500 }
