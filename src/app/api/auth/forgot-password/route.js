@@ -13,6 +13,7 @@ import { query } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
 import { sendPasswordResetEmail } from '@/lib/mailer';
 import { randomInt } from 'crypto';
+import { logAuthEvent, getRequestIP } from '@/lib/logger';
 
 /** Generate a random alphanumeric password (16 chars, mixed case + digits). */
 function generateTempPassword() {
@@ -29,6 +30,7 @@ const GENERIC_OK = {
 };
 
 export async function POST(request) {
+  const ip = getRequestIP(request);
   try {
     const body = await request.json().catch(() => ({}));
     const { email } = body;
@@ -40,6 +42,8 @@ export async function POST(request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    logAuthEvent('password_reset_request', { email: normalizedEmail, ip });
 
     // Look up user — intentionally silent if not found (no enumeration)
     const rows = await query(
@@ -67,6 +71,7 @@ export async function POST(request) {
         name:         user.name || user.email.split('@')[0],
         tempPassword: tempPass,
       });
+      logAuthEvent('password_reset_sent', { email: user.email, userId: user.id, ip });
     } catch (mailErr) {
       console.error('[forgot-password] mail error:', mailErr.message);
     }
