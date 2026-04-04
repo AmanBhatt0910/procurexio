@@ -161,7 +161,7 @@ function PricingCard({ tier, price, period, desc, features, cta, href, highlight
         {badge && <span className="pricing-badge">{badge}</span>}
         <div className="pricing-tier">{tier}</div>
         <div className="pricing-price-row">
-          {price !== 'Custom' && <span className="pricing-currency">$</span>}
+          {price !== 'Custom' && <span className="pricing-currency">₹</span>}
           <span className="pricing-amount">{price}</span>
           {period && <span className="pricing-period">/{period}</span>}
         </div>
@@ -206,7 +206,7 @@ export default function Pricing() {
     },
     {
       tier: 'Pro',
-      price: '79',
+      price: '5999',
       period: 'mo',
       desc: 'Everything your team needs to run a full procurement operation at scale.',
       features: [
