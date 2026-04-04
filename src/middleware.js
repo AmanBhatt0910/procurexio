@@ -174,7 +174,11 @@ function applySecurityHeaders(response) {
   );
   // Content Security Policy
   // - default-src 'self': allow same-origin resources by default
-  // - script-src includes 'unsafe-inline' for Next.js inline scripts
+  // - script-src includes 'unsafe-inline' and 'unsafe-eval': required by Next.js for
+  //   server-side hydration scripts and dynamic code evaluation. Nonce-based CSP is not
+  //   yet supported by the Next.js App Router in all configurations. The auth cookie
+  //   (HttpOnly) and CSRF-resistant token-in-cookie approach provide complementary
+  //   XSS protection.
   // - style-src includes 'unsafe-inline' for CSS-in-JS (inline <style>)
   // - img-src includes data: for base64 images
   // - connect-src allows the app to call its own API

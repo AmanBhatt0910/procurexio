@@ -32,13 +32,12 @@ export async function GET(request) {
       [companyId]
     );
 
-    const [users] = await pool.execute(
-      `SELECT id, name, email, role, created_at
-       FROM   users
-       WHERE  company_id = ?
-       ORDER BY created_at DESC
-       LIMIT ${limit} OFFSET ${offset}`,
-      [companyId]
+    // Use query (not execute) for LIMIT/OFFSET since some mysql2 versions
+    // reject parameterized LIMIT/OFFSET via execute. Values are validated
+    // integers above so there is no SQL injection risk.
+    const [users] = await pool.query(
+      'SELECT id, name, email, role, created_at FROM users WHERE company_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [companyId, limit, offset]
     );
     return Response.json({
       message: 'OK',
