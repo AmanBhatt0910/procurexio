@@ -2,7 +2,7 @@
 // File upload and listing endpoint for bid attachments
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { randomUUID } from 'crypto';
 import pool from '@/lib/db';
 
@@ -133,24 +133,40 @@ export async function POST(request, { params }) {
     };
     const ext = MIME_TO_EXT[mimeType] || 'bin';
 
-    // Sanitize original name: allow only alphanumeric, underscore, hyphen, and a single dot before extension
+    // Sanitize original name: strip path separators first, then allow only safe chars
     const baseName = file.name
+      .replace(/[/\\]/g, '_')            // strip ALL path separators first (prevent directory traversal)
       .replace(/\.[^.]*$/, '')           // remove extension
       .replace(/[^\w\-]/g, '_')          // allow only alphanumeric, underscore, hyphen
-      .replace(/^[\-_]+/, '')            // strip leading hyphens/underscores (prevent hidden files / CLI flag confusion)
+      .replace(/^[\-_]+/, '')            // strip leading hyphens/underscores
       .replace(/_+/g, '_')               // collapse multiple underscores
       .slice(0, 200) || 'file';
     const originalName = `${baseName}.${ext}`;
     const storedName = `${randomUUID()}.${ext}`;
 
-    const uploadDir = join(process.cwd(), 'private', 'uploads', String(companyId), String(rfqId), String(vendorId));
+    // Validate that IDs are numeric before using in paths
+    const safeCompanyId = parseInt(companyId, 10);
+    const safeRfqId = parseInt(rfqId, 10);
+    const safeVendorId = parseInt(vendorId, 10);
+    if (!Number.isFinite(safeCompanyId) || !Number.isFinite(safeRfqId) || !Number.isFinite(safeVendorId)) {
+      return NextResponse.json({ error: 'Invalid IDs in path construction' }, { status: 400 });
+    }
+
+    const uploadsBase = join(process.cwd(), 'private', 'uploads');
+    const uploadDir = join(uploadsBase, String(safeCompanyId), String(safeRfqId), String(safeVendorId));
+
+    // Verify path stays within uploads directory
+    if (!resolve(uploadDir).startsWith(resolve(uploadsBase))) {
+      return NextResponse.json({ error: 'Invalid upload path' }, { status: 400 });
+    }
+
     await mkdir(uploadDir, { recursive: true });
 
     const filePath = join(uploadDir, storedName);
     await writeFile(filePath, Buffer.from(bytes));
 
     // Store metadata in DB — path relative to private/uploads
-    const relativePath = `${companyId}/${rfqId}/${vendorId}/${storedName}`;
+    const relativePath = `${safeCompanyId}/${safeRfqId}/${safeVendorId}/${storedName}`;
     const [result] = await pool.query(
       `INSERT INTO bid_attachments
          (bid_id, rfq_id, vendor_id, company_id, original_name, stored_name, file_path, mime_type, file_size, uploaded_by)

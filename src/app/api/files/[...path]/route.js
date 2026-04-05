@@ -3,7 +3,7 @@
 // Only authorized users can access files belonging to their company.
 import { NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import pool from '@/lib/db';
 
 export async function GET(request, { params }) {
@@ -18,7 +18,14 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'File path required' }, { status: 400 });
   }
 
-  // Reconstruct relative path and validate it matches company
+  // Validate each path segment: no '..' or absolute paths allowed
+  for (const seg of pathSegments) {
+    if (seg === '..' || seg === '.' || seg.includes('/') || seg.includes('\\') || seg.startsWith('/')) {
+      return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
+    }
+  }
+
+  // Reconstruct relative path and validate it matches expected structure
   const relativePath = pathSegments.join('/');
 
   // Security: path must start with the user's company ID or the user must have access
@@ -29,6 +36,11 @@ export async function GET(request, { params }) {
   }
 
   const fileCompanyId = parts[0];
+
+  // Verify numeric IDs
+  if (!/^\d+$/.test(fileCompanyId) || !/^\d+$/.test(parts[1]) || !/^\d+$/.test(parts[2])) {
+    return NextResponse.json({ error: 'Invalid file path structure' }, { status: 400 });
+  }
 
   // Vendor users can only access their own company's files
   // Buyer-side roles can access any file in their company
@@ -49,7 +61,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Verify the attachment exists in DB
+  // Verify the attachment exists in DB (source of truth — prevents serving arbitrary files)
   const [[attachment]] = await pool.query(
     `SELECT id, original_name, mime_type FROM bid_attachments WHERE file_path = ?`,
     [relativePath]
@@ -58,8 +70,13 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 
-  // Read the file from disk
-  const fullPath = join(process.cwd(), 'private', 'uploads', relativePath);
+  // Build and validate the full path stays within the uploads directory
+  const uploadsBase = resolve(process.cwd(), 'private', 'uploads');
+  const fullPath = resolve(uploadsBase, relativePath);
+  if (!fullPath.startsWith(uploadsBase + '/') && fullPath !== uploadsBase) {
+    return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
+  }
+
   try {
     await stat(fullPath);
   } catch {

@@ -43,15 +43,16 @@ export async function GET(request, { params }) {
       [rfqId, companyId]
     );
 
-    // Fetch attachments count per bid
+    // Fetch attachments count per bid - use a JOIN approach to avoid dynamic IN clause
     const bidIds = bids.map(b => b.bid_id);
     let attachmentCounts = {};
     if (bidIds.length > 0) {
-      // Generate parameterized placeholders separately to make intent clear
-      const placeholderList = Array.from({ length: bidIds.length }, () => '?');
+      // Build parameterized IN clause with pre-validated integer IDs
+      const safeIds = bidIds.map(id => parseInt(id, 10)).filter(Number.isFinite);
+      const placeholderList = safeIds.map(() => '?');
       const [attachRows] = await pool.query(
         `SELECT bid_id, COUNT(*) AS cnt FROM bid_attachments WHERE bid_id IN (${placeholderList.join(',')}) GROUP BY bid_id`,
-        bidIds
+        safeIds
       );
       for (const row of attachRows) {
         attachmentCounts[row.bid_id] = row.cnt;
