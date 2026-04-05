@@ -500,6 +500,191 @@ export async function sendVendorRFQInviteEmail({ to, vendorName, companyName, rf
   return data;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// sendBidSubmittedEmail — notify company managers/admins when a vendor submits
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendBidSubmittedEmail({ to, managerName, vendorName, rfqTitle, rfqReference, rfqLink }) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>New Bid Received</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">New Bid Received</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Hi ${managerName || 'there'},<br/>
+          <strong style="color:#0f0e0d;">${vendorName}</strong> has submitted a bid for:
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
+            <p style="margin:0 0 12px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${rfqLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">View Bids</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `New bid received on "${rfqTitle}" from ${vendorName}`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendBidUpdatedEmail — notify company managers/admins when a vendor updates bid
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendBidUpdatedEmail({ to, managerName, vendorName, rfqTitle, rfqReference, rfqLink }) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Bid Updated</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">Bid Updated</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Hi ${managerName || 'there'},<br/>
+          <strong style="color:#0f0e0d;">${vendorName}</strong> has updated their bid for:
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
+            <p style="margin:0 0 12px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${rfqLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">View Bids</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Bid updated on "${rfqTitle}" by ${vendorName}`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendContractAwardedEmail — notify the winning vendor of their win
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendContractAwardedEmail({ to, vendorName, rfqTitle, rfqReference, contractReference, dashboardLink }) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Congratulations — Contract Awarded</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">🏆 Congratulations — You Won!</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
+          Your bid has been selected and a contract has been awarded to you.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#065f46;letter-spacing:.06em;text-transform:uppercase;">Contract Details</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#065f46;">RFQ Ref: <strong>${rfqReference}</strong></p>
+            <p style="margin:0;font-size:13px;color:#065f46;">Contract Ref: <strong>${contractReference}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${dashboardLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">View Contract Details</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `🏆 Contract Awarded — ${rfqTitle}`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendBidRejectedEmail — notify losing vendors
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendBidRejectedEmail({ to, vendorName, rfqTitle, rfqReference }) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Bid Status Update</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">Bid Status Update</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
+          Thank you for participating in the following RFQ. We regret to inform you that another vendor has been selected for this contract.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+          </td></tr>
+        </table>
+        <p style="font-size:14px;color:#6b6660;line-height:1.6;">We appreciate your interest and encourage you to participate in future opportunities.</p>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Bid status update for "${rfqTitle}"`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
 function buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink, appName }) {
   const deadlineText = deadline
     ? new Date(deadline).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })

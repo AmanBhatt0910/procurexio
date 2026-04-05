@@ -17,6 +17,7 @@ export default function RFQBidsPage() {
   const [report, setReport]   = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError]     = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const fetchBids = useCallback(async () => {
     try {
@@ -32,6 +33,27 @@ export default function RFQBidsPage() {
   }, [rfqId]);
 
   useEffect(() => { fetchBids(); }, [fetchBids]);
+
+  const exportCSV = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/rfqs/${rfqId}/bids/export?format=csv`);
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cd = res.headers.get('Content-Disposition') || '';
+      const match = cd.match(/filename="([^"]+)"/);
+      a.download = match ? match[1] : `bids-${rfqId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Export failed: ' + e.message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchReport = async () => {
     setReportLoading(true);
@@ -177,6 +199,14 @@ export default function RFQBidsPage() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn" onClick={() => router.push(`/dashboard/rfqs/${rfqId}`)}>
                     ← RFQ Details
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={exportCSV}
+                    disabled={exporting}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {exporting ? 'Exporting…' : '⬇ Export CSV'}
                   </button>
                 </div>
               }

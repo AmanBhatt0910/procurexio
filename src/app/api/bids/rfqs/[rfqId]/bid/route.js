@@ -32,9 +32,12 @@ export async function POST(request, { params }) {
     );
     if (!invite) return NextResponse.json({ error: 'Not invited to this RFQ' }, { status: 403 });
 
-    // Check deadline
-    const [[rfq]] = await pool.query(`SELECT deadline, currency FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
+    // Check deadline + RFQ status
+    const [[rfq]] = await pool.query(`SELECT deadline, currency, status FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
+    if (rfq.status === 'closed' || rfq.status === 'cancelled') {
+      return NextResponse.json({ error: 'This RFQ is closed and no longer accepting bids' }, { status: 422 });
+    }
     if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
@@ -79,8 +82,11 @@ export async function PUT(request, { params }) {
     const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
     // Check deadline + bid ownership
-    const [[rfq]] = await pool.query(`SELECT deadline, currency FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
+    const [[rfq]] = await pool.query(`SELECT deadline, currency, status FROM rfqs WHERE id = ? AND company_id = ?`, [rfqId, companyId]);
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
+    if (rfq.status === 'closed' || rfq.status === 'cancelled') {
+      return NextResponse.json({ error: 'This RFQ is closed and no longer accepting bids' }, { status: 422 });
+    }
     if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }

@@ -65,3 +65,6 @@ dbprocesscode.tst
 
 *.tmp
 *.swp
+
+# Private file uploads (bid attachments — stored locally, not in source control)
+/private/uploads/

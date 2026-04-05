@@ -1,0 +1,77 @@
+// src/app/api/files/[...path]/route.js
+// Secure file serving for bid attachments.
+// Only authorized users can access files belonging to their company.
+import { NextResponse } from 'next/server';
+import { readFile, stat } from 'fs/promises';
+import { join } from 'path';
+import pool from '@/lib/db';
+
+export async function GET(request, { params }) {
+  const role      = request.headers.get('x-user-role');
+  const userId    = request.headers.get('x-user-id');
+  const companyId = request.headers.get('x-company-id');
+
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { path: pathSegments } = await params;
+  if (!pathSegments?.length) {
+    return NextResponse.json({ error: 'File path required' }, { status: 400 });
+  }
+
+  // Reconstruct relative path and validate it matches company
+  const relativePath = pathSegments.join('/');
+
+  // Security: path must start with the user's company ID or the user must have access
+  // Path format: company_id/rfq_id/vendor_id/filename
+  const parts = relativePath.split('/');
+  if (parts.length < 4) {
+    return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
+  }
+
+  const fileCompanyId = parts[0];
+
+  // Vendor users can only access their own company's files
+  // Buyer-side roles can access any file in their company
+  if (role === 'vendor_user') {
+    // Vendor must belong to this company
+    const [[userRow]] = await pool.query(
+      `SELECT company_id FROM users WHERE id = ? LIMIT 1`,
+      [userId]
+    );
+    if (!userRow || String(userRow.company_id) !== fileCompanyId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } else if (['company_admin', 'manager', 'employee'].includes(role)) {
+    if (String(companyId) !== fileCompanyId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } else {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Verify the attachment exists in DB
+  const [[attachment]] = await pool.query(
+    `SELECT id, original_name, mime_type FROM bid_attachments WHERE file_path = ?`,
+    [relativePath]
+  );
+  if (!attachment) {
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
+  }
+
+  // Read the file from disk
+  const fullPath = join(process.cwd(), 'private', 'uploads', relativePath);
+  try {
+    await stat(fullPath);
+  } catch {
+    return NextResponse.json({ error: 'File not found on disk' }, { status: 404 });
+  }
+
+  const fileBuffer = await readFile(fullPath);
+  return new NextResponse(fileBuffer, {
+    headers: {
+      'Content-Type': attachment.mime_type,
+      'Content-Disposition': `inline; filename="${attachment.original_name}"`,
+      'Cache-Control': 'private, max-age=3600',
+    },
+  });
+}

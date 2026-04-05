@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { autoCloseIfExpired } from '@/lib/rfqUtils';
 
 // GET /api/rfqs/[id]/bids — internal: all bids for an RFQ
 export async function GET(request, { params }) {
@@ -13,6 +14,9 @@ export async function GET(request, { params }) {
   const { id: rfqId } = await params;
 
   try {
+    // Auto-close if deadline has passed
+    await autoCloseIfExpired(rfqId, companyId);
+
     // Verify RFQ belongs to this company
     const [[rfq]] = await pool.query(
       `SELECT id, title, reference_number, status, deadline, budget, currency
