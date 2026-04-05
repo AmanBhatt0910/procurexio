@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS users (
     'vendor_user'
   ) NOT NULL DEFAULT 'employee',
 
-  -- ✅ SECURITY FIELDS (ADDED)
   is_active              TINYINT(1) NOT NULL DEFAULT 1,
   failed_login_attempts  INT        NOT NULL DEFAULT 0,
   locked_until           DATETIME   NULL,
@@ -48,14 +47,18 @@ CREATE TABLE IF NOT EXISTS users (
 
   INDEX idx_users_company_id (company_id),
   INDEX idx_users_vendor_id  (vendor_id),
-
   INDEX idx_users_is_active (is_active),
   INDEX idx_users_locked_until (locked_until),
 
   CONSTRAINT fk_users_company
     FOREIGN KEY (company_id)
     REFERENCES companies(id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_users_vendor
+    FOREIGN KEY (vendor_id)
+    REFERENCES vendors(id)
+    ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -130,5 +133,10 @@ CREATE TABLE IF NOT EXISTS invitations (
   CONSTRAINT fk_invitations_company
     FOREIGN KEY (company_id)
     REFERENCES companies(id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_invitations_vendor
+    FOREIGN KEY (vendor_id)
+    REFERENCES vendors(id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
