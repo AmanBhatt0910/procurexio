@@ -148,7 +148,7 @@ async function handleInviteRegister(body, request) {
     };
 
     const response = NextResponse.json(
-      { message: 'Account created successfully.', user: safeUser },
+      { message: 'Account created successfully.', data: safeUser },
       { status: 201 }
     );
     response.headers.set('Set-Cookie', buildAuthCookie(jwtToken, { isSecure }));
@@ -246,7 +246,7 @@ async function handleCompanyRegister(body, request) {
     };
 
     const response = NextResponse.json(
-      { message: 'Registration successful.', user: safeUser },
+      { message: 'Registration successful.', data: safeUser },
       { status: 201 }
     );
     response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));

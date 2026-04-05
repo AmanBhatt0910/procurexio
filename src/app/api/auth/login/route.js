@@ -203,7 +203,7 @@ export async function POST(request) {
     });
 
     const response = NextResponse.json(
-      { message: 'Login successful.', user: safeUser },
+      { message: 'Login successful.', data: safeUser },
       { status: 200 }
     );
 

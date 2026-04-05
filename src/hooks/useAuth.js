@@ -22,7 +22,7 @@ export function useAuth() {
 
       if (res.ok) {
         const data = await res.json();
-        const userData = data.data ?? data.user ?? null;
+        const userData = data.data ?? null;
         _cachedUser = userData;
         _cacheReady = true;
         setUser(userData);
@@ -61,7 +61,7 @@ export function useAuth() {
         return { success: false, error: data.error };
       }
 
-      const loggedInUser = data.user ?? data.data ?? null;
+      const loggedInUser = data.data ?? null;
       _cachedUser = loggedInUser;
       _cacheReady = true;
       setUser(loggedInUser);
