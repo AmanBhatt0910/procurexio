@@ -140,14 +140,15 @@ export async function POST(request, { params }) {
         }
       }
 
-      // Notify rejected vendors
+      // Notify rejected vendors (use DISTINCT to avoid duplicates for vendors with multiple users)
       const [rejectedBids] = await db.query(
-        `SELECT b.vendor_id, v.name AS vendor_name,
-                u.email AS vendor_email
+        `SELECT DISTINCT b.vendor_id, v.name AS vendor_name,
+                MIN(u.email) AS vendor_email
          FROM bids b
          JOIN vendors v ON v.id = b.vendor_id
          JOIN users u ON u.vendor_id = b.vendor_id AND u.role = 'vendor_user'
-         WHERE b.rfq_id = ? AND b.status = 'rejected' AND b.company_id = ?`,
+         WHERE b.rfq_id = ? AND b.status = 'rejected' AND b.company_id = ?
+         GROUP BY b.vendor_id, v.name`,
         [id, companyId]
       );
       for (const rb of rejectedBids) {

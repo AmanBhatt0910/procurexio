@@ -627,7 +627,7 @@ export default function VendorBidWorkspacePage() {
                             type="file"
                             style={{ display: 'none' }}
                             onChange={handleFileUpload}
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.csv"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.txt,.csv"
                             disabled={uploadingFile}
                           />
                           {uploadingFile ? 'Uploading…' : '+ Add File'}
@@ -654,7 +654,9 @@ export default function VendorBidWorkspacePage() {
                             {att.original_name}
                           </span>
                           <span style={{ fontSize: '.76rem', color: 'var(--ink-soft)' }}>
-                            {(att.file_size / 1024).toFixed(1)} KB
+                            {att.file_size >= 1024 * 1024
+                              ? `${(att.file_size / (1024 * 1024)).toFixed(1)} MB`
+                              : `${(att.file_size / 1024).toFixed(1)} KB`}
                           </span>
                           {!isLocked && (
                             <button

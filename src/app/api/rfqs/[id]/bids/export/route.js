@@ -47,9 +47,10 @@ export async function GET(request, { params }) {
     const bidIds = bids.map(b => b.bid_id);
     let attachmentCounts = {};
     if (bidIds.length > 0) {
-      const placeholders = bidIds.map(() => '?').join(',');
+      // Generate parameterized placeholders separately to make intent clear
+      const placeholderList = Array.from({ length: bidIds.length }, () => '?');
       const [attachRows] = await pool.query(
-        `SELECT bid_id, COUNT(*) AS cnt FROM bid_attachments WHERE bid_id IN (${placeholders}) GROUP BY bid_id`,
+        `SELECT bid_id, COUNT(*) AS cnt FROM bid_attachments WHERE bid_id IN (${placeholderList.join(',')}) GROUP BY bid_id`,
         bidIds
       );
       for (const row of attachRows) {

@@ -136,7 +136,8 @@ export async function POST(request, { params }) {
     // Sanitize original name: allow only alphanumeric, underscore, hyphen, and a single dot before extension
     const baseName = file.name
       .replace(/\.[^.]*$/, '')           // remove extension
-      .replace(/[^\w\-]/g, '_')          // allow only safe chars in basename
+      .replace(/[^\w\-]/g, '_')          // allow only alphanumeric, underscore, hyphen
+      .replace(/^[\-_]+/, '')            // strip leading hyphens/underscores (prevent hidden files / CLI flag confusion)
       .replace(/_+/g, '_')               // collapse multiple underscores
       .slice(0, 200) || 'file';
     const originalName = `${baseName}.${ext}`;

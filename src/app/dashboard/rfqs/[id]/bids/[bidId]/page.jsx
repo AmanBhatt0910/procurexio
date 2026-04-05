@@ -228,7 +228,9 @@ export default function BidDetailPage() {
                     <div className="attach-info">
                       <div className="attach-name">{att.original_name}</div>
                       <div className="attach-meta">
-                        {att.mime_type} · {(att.file_size / 1024).toFixed(1)} KB ·
+                        {att.mime_type} · {att.file_size >= 1024 * 1024
+                          ? `${(att.file_size / (1024 * 1024)).toFixed(1)} MB`
+                          : `${(att.file_size / 1024).toFixed(1)} KB`} ·
                         Uploaded {fmtDate(att.created_at)}
                       </div>
                     </div>
