@@ -7,6 +7,7 @@ import { logAuthEvent, getRequestIP } from '@/lib/logger';
 import { logAction, ACTION } from '@/lib/audit';
 import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime } from '@/lib/security';
 import { validateEmail } from '@/lib/validation';
+import { normalizeRole } from '@/lib/roleNormalizer';
 
 // Max failed attempts before account lock, and lock duration in minutes
 const MAX_FAILED_ATTEMPTS  = 5;
@@ -153,10 +154,13 @@ export async function POST(request) {
       [user.id]
     );
 
+    // Normalize role to canonical form before embedding in JWT and response
+    const canonicalRole = normalizeRole(user.role) ?? user.role;
+
     const token = await signToken({
       userId:    user.id,
       companyId: user.company_id,
-      role:      user.role,
+      role:      canonicalRole,
       email:     user.email,
       name:      user.name,
     });
@@ -183,7 +187,7 @@ export async function POST(request) {
       id:          user.id,
       name:        user.name,
       email:       user.email,
-      role:        user.role,
+      role:        canonicalRole,
       companyId:   user.company_id,
       companyName: user.company_name,
     };
