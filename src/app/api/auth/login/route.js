@@ -165,11 +165,18 @@ export async function POST(request) {
       name:      user.name,
     });
 
-    // ── Record session ───────────────────────────────────────────────────────
+    // ── Invalidate old sessions and record new session ───────────────────────
     const sessionToken = generateSessionToken();
     const sessionExpiry = toMySQLDatetime(expiresInHours(7 * 24)); // 7 days
     const userAgent = request.headers.get('user-agent') || null;
     try {
+      // Invalidate all previously active sessions for this user so that old
+      // tokens cannot be reused after a new login (prevents stale session reuse).
+      await pool.execute(
+        `UPDATE user_sessions SET invalidated_at = NOW()
+         WHERE user_id = ? AND invalidated_at IS NULL`,
+        [user.id]
+      );
       await pool.execute(
         `INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent)
          VALUES (?, ?, ?, ?, ?)`,
@@ -207,6 +214,7 @@ export async function POST(request) {
       { status: 200 }
     );
 
+    response.headers.set('Cache-Control', 'no-store, no-cache');
     response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 

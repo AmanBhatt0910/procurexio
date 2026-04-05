@@ -21,7 +21,7 @@ export default function DashboardPage() {
     async function load() {
       try {
         const [meRes, cRes, uRes, sRes] = await Promise.all([
-          fetch('/api/auth/me'),
+          fetch('/api/auth/me', { cache: 'no-store' }),
           fetch('/api/company'),
           fetch('/api/company/users'),
           fetch('/api/dashboard/stats'),
