@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { validateCurrency } from '@/lib/validation';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -40,7 +41,13 @@ export async function POST(request, { params }) {
 
     const body = await request.json().catch(() => ({}));
     const notes    = body.notes    || null;
-    const currency = body.currency || rfq.currency || 'USD';
+    const currency = (body.currency || rfq.currency || 'USD').toString().trim().toUpperCase();
+
+    // Validate currency against allowlist
+    const currencyError = validateCurrency(currency);
+    if (currencyError) {
+      return NextResponse.json({ error: currencyError }, { status: 422 });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, total_amount)
@@ -86,7 +93,16 @@ export async function PUT(request, { params }) {
     if (bid.status === 'withdrawn') return NextResponse.json({ error: 'Cannot edit a withdrawn bid' }, { status: 422 });
 
     const body = await request.json();
-    const { notes, currency, items = [] } = body;
+    const { notes, items = [] } = body;
+    const currency = body.currency
+      ? body.currency.toString().trim().toUpperCase()
+      : (rfq.currency || 'USD');
+
+    // Validate currency against allowlist
+    const currencyError = validateCurrency(currency);
+    if (currencyError) {
+      return NextResponse.json({ error: currencyError }, { status: 422 });
+    }
 
     const conn = await pool.getConnection();
     try {

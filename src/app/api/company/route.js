@@ -10,6 +10,11 @@ export async function GET(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // vendor_user should not access company profile details
+  if (role === 'vendor_user') {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const [rows] = await pool.query(
       `SELECT c.id, c.name, c.email, c.plan, c.created_at,

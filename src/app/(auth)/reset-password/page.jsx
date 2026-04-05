@@ -1,33 +1,76 @@
-// src/app/(auth)/forgot-password/page.jsx
+// src/app/(auth)/reset-password/page.jsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AuthInput from '@/components/auth/AuthInput';
-import AuthButton from '@/components/auth/AuthButton';
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [submitted, setSubmitted] = useState(false);
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+  const token        = searchParams.get('token') || '';
+
+  const [password, setPassword]         = useState('');
+  const [confirm, setConfirm]           = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [validating, setValidating]     = useState(true);
+  const [tokenValid, setTokenValid]     = useState(false);
+  const [tokenError, setTokenError]     = useState('');
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Validate token on mount
+  useEffect(() => {
+    if (!token) {
+      setTokenError('No reset token found. Please request a new password reset link.');
+      setValidating(false);
+      return;
+    }
+
+    fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid) {
+          setTokenValid(true);
+        } else {
+          setTokenError(data.error || 'This reset link is invalid or has expired.');
+        }
+      })
+      .catch(() => {
+        setTokenError('Unable to validate the reset link. Please try again.');
+      })
+      .finally(() => setValidating(false));
+  }, [token]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res  = await fetch('/api/auth/forgot-password', {
+      const res  = await fetch('/api/auth/reset-password', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email }),
+        body:    JSON.stringify({ token, password }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Something went wrong. Please try again.');
         return;
       }
-      setSubmitted(true);
+      setSuccess(true);
+      // Redirect to login after 3 seconds
+      setTimeout(() => router.push('/login'), 3000);
     } catch {
       setError('Network error. Please check your connection.');
     } finally {
@@ -182,15 +225,14 @@ export default function ForgotPasswordPage() {
 
         .auth-form { display: flex; flex-direction: column; gap: 20px; }
 
-        .auth-input-wrapper { display: flex; flex-direction: column; gap: 6px; }
-        .auth-input-label {
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field-label {
           font-size: .8rem;
           font-weight: 500;
           color: var(--ink);
           letter-spacing: .01em;
         }
-        .auth-input-required { color: var(--accent); margin-left: 2px; }
-        .auth-input-container {
+        .field-input-wrap {
           display: flex;
           align-items: center;
           border: 1.5px solid var(--border);
@@ -199,12 +241,11 @@ export default function ForgotPasswordPage() {
           transition: border-color .15s, box-shadow .15s;
           overflow: hidden;
         }
-        .auth-input-container:focus-within {
+        .field-input-wrap:focus-within {
           border-color: var(--ink);
           box-shadow: 0 0 0 3px rgba(15,14,13,.06);
         }
-        .auth-input-icon { padding: 0 12px 0 14px; color: var(--ink-faint); display: flex; }
-        .auth-input-field {
+        .field-input {
           flex: 1;
           border: none;
           outline: none;
@@ -214,7 +255,17 @@ export default function ForgotPasswordPage() {
           color: var(--ink);
           background: transparent;
         }
-        .auth-input-field::placeholder { color: var(--ink-faint); }
+        .field-input::placeholder { color: var(--ink-faint); }
+        .field-toggle {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0 14px;
+          color: var(--ink-faint);
+          display: flex;
+          align-items: center;
+        }
+        .field-toggle:hover { color: var(--ink-soft); }
 
         .auth-btn {
           border: none; cursor: pointer;
@@ -224,19 +275,15 @@ export default function ForgotPasswordPage() {
           border-radius: var(--radius);
           padding: 13px 24px;
           transition: background .15s, transform .1s, box-shadow .15s;
+          width: 100%;
         }
-        .auth-btn--full { width: 100%; }
         .auth-btn--primary { background: var(--ink); color: #fff; }
         .auth-btn--primary:hover:not(:disabled) {
           background: #1e1c1a;
           box-shadow: 0 4px 16px rgba(15,14,13,.18);
           transform: translateY(-1px);
         }
-        .auth-btn--loading { opacity: .75; cursor: not-allowed; }
         .auth-btn:disabled { cursor: not-allowed; opacity: .55; }
-        .auth-btn-spinner-wrap { display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .auth-btn-spinner { width: 16px; height: 16px; animation: spin .7s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         .form-error {
           background: #fff5f2;
@@ -246,15 +293,25 @@ export default function ForgotPasswordPage() {
           font-size: .85rem;
           color: #a83e12;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 8px;
+        }
+
+        .form-warning {
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: var(--radius);
+          padding: 16px 18px;
+          font-size: .88rem;
+          color: #92400e;
+          text-align: center;
         }
 
         .form-success {
           background: #f0fdf4;
           border: 1px solid #bbf7d0;
           border-radius: var(--radius);
-          padding: 20px 20px;
+          padding: 20px;
           text-align: center;
         }
         .form-success-icon { font-size: 2rem; margin-bottom: 10px; }
@@ -266,6 +323,13 @@ export default function ForgotPasswordPage() {
           margin-bottom: 6px;
         }
         .form-success-sub { font-size: .88rem; color: #166534; line-height: 1.5; }
+
+        .validating {
+          text-align: center;
+          padding: 40px 0;
+          color: var(--ink-soft);
+          font-size: .93rem;
+        }
 
         .form-footer {
           margin-top: 32px;
@@ -281,6 +345,17 @@ export default function ForgotPasswordPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
         .panel-right { animation: fadeUp .4s ease both; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+          width: 18px; height: 18px;
+          border: 2px solid rgba(255,255,255,.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin .7s linear infinite;
+          display: inline-block;
+          margin-right: 8px;
+          vertical-align: middle;
+        }
       `}</style>
 
       <div className="page">
@@ -288,13 +363,14 @@ export default function ForgotPasswordPage() {
         <div className="panel-left">
           <div className="panel-left-grid" />
           <div className="panel-left-content">
-            <div className="panel-badge"><span />Account recovery</div>
+            <div className="panel-badge"><span />Set new password</div>
             <h2 className="panel-tagline">
-              Locked out?<br />
-              <em>We&apos;ve got you.</em>
+              Almost there.<br />
+              <em>Choose wisely.</em>
             </h2>
             <p className="panel-sub">
-              Enter your work email and we&apos;ll send a secure reset link straight to your inbox.
+              Pick a strong, unique password to secure your account.
+              We recommend at least 12 characters.
             </p>
           </div>
         </div>
@@ -312,51 +388,106 @@ export default function ForgotPasswordPage() {
           </Link>
 
           <div className="form-header">
-            <h1 className="form-title">Reset password</h1>
-            <p className="form-subtitle">
-              Enter your work email and we&apos;ll send you a secure reset link.
-            </p>
+            <h1 className="form-title">Set new password</h1>
+            <p className="form-subtitle">Enter and confirm your new password below.</p>
           </div>
 
-          {submitted ? (
+          {validating ? (
+            <div className="validating">
+              <span className="spinner" />
+              Validating your reset link&hellip;
+            </div>
+          ) : !tokenValid ? (
+            <>
+              <div className="form-warning">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display:'inline-block', marginRight:'6px', verticalAlign:'middle', flexShrink:0 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {tokenError}
+              </div>
+              <div className="form-footer">
+                <Link href="/forgot-password">Request a new reset link</Link>
+                {' · '}
+                <Link href="/login">Back to sign in</Link>
+              </div>
+            </>
+          ) : success ? (
             <div className="form-success">
-              <div className="form-success-icon">📬</div>
-              <div className="form-success-title">Check your inbox</div>
+              <div className="form-success-icon">✅</div>
+              <div className="form-success-title">Password updated!</div>
               <p className="form-success-sub">
-                If an account exists for that email, a password reset link has been sent.
-                The link will expire in 24 hours.
+                Your password has been changed successfully.
+                Redirecting you to the sign-in page&hellip;
               </p>
             </div>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>
               {error && (
                 <div className="form-error">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
                   {error}
                 </div>
               )}
 
-              <AuthInput
-                label="Work email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-                autoComplete="email"
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                }
-              />
+              <div className="field">
+                <label className="field-label" htmlFor="password">New password</label>
+                <div className="field-input-wrap">
+                  <input
+                    id="password"
+                    className="field-input"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    required
+                    autoComplete="new-password"
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className="field-toggle"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
 
-              <AuthButton loading={loading}>Send reset link</AuthButton>
+              <div className="field">
+                <label className="field-label" htmlFor="confirm">Confirm new password</label>
+                <div className="field-input-wrap">
+                  <input
+                    id="confirm"
+                    className="field-input"
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    placeholder="Repeat your new password"
+                    required
+                    autoComplete="new-password"
+                    minLength={8}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="auth-btn auth-btn--primary"
+                disabled={loading}
+              >
+                {loading ? (
+                  <><span className="spinner" />Updating password&hellip;</>
+                ) : (
+                  'Set new password'
+                )}
+              </button>
             </form>
           )}
 
@@ -367,5 +498,17 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', fontFamily: 'sans-serif', color: '#6b6660' }}>
+        Loading&hellip;
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
