@@ -5,7 +5,7 @@
 // Verifies a password-reset token and allows the user to set a new password.
 // Token must be valid (exists, not expired, not already used).
 
-import { query } from '@/lib/db';
+import { query, getConnection } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
 import { logAction, ACTION } from '@/lib/audit';
 import { validatePassword } from '@/lib/validation';
@@ -57,17 +57,20 @@ export async function POST(request) {
     // Hash new password and update user, mark token used — in a transaction
     const hashed = await hashPassword(password);
 
-    await query('START TRANSACTION');
+    const conn = await getConnection();
     try {
-      await query('UPDATE users SET password = ? WHERE id = ?', [hashed, row.user_id]);
-      await query(
+      await conn.beginTransaction();
+      await conn.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, row.user_id]);
+      await conn.execute(
         'UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?',
         [row.token_id]
       );
-      await query('COMMIT');
+      await conn.commit();
     } catch (txErr) {
-      await query('ROLLBACK');
+      await conn.rollback();
       throw txErr;
+    } finally {
+      conn.release();
     }
 
     logAuthEvent('password_reset_complete', { userId: row.user_id, ip });
