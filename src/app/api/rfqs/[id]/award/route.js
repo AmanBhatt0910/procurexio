@@ -103,7 +103,7 @@ export async function POST(request, { params }) {
     // Fetch the full contract
     const [[contract]] = await conn.query(
       `SELECT c.*, v.name AS vendor_name, u.name AS awarded_by_name,
-              r.title AS rfq_title
+              r.title AS rfq_title, r.reference_number AS rfq_reference
        FROM contracts c
        JOIN vendors v ON v.id = c.vendor_id
        JOIN users u ON u.id = c.awarded_by
@@ -133,7 +133,7 @@ export async function POST(request, { params }) {
             to: u.email,
             vendorName: u.vendor_name,
             rfqTitle: contract.rfq_title,
-            rfqReference: contract.contract_reference,
+            rfqReference: contract.rfq_reference,
             contractReference: contract.contract_reference,
             dashboardLink,
           }).catch(() => {});
@@ -155,7 +155,7 @@ export async function POST(request, { params }) {
           to: rb.vendor_email,
           vendorName: rb.vendor_name,
           rfqTitle: contract.rfq_title,
-          rfqReference: contract.contract_reference,
+          rfqReference: contract.rfq_reference,
         }).catch(() => {});
       }
 

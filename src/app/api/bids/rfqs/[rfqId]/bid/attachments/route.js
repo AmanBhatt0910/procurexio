@@ -117,9 +117,29 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Sanitize and build secure file path
-    const originalName = file.name.replace(/[^\w.\-]/g, '_').slice(0, 255);
-    const ext = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : 'bin';
+    // Derive file extension from MIME type to prevent extension spoofing
+    const MIME_TO_EXT = {
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/vnd.ms-excel': 'xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'text/plain': 'txt',
+      'text/csv': 'csv',
+    };
+    const ext = MIME_TO_EXT[mimeType] || 'bin';
+
+    // Sanitize original name: allow only alphanumeric, underscore, hyphen, and a single dot before extension
+    const baseName = file.name
+      .replace(/\.[^.]*$/, '')           // remove extension
+      .replace(/[^\w\-]/g, '_')          // allow only safe chars in basename
+      .replace(/_+/g, '_')               // collapse multiple underscores
+      .slice(0, 200) || 'file';
+    const originalName = `${baseName}.${ext}`;
     const storedName = `${randomUUID()}.${ext}`;
 
     const uploadDir = join(process.cwd(), 'private', 'uploads', String(companyId), String(rfqId), String(vendorId));
