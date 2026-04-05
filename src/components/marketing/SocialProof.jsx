@@ -1,3 +1,5 @@
+import React from 'react';
+
 export default function SocialProof() {
   const companies = [
     'Meridian Group', 'TechBridge Corp', 'Elevate Solutions',
@@ -87,10 +89,10 @@ export default function SocialProof() {
           <div className="proof-scroll-track">
             <div className="proof-scroll-inner">
               {[...companies, ...companies].map((c, i) => (
-                <>
-                  <span key={`${c}-${i}`} className="proof-company">{c}</span>
-                  <div key={`dot-${i}`} className="proof-dot" />
-                </>
+                <React.Fragment key={`item-${i}`}>
+                  <span className="proof-company">{c}</span>
+                  <div className="proof-dot" />
+                </React.Fragment>
               ))}
             </div>
           </div>

@@ -67,11 +67,13 @@ function _getIP(request) {
 /**
  * Rate-limit configuration.
  * auth:    stricter limit for login / register / forgot-password / invite
- * default: general limit for all other /api/* requests
+ * user:    per-user limit for authenticated general API requests
+ * ip:      per-IP fallback limit for unauthenticated general API requests
  */
 const RATE_LIMIT_CONFIGS = {
-  auth:    { max: 10,  windowMs: 60_000 },   // 10  req / min  (auth-sensitive)
-  default: { max: 60,  windowMs: 60_000 },   // 60  req / min  (general API)
+  auth: { max: 10,   windowMs: 60_000 },   // 10   req / min  (auth-sensitive mutations)
+  user: { max: 1000, windowMs: 60_000 },   // 1000 req / min  (per authenticated user)
+  ip:   { max: 60,   windowMs: 60_000 },   // 60   req / min  (unauthenticated fallback)
 };
 
 /** Path prefixes that receive the stricter auth rate limit. */
@@ -83,19 +85,14 @@ const AUTH_RATE_PATHS = [
 ];
 
 /**
- * Apply rate limiting to an API request.
- * Returns a 429 NextResponse if the limit is exceeded, otherwise null.
+ * Paths excluded from rate limiting entirely.
+ * /api/auth/me is a lightweight session check called on every page mount —
+ * it must not be throttled by the strict auth limit.
  */
-function applyRateLimit(request) {
-  const { pathname } = request.nextUrl;
-  const ip           = _getIP(request);
-  const isAuth       = AUTH_RATE_PATHS.some(p => pathname.startsWith(p));
-  const cfg          = isAuth ? RATE_LIMIT_CONFIGS.auth : RATE_LIMIT_CONFIGS.default;
-  const key          = `${isAuth ? 'auth' : 'api'}:${ip}`;
+const RATE_LIMIT_EXCLUDED = ['/api/auth/me'];
 
-  const result = _rlCheck(key, cfg.max, cfg.windowMs);
-  if (result.allowed) return null;
-
+/** Build a 429 NextResponse with standard rate-limit headers. */
+function _rateLimitResponse(result, max) {
   const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
   return new NextResponse(
     JSON.stringify({ error: 'Too many requests. Please try again later.' }),
@@ -104,12 +101,58 @@ function applyRateLimit(request) {
       headers: {
         'Content-Type':          'application/json',
         'Retry-After':           String(retryAfter),
-        'X-RateLimit-Limit':     String(cfg.max),
+        'X-RateLimit-Limit':     String(max),
         'X-RateLimit-Remaining': '0',
         'X-RateLimit-Reset':     String(Math.ceil(result.resetAt / 1000)),
       },
     },
   );
+}
+
+/**
+ * Apply rate limiting to an API request.
+ *
+ * - Auth mutation endpoints (login, register, …): strict per-IP limit.
+ * - Authenticated general API requests: per-user limit (higher cap).
+ * - Unauthenticated general API requests: per-IP fallback limit.
+ * - /api/auth/me: excluded (session check, called on every page load).
+ *
+ * Returns a 429 NextResponse if the limit is exceeded, otherwise null.
+ */
+async function applyRateLimit(request) {
+  const { pathname } = request.nextUrl;
+  const ip           = _getIP(request);
+
+  // Paths explicitly excluded from rate limiting
+  if (RATE_LIMIT_EXCLUDED.some(p => pathname.startsWith(p))) return null;
+
+  // Auth mutation endpoints: strict per-IP limit
+  if (AUTH_RATE_PATHS.some(p => pathname.startsWith(p))) {
+    const cfg    = RATE_LIMIT_CONFIGS.auth;
+    const result = _rlCheck(`auth:${ip}`, cfg.max, cfg.windowMs);
+    return result.allowed ? null : _rateLimitResponse(result, cfg.max);
+  }
+
+  // General API: prefer per-user rate limiting for authenticated requests
+  const token = request.cookies.get('auth_token')?.value;
+  if (token) {
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      const { payload } = await jwtVerify(token, secret);
+      if (payload.userId) {
+        const cfg    = RATE_LIMIT_CONFIGS.user;
+        const result = _rlCheck(`user:${payload.userId}`, cfg.max, cfg.windowMs);
+        return result.allowed ? null : _rateLimitResponse(result, cfg.max);
+      }
+    } catch {
+      // Invalid / expired token — fall through to IP-based limiting
+    }
+  }
+
+  // Unauthenticated API requests: per-IP fallback
+  const cfg    = RATE_LIMIT_CONFIGS.ip;
+  const result = _rlCheck(`ip:${ip}`, cfg.max, cfg.windowMs);
+  return result.allowed ? null : _rateLimitResponse(result, cfg.max);
 }
 
 // ── Route protection ─────────────────────────────────────────────────────────
@@ -216,7 +259,7 @@ export async function middleware(request) {
 
   // ── 1. Rate limiting (applies to all /api/* requests, including public auth routes)
   if (pathname.startsWith('/api/')) {
-    const limited = applyRateLimit(request);
+    const limited = await applyRateLimit(request);
     if (limited) return applySecurityHeaders(limited);
   }
 
