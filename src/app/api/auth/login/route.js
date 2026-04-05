@@ -5,15 +5,12 @@ import { comparePassword } from '@/lib/password';
 import { signToken, buildAuthCookie } from '@/lib/jwt';
 import { logAuthEvent, getRequestIP } from '@/lib/logger';
 import { logAction, ACTION } from '@/lib/audit';
-import { generateSessionToken, expiresInHours, toMySQLDatetime } from '@/lib/security';
+import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime } from '@/lib/security';
 import { validateEmail } from '@/lib/validation';
 
 // Max failed attempts before account lock, and lock duration in minutes
-const MAX_FAILED_ATTEMPTS = 5;
+const MAX_FAILED_ATTEMPTS  = 5;
 const LOCK_DURATION_MINUTES = 30;
-
-// Basic email format check (rejects obviously malformed inputs)
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request) {
   const ip = getRequestIP(request);
@@ -28,9 +25,10 @@ export async function POST(request) {
       );
     }
 
-    if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+    const emailError = validateEmail(email);
+    if (emailError) {
       return NextResponse.json(
-        { error: 'A valid email address is required.' },
+        { error: emailError },
         { status: 400 }
       );
     }
@@ -105,7 +103,7 @@ export async function POST(request) {
       const newAttempts = (user.failed_login_attempts || 0) + 1;
       const shouldLock  = newAttempts >= MAX_FAILED_ATTEMPTS;
       const lockedUntil = shouldLock
-        ? toMySQLDatetime(new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000))
+        ? toMySQLDatetime(expiresInMinutes(LOCK_DURATION_MINUTES))
         : null;
 
       if (shouldLock) {
