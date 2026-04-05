@@ -37,10 +37,10 @@ function LoginForm() {
         return;
       }
 
-      // Redirect super_admin to their dedicated platform dashboard.
-      // Use a full page load (window.location.href) instead of router.push()
-      // so that all client-side module-level auth caches are cleared and the
-      // new user's session is loaded from scratch.
+      // By the time this await resolves, the browser has already committed the
+      // Set-Cookie header from the login response to its cookie store.
+      // Navigate with a full-page load so all client-side module-level auth
+      // caches are cleared and the new user's session is loaded from scratch.
       const role = data.data?.role;
       const destination = role === 'super_admin' ? '/dashboard/admin' : redirect;
       window.location.href = destination;

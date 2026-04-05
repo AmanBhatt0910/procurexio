@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import pool from '@/lib/db';
 import { comparePassword } from '@/lib/password';
-import { signToken, buildAuthCookie } from '@/lib/jwt';
+import { signToken, buildAuthCookie, getCookieSecure } from '@/lib/jwt';
 import { logAuthEvent, getRequestIP } from '@/lib/logger';
 import { logAction, ACTION } from '@/lib/audit';
 import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime } from '@/lib/security';
@@ -187,8 +187,10 @@ export async function POST(request) {
       console.error('[login] session recording error:', sessionErr.message);
     }
 
-    // Secure flag: always true in production (fixes x-forwarded-proto dependency)
-    const isSecure = process.env.NODE_ENV === 'production';
+    // Determine whether the Secure cookie attribute should be set.
+    // getCookieSecure() checks COOKIE_SECURE env var, then x-forwarded-proto,
+    // then falls back to NODE_ENV so HTTP-only deployments work correctly.
+    const isSecure = getCookieSecure(request);
 
     const safeUser = {
       id:          user.id,
@@ -214,7 +216,9 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    response.headers.set('Cache-Control', 'no-store, no-cache');
+    // Prevent any proxy or browser cache from storing the login response,
+    // which contains the Set-Cookie header that must reach the client fresh.
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 
