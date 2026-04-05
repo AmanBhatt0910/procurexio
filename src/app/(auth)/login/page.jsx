@@ -3,14 +3,13 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthInput from '@/components/auth/AuthInput';
 import AuthButton from '@/components/auth/AuthButton';
 
 // Separate component that uses useSearchParams
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/dashboard';
 
@@ -38,10 +37,13 @@ function LoginForm() {
         return;
       }
 
-      // Redirect super_admin to their dedicated platform dashboard
+      // Redirect super_admin to their dedicated platform dashboard.
+      // Use a full page load (window.location.href) instead of router.push()
+      // so that all client-side module-level auth caches are cleared and the
+      // new user's session is loaded from scratch.
       const role = data.data?.role;
       const destination = role === 'super_admin' ? '/dashboard/admin' : redirect;
-      router.push(destination);
+      window.location.href = destination;
     } catch {
       setError('Network error. Please check your connection.');
     } finally {

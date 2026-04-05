@@ -21,7 +21,7 @@ export default function DashboardLayout({ children, pageTitle }) {
   useEffect(() => {
     async function load() {
       try {
-        const uRes = await fetch('/api/auth/me');
+        const uRes = await fetch('/api/auth/me', { cache: 'no-store' });
         if (uRes.ok) {
           const u = await uRes.json();
           const userData = u.user ?? u.data ?? null;

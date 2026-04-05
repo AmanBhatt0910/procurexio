@@ -25,7 +25,9 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'OK', data: rows[0] });
+    const res = NextResponse.json({ message: 'OK', data: rows[0] });
+    res.headers.set('Cache-Control', 'no-store, no-cache');
+    return res;
   } catch (err) {
     console.error('[GET /api/auth/me]', err);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
