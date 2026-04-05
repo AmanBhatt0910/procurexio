@@ -214,7 +214,10 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    response.headers.set('Cache-Control', 'no-store, no-cache');
+    // Prevent any proxy or browser cache from storing the login response,
+    // which contains the Set-Cookie header that must reach the client fresh.
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
     response.headers.set('Set-Cookie', buildAuthCookie(token, { isSecure }));
     return response;
 
