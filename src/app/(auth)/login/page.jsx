@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthInput from '@/components/auth/AuthInput';
@@ -17,6 +17,36 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // On mount, verify whether the user is already signed in.
+  // If they are, skip the login form entirely and send them straight to the
+  // protected destination.  This breaks the redirect loop that occurs when
+  // the Set-Cookie response arrives but the middleware still sees an expired /
+  // missing cookie on the very next navigation.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' })
+      .then((res) => {
+        if (!cancelled && res.ok) {
+          res.json().then((data) => {
+            if (!cancelled) {
+              const role = data.data?.role;
+              // Guard against open-redirect: only allow relative paths
+              const safeDest = redirect.startsWith('/') ? redirect : '/dashboard';
+              const dest = role === 'super_admin' ? '/dashboard/admin' : safeDest;
+              window.location.replace(dest);
+            }
+          });
+        } else if (!cancelled) {
+          setCheckingAuth(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCheckingAuth(false);
+      });
+    return () => { cancelled = true; };
+  }, [redirect]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -42,7 +72,9 @@ function LoginForm() {
       // Navigate with a full-page load so all client-side module-level auth
       // caches are cleared and the new user's session is loaded from scratch.
       const role = data.data?.role;
-      const destination = role === 'super_admin' ? '/dashboard/admin' : redirect;
+      // Guard against open-redirect: only allow relative paths
+      const safeDest = redirect.startsWith('/') ? redirect : '/dashboard';
+      const destination = role === 'super_admin' ? '/dashboard/admin' : safeDest;
       window.location.href = destination;
     } catch {
       setError('Network error. Please check your connection.');
@@ -50,6 +82,10 @@ function LoginForm() {
       setLoading(false);
     }
   }
+
+  // While we're checking whether the user is already authenticated, render
+  // nothing to avoid a flash of the login form before the redirect fires.
+  if (checkingAuth) return null;
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
