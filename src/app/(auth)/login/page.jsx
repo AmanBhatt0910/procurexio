@@ -37,34 +37,12 @@ function LoginForm() {
         return;
       }
 
-      // After a successful login the server sets an HttpOnly auth_token cookie.
-      // Behind a reverse proxy (e.g. Nginx) the browser may not have committed
-      // that cookie to its store before the next navigation request is sent,
-      // causing the middleware to see no cookie and redirect back to login.
-      //
-      // Calling /api/auth/me here forces the browser to flush the Set-Cookie
-      // header and confirms the cookie is live before we navigate.  We retry a
-      // few times to handle any transient proxy delay.
+      // By the time this await resolves, the browser has already committed the
+      // Set-Cookie header from the login response to its cookie store.
+      // Navigate with a full-page load so all client-side module-level auth
+      // caches are cleared and the new user's session is loaded from scratch.
       const role = data.data?.role;
       const destination = role === 'super_admin' ? '/dashboard/admin' : redirect;
-
-      let sessionReady = false;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          const meRes = await fetch('/api/auth/me', { credentials: 'include' });
-          if (meRes.ok) { sessionReady = true; break; }
-        } catch {
-          // Network hiccup — wait and retry
-        }
-        await new Promise((r) => setTimeout(r, 200));
-      }
-
-      if (!sessionReady) {
-        // Fallback: navigate anyway; at worst the user lands on login again
-        // and can retry (better than a silent hang).
-        console.warn('[login] session cookie not confirmed after retries — navigating anyway');
-      }
-
       window.location.href = destination;
     } catch {
       setError('Network error. Please check your connection.');

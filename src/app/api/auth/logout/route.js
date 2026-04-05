@@ -40,6 +40,6 @@ export async function POST(request) {
   }
 
   const response = NextResponse.json({ message: 'Logged out.' }, { status: 200 });
-  response.headers.set('Set-Cookie', clearAuthCookie());
+  response.headers.set('Set-Cookie', clearAuthCookie({ request }));
   return response;
 }

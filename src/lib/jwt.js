@@ -14,6 +14,34 @@ import { SignJWT, jwtVerify } from 'jose';
 
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
 
+/**
+ * Determine whether the auth cookie should carry the Secure attribute.
+ *
+ * Resolution order (first match wins):
+ *  1. COOKIE_SECURE env var — set to "false" to force HTTP mode,
+ *     "true" to force HTTPS mode (useful for non-standard setups).
+ *  2. x-forwarded-proto request header — detects HTTPS behind a reverse
+ *     proxy (Nginx, Cloudflare, AWS ALB, …) at request time.
+ *  3. NODE_ENV fallback — production assumes HTTPS; development assumes HTTP.
+ *
+ * @param {Request|null} request  Next.js/Web Request object (optional).
+ * @returns {boolean}
+ */
+export function getCookieSecure(request = null) {
+  // Explicit operator override
+  if (process.env.COOKIE_SECURE === 'false') return false;
+  if (process.env.COOKIE_SECURE === 'true')  return true;
+
+  // Infer from the actual transport protocol when a request is available
+  if (request) {
+    const proto = request.headers.get('x-forwarded-proto');
+    if (proto) return proto.split(',')[0].trim() === 'https';
+  }
+
+  // Default: require HTTPS in production, allow HTTP in development
+  return process.env.NODE_ENV === 'production';
+}
+
 function getSecret() {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET is not set');
@@ -45,11 +73,11 @@ export async function verifyToken(token) {
 
 /**
  * Build auth cookie
+ * @param {string} token
+ * @param {{ isSecure?: boolean, request?: Request }} [options]
  */
 export function buildAuthCookie(token, options = {}) {
-  const {
-    isSecure = process.env.NODE_ENV === 'production',
-  } = options;
+  const isSecure = options.isSecure ?? getCookieSecure(options.request ?? null);
 
   return [
     `auth_token=${token}`,
@@ -63,8 +91,12 @@ export function buildAuthCookie(token, options = {}) {
     .join('; ');
 }
 
-export function clearAuthCookie() {
-  const isSecure = process.env.NODE_ENV === 'production';
+/**
+ * Build a cookie header value that clears the auth cookie.
+ * @param {{ isSecure?: boolean, request?: Request }} [options]
+ */
+export function clearAuthCookie(options = {}) {
+  const isSecure = options.isSecure ?? getCookieSecure(options.request ?? null);
   return [
     'auth_token=',
     'HttpOnly',
