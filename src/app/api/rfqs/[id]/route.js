@@ -2,6 +2,7 @@
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
+import { autoCloseIfExpired } from '@/lib/rfqUtils';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
 const TRANSITIONS = {
@@ -23,6 +24,9 @@ export async function GET(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
+    // Auto-close if deadline has passed
+    await autoCloseIfExpired(id, companyId);
+
     // Core RFQ — query() already returns the rows array directly
     const rfqRows = await query(
       `SELECT r.*, u.name AS created_by_name
@@ -102,6 +106,16 @@ export async function PUT(request, { params }) {
     if ((rfq.status === 'closed' || rfq.status === 'cancelled') && !body.status) {
       return Response.json(
         { error: `Cannot edit a ${rfq.status} RFQ` },
+        { status: 422 }
+      );
+    }
+
+    // Once published, only status transitions are allowed — field edits are locked
+    const isFieldEdit = body.title !== undefined || body.description !== undefined ||
+      body.deadline !== undefined || body.budget !== undefined || body.currency !== undefined;
+    if (rfq.status === 'published' && isFieldEdit && !body.status) {
+      return Response.json(
+        { error: 'RFQ details cannot be edited after publishing. Only status transitions are allowed.' },
         { status: 422 }
       );
     }

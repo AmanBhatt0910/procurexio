@@ -151,7 +151,8 @@ export default function RFQDetailPage({ params }) {
   // ──────────────────────────────────────────────────────────────────────────
 
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
-  const isEditable  = rfq && !['closed', 'cancelled'].includes(rfq.status) && canWrite;
+  // RFQ fields are only editable in draft state; once published, only status transitions are allowed
+  const isEditable  = rfq && rfq.status === 'draft' && canWrite;
 
   return (
     <DashboardLayout>
@@ -203,6 +204,16 @@ export default function RFQDetailPage({ params }) {
           <div style={{ background: '#fdecea', color: '#c0392b', padding: '10px 14px',
             borderRadius: 'var(--radius)', fontSize: '.84rem', marginBottom: 16 }}>
             {error}
+          </div>
+        )}
+
+        {/* Published lock notice */}
+        {rfq.status === 'published' && canWrite && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '10px 14px',
+            borderRadius: 'var(--radius)', fontSize: '.84rem', color: '#92400e', marginBottom: 16,
+            display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>🔒</span>
+            <span>This RFQ is published and can no longer be edited. Only status transitions are available.</span>
           </div>
         )}
 

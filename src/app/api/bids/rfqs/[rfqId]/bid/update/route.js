@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { createNotifications } from '@/lib/notifications';
+import { sendBidUpdatedEmail } from '@/lib/mailer';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -47,10 +49,19 @@ export async function PUT(request, { params }) {
 
     // Check RFQ exists and deadline
     const [[rfq]] = await pool.query(
-      `SELECT deadline, currency FROM rfqs WHERE id = ? AND company_id = ?`,
-      [rfqId, companyId]
+      `SELECT r.deadline, r.currency, r.status, r.title, r.reference_number,
+              v.name AS vendor_name, v.email AS vendor_email
+       FROM rfqs r
+       JOIN rfq_vendors rv ON rv.rfq_id = r.id
+       JOIN vendors v ON v.id = rv.vendor_id
+       JOIN users u ON u.vendor_id = v.id AND u.id = ?
+       WHERE r.id = ? AND r.company_id = ?`,
+      [userId, rfqId, companyId]
     );
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
+    if (rfq.status === 'closed' || rfq.status === 'cancelled') {
+      return NextResponse.json({ error: 'This RFQ is closed — bid amounts can no longer be modified' }, { status: 422 });
+    }
     if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
@@ -129,6 +140,37 @@ export async function PUT(request, { params }) {
 
     // Return updated rank
     const rankData = await getVendorRank(rfqId, companyId, vendorId);
+
+    // Notify managers/admins of the bid update
+    try {
+      const [managers] = await pool.query(
+        `SELECT u.id AS userId, u.email, u.name FROM users u
+         WHERE u.company_id = ? AND u.role IN ('company_admin', 'manager')`,
+        [companyId]
+      );
+      if (managers.length) {
+        await createNotifications(
+          managers.map(m => ({ userId: m.userId, companyId })),
+          {
+            type:  'bid_updated',
+            title: `Bid updated on "${rfq.title}"`,
+            body:  `${rfq.vendor_name} has updated their bid.`,
+            link:  `/dashboard/rfqs/${rfqId}/bids`,
+          }
+        );
+        const rfqLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/dashboard/rfqs/${rfqId}/bids`;
+        for (const m of managers) {
+          sendBidUpdatedEmail({
+            to: m.email,
+            managerName: m.name,
+            vendorName: rfq.vendor_name,
+            rfqTitle: rfq.title,
+            rfqReference: rfq.reference_number,
+            rfqLink,
+          }).catch(() => {});
+        }
+      }
+    } catch (_) { /* notification errors must not fail the request */ }
 
     return NextResponse.json({
       message: 'Bid updated',

@@ -103,6 +103,11 @@ export default function VendorBidWorkspacePage() {
   const [bidRank, setBidRank] = useState(null);
   const [updateMode, setUpdateMode] = useState(false);
 
+  // File attachment state
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
   const refreshRank = useCallback(async () => {
     try {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/rank`);
@@ -123,6 +128,14 @@ export default function VendorBidWorkspacePage() {
         setNotes(json.data.bid.notes || '');
         // Use saved bid currency, then company currency, then USD
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
+        // Load attachments if bid exists
+        try {
+          const attRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`);
+          if (attRes.ok) {
+            const attJson = await attRes.json();
+            setAttachments(attJson.data || []);
+          }
+        } catch { /* ignore */ }
       } else {
         // No bid yet — pre-select company currency
         setCurrency(overrideCurrency || 'USD');
@@ -156,12 +169,44 @@ export default function VendorBidWorkspacePage() {
   const bid = data?.bid;
   const rfqItems = data?.items || [];
 
+  const isClosed = rfq?.status === 'closed' || rfq?.status === 'cancelled';
   const isPastDeadline = rfq?.deadline && new Date() > new Date(rfq.deadline);
-  const canEdit   = bid && bid.status === 'draft'      && !isPastDeadline;
-  const canUpdate = bid && bid.status === 'submitted'  && !isPastDeadline;
+  const isLocked  = isClosed || isPastDeadline;
+  const canEdit   = bid && bid.status === 'draft'      && !isLocked;
+  const canUpdate = bid && bid.status === 'submitted'  && !isLocked;
   const canSubmit = canEdit && bidItems.length > 0;
-  const canWithdraw = bid?.status === 'submitted' && !isPastDeadline;
+  const canWithdraw = bid?.status === 'submitted' && !isLocked;
   const showForm = bid && (bid.status === 'draft' || bid.status === 'submitted');
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setUploadingFile(true); setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`, {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Upload failed');
+      setAttachments(prev => [...prev, json.data]);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
+  async function handleDeleteAttachment(id) {
+    if (!confirm('Remove this attachment?')) return;
+    try {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments?attachmentId=${id}`, { method: 'DELETE' });
+      if (res.ok) setAttachments(prev => prev.filter(a => a.id !== id));
+    } catch { /* ignore */ }
+  }
 
   async function handleCreateBid() {
     setSaving(true); setError(''); setSuccess('');
@@ -480,7 +525,10 @@ export default function VendorBidWorkspacePage() {
             {/* Alerts */}
             {error && <div className="error-box">{error}</div>}
             {success && <div className="success-box">{success}</div>}
-            {isPastDeadline && (
+            {isClosed && (
+              <div className="warning-banner">🔒 This RFQ is closed. Bid submission and editing are no longer allowed.</div>
+            )}
+            {!isClosed && isPastDeadline && (
               <div className="warning-banner">⚠ The deadline for this RFQ has passed. Bid editing is locked.</div>
             )}
 
@@ -563,6 +611,65 @@ export default function VendorBidWorkspacePage() {
                       onChange={setBidItems}
                       readOnly={!canEdit && !updateMode}
                     />
+                  </div>
+
+                  {/* File Attachments */}
+                  <div style={{ marginBottom: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: '.8rem', fontWeight: 600, letterSpacing: '.07em',
+                        textTransform: 'uppercase', color: 'var(--ink-faint)' }}>
+                        Attachments ({attachments.length})
+                      </span>
+                      {!isLocked && (
+                        <label style={{ cursor: 'pointer', fontSize: '.8rem', fontWeight: 600,
+                          color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input
+                            type="file"
+                            style={{ display: 'none' }}
+                            onChange={handleFileUpload}
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.txt,.csv"
+                            disabled={uploadingFile}
+                          />
+                          {uploadingFile ? 'Uploading…' : '+ Add File'}
+                        </label>
+                      )}
+                    </div>
+                    {uploadError && (
+                      <div style={{ color: 'var(--accent)', fontSize: '.8rem', marginBottom: 8 }}>
+                        {uploadError}
+                      </div>
+                    )}
+                    {attachments.length === 0 ? (
+                      <p style={{ fontSize: '.84rem', color: 'var(--ink-soft)', margin: 0 }}>
+                        No files attached yet.{!isLocked && ' Use "Add File" to attach supporting documents.'}
+                      </p>
+                    ) : (
+                      attachments.map(att => (
+                        <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+                          marginBottom: 6, background: 'var(--surface)' }}>
+                          <span>📎</span>
+                          <span style={{ flex: 1, fontSize: '.84rem', color: 'var(--ink)',
+                            fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {att.original_name}
+                          </span>
+                          <span style={{ fontSize: '.76rem', color: 'var(--ink-soft)' }}>
+                            {att.file_size >= 1024 * 1024
+                              ? `${(att.file_size / (1024 * 1024)).toFixed(1)} MB`
+                              : `${(att.file_size / 1024).toFixed(1)} KB`}
+                          </span>
+                          {!isLocked && (
+                            <button
+                              onClick={() => handleDeleteAttachment(att.id)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                                color: 'var(--ink-faint)', fontSize: '.82rem', padding: '2px 4px' }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   {/* Actions */}

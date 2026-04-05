@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { createNotifications } from '@/lib/notifications';
+import { sendBidSubmittedEmail } from '@/lib/mailer';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -26,7 +27,7 @@ export async function POST(request, { params }) {
     const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
     const [[rfq]] = await pool.query(
-      `SELECT r.deadline, r.status, r.title, r.created_by FROM rfqs r WHERE r.id = ? AND r.company_id = ?`,
+      `SELECT r.deadline, r.status, r.title, r.reference_number, r.created_by FROM rfqs r WHERE r.id = ? AND r.company_id = ?`,
       [rfqId, companyId]
     );
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
@@ -68,11 +69,17 @@ export async function POST(request, { params }) {
     // Notify company admins and managers that a bid was submitted on their RFQ
     try {
       const [managers] = await pool.query(
-        `SELECT id AS userId FROM users
-         WHERE company_id = ? AND role IN ('company_admin', 'manager')`,
+        `SELECT u.id AS userId, u.email, u.name FROM users u
+         WHERE u.company_id = ? AND u.role IN ('company_admin', 'manager')`,
         [companyId]
       );
       if (managers.length) {
+        // Fetch vendor name
+        const [[vendorRow]] = await pool.query(
+          `SELECT v.name FROM vendors v JOIN users u ON u.vendor_id = v.id WHERE u.id = ? LIMIT 1`,
+          [userId]
+        );
+        const vendorName = vendorRow?.name || 'A vendor';
         await createNotifications(
           managers.map(m => ({ userId: m.userId, companyId })),
           {
@@ -82,6 +89,17 @@ export async function POST(request, { params }) {
             link:  `/dashboard/rfqs/${rfqId}/bids`,
           }
         );
+        const rfqLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/dashboard/rfqs/${rfqId}/bids`;
+        for (const m of managers) {
+          sendBidSubmittedEmail({
+            to: m.email,
+            managerName: m.name,
+            vendorName,
+            rfqTitle: rfq.title,
+            rfqReference: rfq.reference_number,
+            rfqLink,
+          }).catch(() => {});
+        }
       }
     } catch (_) { /* notification errors must not fail the request */ }
 

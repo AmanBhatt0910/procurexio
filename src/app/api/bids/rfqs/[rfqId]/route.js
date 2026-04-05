@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { autoCloseIfExpired } from '@/lib/rfqUtils';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -29,6 +30,9 @@ export async function GET(request, { params }) {
     }
 
     const { vendor_id: vendorId, company_id: companyId } = userInfo;
+
+    // Auto-close if deadline has passed
+    await autoCloseIfExpired(rfqId, companyId);
 
     // Verify invitation
     const [[invite]] = await pool.query(

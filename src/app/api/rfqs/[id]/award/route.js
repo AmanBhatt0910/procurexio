@@ -2,6 +2,7 @@
 import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
+import { sendContractAwardedEmail, sendBidRejectedEmail } from '@/lib/mailer';
 
 // Helper: generate contract reference
 async function generateContractRef(conn, companyId) {
@@ -102,7 +103,7 @@ export async function POST(request, { params }) {
     // Fetch the full contract
     const [[contract]] = await conn.query(
       `SELECT c.*, v.name AS vendor_name, u.name AS awarded_by_name,
-              r.title AS rfq_title
+              r.title AS rfq_title, r.reference_number AS rfq_reference
        FROM contracts c
        JOIN vendors v ON v.id = c.vendor_id
        JOIN users u ON u.id = c.awarded_by
@@ -114,16 +115,63 @@ export async function POST(request, { params }) {
     // Notify vendor user(s) that they won the contract
     try {
       const [vendorUsers] = await db.query(
-        `SELECT id AS userId, company_id AS companyId
-           FROM users WHERE vendor_id = ? AND role = 'vendor_user'`,
+        `SELECT u.id AS userId, u.company_id AS companyId, u.email, v.name AS vendor_name
+           FROM users u JOIN vendors v ON v.id = u.vendor_id
+          WHERE u.vendor_id = ? AND u.role = 'vendor_user'`,
         [bid.vendor_id]
       );
       if (vendorUsers.length) {
-        await createNotifications(vendorUsers, {
+        await createNotifications(vendorUsers.map(u => ({ userId: u.userId, companyId: u.companyId })), {
           type:      'contract_awarded',
           title:     `You won the contract for "${contract.rfq_title}"`,
           body:      `Congratulations! Your bid has been selected. Contract reference: ${contract.contract_reference}.`,
           link:      `/dashboard/bids/${id}`,
+        });
+        const dashboardLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/dashboard/bids/${id}`;
+        for (const u of vendorUsers) {
+          sendContractAwardedEmail({
+            to: u.email,
+            vendorName: u.vendor_name,
+            rfqTitle: contract.rfq_title,
+            rfqReference: contract.rfq_reference,
+            contractReference: contract.contract_reference,
+            dashboardLink,
+          }).catch(() => {});
+        }
+      }
+
+      // Notify rejected vendors (use DISTINCT to avoid duplicates for vendors with multiple users)
+      const [rejectedBids] = await db.query(
+        `SELECT DISTINCT b.vendor_id, v.name AS vendor_name,
+                MIN(u.email) AS vendor_email
+         FROM bids b
+         JOIN vendors v ON v.id = b.vendor_id
+         JOIN users u ON u.vendor_id = b.vendor_id AND u.role = 'vendor_user'
+         WHERE b.rfq_id = ? AND b.status = 'rejected' AND b.company_id = ?
+         GROUP BY b.vendor_id, v.name`,
+        [id, companyId]
+      );
+      for (const rb of rejectedBids) {
+        sendBidRejectedEmail({
+          to: rb.vendor_email,
+          vendorName: rb.vendor_name,
+          rfqTitle: contract.rfq_title,
+          rfqReference: contract.rfq_reference,
+        }).catch(() => {});
+      }
+
+      // Notify company managers/admins of the award
+      const [admins] = await db.query(
+        `SELECT u.id AS userId, u.company_id AS companyId FROM users u
+         WHERE u.company_id = ? AND u.role IN ('company_admin', 'manager')`,
+        [companyId]
+      );
+      if (admins.length) {
+        await createNotifications(admins, {
+          type:  'contract_awarded',
+          title: `Contract awarded for "${contract.rfq_title}"`,
+          body:  `Contract ${contract.contract_reference} has been awarded to ${contract.vendor_name}.`,
+          link:  `/dashboard/rfqs/${id}/award`,
         });
       }
     } catch (_) { /* notification errors must not fail the request */ }
