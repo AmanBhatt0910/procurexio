@@ -36,14 +36,21 @@ CREATE TABLE IF NOT EXISTS users (
     'vendor_user'
   ) NOT NULL DEFAULT 'employee',
 
+  -- ✅ SECURITY FIELDS (ADDED)
+  is_active              TINYINT(1) NOT NULL DEFAULT 1,
+  failed_login_attempts  INT        NOT NULL DEFAULT 0,
+  locked_until           DATETIME   NULL,
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-
   UNIQUE KEY uq_users_email (email),
 
   INDEX idx_users_company_id (company_id),
   INDEX idx_users_vendor_id  (vendor_id),
+
+  INDEX idx_users_is_active (is_active),
+  INDEX idx_users_locked_until (locked_until),
 
   CONSTRAINT fk_users_company
     FOREIGN KEY (company_id)
