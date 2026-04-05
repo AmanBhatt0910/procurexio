@@ -263,8 +263,35 @@ export async function middleware(request) {
     if (limited) return applySecurityHeaders(limited);
   }
 
-  // ── 2. Always allow explicitly public routes
-  if (isPublic(pathname)) return applySecurityHeaders(NextResponse.next());
+  // ── 2. Handle public routes
+  // For the login page specifically: if the user already has a valid token,
+  // redirect them straight to the dashboard so they don't land on the login
+  // form and get sent straight back into a redirect loop.
+  if (isPublic(pathname)) {
+    if (pathname.startsWith('/login')) {
+      const token = request.cookies.get('auth_token')?.value;
+      if (token) {
+        try {
+          const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+          await jwtVerify(token, secret);
+          // Valid token — send authenticated user away from login page
+          const redirectTo =
+            request.nextUrl.searchParams.get('redirect') || '/dashboard';
+          // Only allow relative redirects to prevent open-redirect attacks
+          const safeDest = redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+          return applySecurityHeaders(
+            NextResponse.redirect(new URL(safeDest, request.url))
+          );
+        } catch {
+          // Invalid / expired token — clear it and show login form normally
+          const res = applySecurityHeaders(NextResponse.next());
+          res.cookies.delete('auth_token');
+          return res;
+        }
+      }
+    }
+    return applySecurityHeaders(NextResponse.next());
+  }
 
   // ── 3. Require authentication for everything else
   const token = request.cookies.get('auth_token')?.value;

@@ -2,7 +2,6 @@
 // src/hooks/useAuth.js
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 
 // Module-level cache: survives component unmount/remount within the same browser
 // session. Cleared on 401 so stale data is never shown after logout.
@@ -10,7 +9,6 @@ let _cachedUser  = null;
 let _cacheReady  = false;
 
 export function useAuth() {
-  const router = useRouter();
   // Initialise from cache so RoleGuard can render immediately on re-navigation
   const [user, setUser]       = useState(_cachedUser);
   const [loading, setLoading] = useState(!_cacheReady);
@@ -52,6 +50,7 @@ export function useAuth() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -74,12 +73,14 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     _cachedUser = null;
     _cacheReady = true;
     setUser(null);
-    router.push('/login');
-  }, [router]);
+    // Use a hard navigation so the entire module-level auth cache is discarded
+    // along with any React state left over from the previous session.
+    window.location.href = '/login';
+  }, []);
 
   return { user, loading, error, login, logout, refetch: fetchSession };
 }

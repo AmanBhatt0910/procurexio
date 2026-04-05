@@ -28,17 +28,34 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
  * @returns {boolean}
  */
 export function getCookieSecure(request = null) {
-  // Explicit operator override
+  // Explicit operator override via environment variable.
+  // Set COOKIE_SECURE=false for HTTP-only deployments (e.g. plain HTTP behind
+  // Nginx without SSL), or COOKIE_SECURE=true to force Secure in all cases.
   if (process.env.COOKIE_SECURE === 'false') return false;
   if (process.env.COOKIE_SECURE === 'true')  return true;
 
-  // Infer from the actual transport protocol when a request is available
+  // Infer from the actual transport protocol when a request is available.
+  // Nginx should be configured with:
+  //   proxy_set_header X-Forwarded-Proto $scheme;
+  //   proxy_set_header X-Forwarded-Ssl   on;  (HTTPS only)
   if (request) {
+    // Primary: X-Forwarded-Proto set by Nginx / AWS ALB / Cloudflare
     const proto = request.headers.get('x-forwarded-proto');
     if (proto) return proto.split(',')[0].trim() === 'https';
+
+    // Secondary: X-Forwarded-Ssl set by some Nginx / Apache configurations
+    const xssl = request.headers.get('x-forwarded-ssl');
+    if (xssl) return xssl.trim() === 'on';
+
+    // Tertiary: Front-End-Https set by older Microsoft / IIS ARR proxies
+    const feHttps = request.headers.get('front-end-https');
+    if (feHttps) return feHttps.trim().toLowerCase() === 'on';
   }
 
-  // Default: require HTTPS in production, allow HTTP in development
+  // Fallback: require HTTPS in production, allow HTTP in development.
+  // If you are running HTTP-only in production (no SSL), set COOKIE_SECURE=false
+  // in your .env.local — otherwise the Secure cookie attribute will prevent
+  // the browser from sending the auth cookie over plain HTTP connections.
   return process.env.NODE_ENV === 'production';
 }
 

@@ -11,13 +11,17 @@ export async function GET(request) {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    const { userId, companyId, role } = payload;
+    const { userId } = payload;
 
     const [rows] = await pool.query(
-      `SELECT id, name, email, role, company_id, created_at
-       FROM users
-       WHERE id = ?
-       LIMIT 1`,
+      `SELECT u.id, u.name, u.email, u.role,
+              u.company_id   AS companyId,
+              c.name         AS companyName,
+              u.created_at   AS createdAt
+       FROM   users u
+       LEFT JOIN companies c ON c.id = u.company_id
+       WHERE  u.id = ?
+       LIMIT  1`,
       [userId]
     );
 

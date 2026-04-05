@@ -1,0 +1,93 @@
+# =============================================================================
+# Procurexio — Nginx reverse-proxy configuration example
+# =============================================================================
+#
+# This file shows how to configure Nginx on Windows Server (or Linux) to
+# correctly proxy the Next.js application running on port 3001.
+#
+# Key requirements for auth cookies to work end-to-end:
+#   1. X-Forwarded-Proto must be forwarded so the app can set the correct
+#      Secure attribute on the auth cookie.
+#   2. proxy_cookie_path and proxy_cookie_domain must NOT strip or rewrite
+#      the Set-Cookie headers returned by the Next.js API routes.
+#
+# If your site is HTTP-only (no SSL), set COOKIE_SECURE=false in .env.local
+# instead of configuring HTTPS here.
+# =============================================================================
+
+# ── HTTP → HTTPS redirect (optional, only if SSL is configured) ──────────────
+server {
+    listen 80;
+    server_name procurexio.com www.procurexio.com;
+
+    # Redirect all HTTP traffic to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+# ── HTTPS with SSL termination ───────────────────────────────────────────────
+server {
+    listen 443 ssl http2;
+    server_name procurexio.com www.procurexio.com;
+
+    # SSL certificate paths (adjust for your environment)
+    ssl_certificate     /etc/ssl/certs/procurexio.com.crt;
+    ssl_certificate_key /etc/ssl/private/procurexio.com.key;
+
+    # Modern TLS settings
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # ── Proxy to Next.js app ─────────────────────────────────────────────────
+    location / {
+        proxy_pass         http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+
+        # Required for WebSocket support (Next.js HMR in development)
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        "upgrade";
+
+        # Pass the real client IP and protocol to the Next.js app.
+        # X-Forwarded-Proto is critical: without it, getCookieSecure() in
+        # src/lib/jwt.js cannot detect HTTPS and may set the wrong Secure
+        # attribute on the auth cookie, causing an infinite login-redirect loop.
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Ssl   on;
+
+        # Do NOT buffer the response body — auth Set-Cookie headers must reach
+        # the browser immediately without being held in a proxy buffer.
+        proxy_buffering    off;
+
+        # Pass Set-Cookie headers through unchanged.
+        # Do NOT add proxy_cookie_domain or proxy_cookie_path — they can
+        # silently rewrite or drop the auth_token cookie attributes.
+        proxy_pass_header  Set-Cookie;
+    }
+}
+
+# =============================================================================
+# HTTP-only configuration (no SSL — use COOKIE_SECURE=false in .env.local)
+# =============================================================================
+# Uncomment this block and remove the HTTPS blocks above if you are running
+# without SSL (not recommended for production).
+#
+# server {
+#     listen 80;
+#     server_name procurexio.com www.procurexio.com;
+#
+#     location / {
+#         proxy_pass         http://127.0.0.1:3001;
+#         proxy_http_version 1.1;
+#         proxy_set_header   Upgrade           $http_upgrade;
+#         proxy_set_header   Connection        "upgrade";
+#         proxy_set_header   Host              $host;
+#         proxy_set_header   X-Real-IP         $remote_addr;
+#         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+#         proxy_set_header   X-Forwarded-Proto $scheme;
+#         proxy_buffering    off;
+#         proxy_pass_header  Set-Cookie;
+#     }
+# }
