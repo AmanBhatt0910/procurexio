@@ -38,17 +38,17 @@ export async function sendInviteEmail({ to, token, role, companyName, invitedBy 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// sendPasswordResetEmail — send a newly-generated temporary password to user
+// sendPasswordResetTokenEmail — send a secure token-based reset link to user
 // ─────────────────────────────────────────────────────────────────────────────
-export async function sendPasswordResetEmail({ to, name, tempPassword }) {
-  const loginUrl = `${BASE_URL}/login`;
+export async function sendPasswordResetTokenEmail({ to, name, token }) {
+  const resetUrl = `${BASE_URL}/reset-password?token=${token}`;
 
-  const html = buildPasswordResetHtml({ name, tempPassword, loginUrl, appName: APP_NAME });
+  const html = buildPasswordResetTokenHtml({ name, resetUrl, appName: APP_NAME });
 
   const { data, error } = await getResend().emails.send({
     from:    FROM,
     to,
-    subject: `Your ${APP_NAME} password has been reset`,
+    subject: `Reset your ${APP_NAME} password`,
     html,
   });
 
@@ -635,6 +635,71 @@ function buildPasswordResetHtml({ name, tempPassword, loginUrl, appName }) {
               </table>
               <p style="margin:24px 0 0;font-size:13px;color:#9d9894;">
                 If you did not request a password reset, please contact support immediately.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f5f4f2;padding:18px 36px;border-top:1px solid #e5e3df;">
+              <p style="margin:0;font-size:12px;color:#b8b4b0;">
+                &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTML: Password reset (token-based link)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildPasswordResetTokenHtml({ name, resetUrl, appName }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Your Password</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+          <tr>
+            <td style="background:#0f0e0d;padding:28px 36px;">
+              <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 36px 28px;">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">
+                Reset your password
+              </h1>
+              <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+                Hi <strong style="color:#0f0e0d;">${name}</strong>, we received a request to reset your password.
+                Click the button below to choose a new password. This link expires in <strong>24 hours</strong>.
+              </p>
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#c8501a;border-radius:8px;">
+                    <a href="${resetUrl}"
+                       style="display:inline-block;padding:13px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:-0.1px;">
+                      Reset password &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:13px;color:#9d9894;">
+                If you didn&rsquo;t request a password reset, you can safely ignore this email.
+                Your password will not change.
+              </p>
+              <p style="margin:12px 0 0;font-size:12px;color:#b8b3ae;word-break:break-all;">
+                Or copy this link into your browser:<br />
+                <a href="${resetUrl}" style="color:#c8501a;">${resetUrl}</a>
               </p>
             </td>
           </tr>

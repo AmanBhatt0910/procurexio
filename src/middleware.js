@@ -134,6 +134,7 @@ const PUBLIC_PREFIXES = [
   '/login',
   '/register',
   '/forgot-password',
+  '/reset-password',
   '/api/auth',
   '/_next',
   '/favicon',

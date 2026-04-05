@@ -48,7 +48,7 @@ export async function verifyToken(token) {
  */
 export function buildAuthCookie(token, options = {}) {
   const {
-    isSecure = false,
+    isSecure = process.env.NODE_ENV === 'production',
   } = options;
 
   return [

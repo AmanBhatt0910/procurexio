@@ -1,10 +1,18 @@
 import pool from '@/lib/db';
 
+// Roles that are allowed to see company dashboard stats
+const ALLOWED_ROLES = ['super_admin', 'company_admin', 'manager', 'employee'];
+
 export async function GET(request) {
   const companyId = request.headers.get('x-company-id');
+  const role      = request.headers.get('x-user-role');
 
   if (!companyId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!ALLOWED_ROLES.includes(role)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
