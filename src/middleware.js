@@ -71,9 +71,9 @@ function _getIP(request) {
  * ip:      per-IP fallback limit for unauthenticated general API requests
  */
 const RATE_LIMIT_CONFIGS = {
-  auth: { max: 10,  windowMs: 60_000 },   // 10  req / min  (auth-sensitive mutations)
-  user: { max: 300, windowMs: 60_000 },   // 300 req / min  (per authenticated user)
-  ip:   { max: 60,  windowMs: 60_000 },   // 60  req / min  (unauthenticated fallback)
+  auth: { max: 10,   windowMs: 60_000 },   // 10   req / min  (auth-sensitive mutations)
+  user: { max: 1000, windowMs: 60_000 },   // 1000 req / min  (per authenticated user)
+  ip:   { max: 60,   windowMs: 60_000 },   // 60   req / min  (unauthenticated fallback)
 };
 
 /** Path prefixes that receive the stricter auth rate limit. */
