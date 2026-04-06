@@ -1,6 +1,7 @@
 // src/app/api/vendors/route.js
 import { query, queryRaw, getConnection } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 // ─── GET /api/vendors ────────────────────────────────────────────
 export async function GET(request) {
@@ -110,6 +111,15 @@ export async function POST(request) {
     }
 
     await conn.commit();
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.VENDOR_CREATED,
+      resourceType: 'vendor',
+      resourceId:   vendorId,
+      resourceName: name.trim(),
+      status:       'success',
+    });
     return Response.json({ message: 'Vendor created', data: { id: vendorId } }, { status: 201 });
   } catch (err) {
     await conn.rollback();

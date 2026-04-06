@@ -4,9 +4,11 @@ import pool                    from '@/lib/db';
 import { sendInviteEmail,
          sendVendorInviteEmail } from '@/lib/mailer';
 import crypto                  from 'crypto';
+import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
-const TEAM_ROLES   = ['company_admin', 'manager', 'employee'];
-const VENDOR_ROLES = ['vendor_user'];
+const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
+const VENDOR_ROLES = [ROLES.VENDOR_USER];
 const ALL_ROLES    = [...TEAM_ROLES, ...VENDOR_ROLES];
 
 export async function POST(request) {
@@ -17,7 +19,7 @@ export async function POST(request) {
   if (!companyId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!['super_admin', 'company_admin'].includes(role)) {
+  if (!hasPermission(role, PERMISSIONS.MANAGE_COMPANY)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -31,8 +33,13 @@ export async function POST(request) {
     return Response.json({ error: 'Invalid role' }, { status: 400 });
   }
 
+  // Prevent inviting a second company_admin — only one is allowed per company
+  if (inviteRole === ROLES.COMPANY_ADMIN) {
+    return Response.json({ error: 'Only one company admin is allowed per company' }, { status: 400 });
+  }
+
   // Vendor invites MUST supply a vendorId
-  if (inviteRole === 'vendor_user' && !vendorId) {
+  if (inviteRole === ROLES.VENDOR_USER && !vendorId) {
     return Response.json({ error: 'vendorId is required for vendor_user invitations' }, { status: 400 });
   }
 
@@ -45,7 +52,7 @@ export async function POST(request) {
 
   try {
     // 1. Verify the vendor belongs to this company (prevents cross-tenant abuse)
-    if (inviteRole === 'vendor_user') {
+    if (inviteRole === ROLES.VENDOR_USER) {
       const [vRows] = await pool.query(
         'SELECT id FROM vendors WHERE id = ? AND company_id = ? LIMIT 1',
         [vendorId, companyId]
@@ -70,7 +77,7 @@ export async function POST(request) {
        WHERE email = ? AND company_id = ? AND accepted_at IS NULL AND expires_at > NOW()`;
     const pendingParams = [normalizedEmail, companyId];
 
-    if (inviteRole === 'vendor_user') {
+    if (inviteRole === ROLES.VENDOR_USER) {
       pendingQuery += ' AND vendor_id = ?';
       pendingParams.push(vendorId);
     } else {
@@ -109,7 +116,7 @@ export async function POST(request) {
     const companyName = companyRows[0]?.name || 'Your company';
 
     // 5. Send the appropriate email
-    if (inviteRole === 'vendor_user') {
+    if (inviteRole === ROLES.VENDOR_USER) {
       await sendVendorInviteEmail({
         to:          normalizedEmail,
         token,
@@ -128,6 +135,15 @@ export async function POST(request) {
     }
 
     const message = pendingInvite.length ? 'Invitation resent' : 'Invitation sent';
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.INVITATION_CREATED,
+      resourceType: 'invitation',
+      resourceName: normalizedEmail,
+      changes:      { role: inviteRole, resent: pendingInvite.length > 0 },
+      status:       'success',
+    });
     return Response.json({
       message,
       data: { email: normalizedEmail, role: inviteRole },

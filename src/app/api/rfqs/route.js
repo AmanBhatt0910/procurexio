@@ -1,6 +1,7 @@
 // src/app/api/rfqs/route.js
 import { query, queryRaw, getConnection } from '@/lib/db';
 import { requirePermission, PERMISSIONS } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,16 @@ export async function POST(request) {
         WHERE r.id = ?`,
       [rfqId]
     );
+
+    await logAction(request, {
+      userId:       parseInt(userId, 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.RFQ_CREATED,
+      resourceType: 'rfq',
+      resourceId:   rfqId,
+      resourceName: title.trim(),
+      status:       'success',
+    });
 
     return Response.json(
       { message: 'RFQ created', data: { rfq: rfqRows[0] } },

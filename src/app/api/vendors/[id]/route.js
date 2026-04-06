@@ -1,6 +1,7 @@
 // src/app/api/vendors/[id]/route.js
 import { query, getConnection } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 async function getVendor(vendorId, companyId) {
   const rows = await query(
@@ -109,6 +110,15 @@ export async function PUT(request, { params }) {
     }
 
     await conn.commit();
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.VENDOR_UPDATED,
+      resourceType: 'vendor',
+      resourceId:   parseInt(id, 10),
+      resourceName: name.trim(),
+      status:       'success',
+    });
     return Response.json({ message: 'Vendor updated' });
   } catch (err) {
     await conn.rollback();
@@ -140,6 +150,14 @@ export async function DELETE(request, { params }) {
     if (result.affectedRows === 0)
       return Response.json({ error: 'Vendor not found' }, { status: 404 });
 
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.VENDOR_DEACTIVATED,
+      resourceType: 'vendor',
+      resourceId:   parseInt(id, 10),
+      status:       'success',
+    });
     return Response.json({ message: 'Vendor deactivated' });
   } catch (err) {
     console.error('[DELETE /api/vendors/[id]]', err);

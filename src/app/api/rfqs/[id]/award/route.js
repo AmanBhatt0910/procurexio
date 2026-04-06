@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
 import { sendContractAwardedEmail, sendBidRejectedEmail } from '@/lib/mailer';
+import { logAction, ACTION } from '@/lib/audit';
 
 // Helper: generate contract reference
 async function generateContractRef(conn, companyId) {
@@ -175,6 +176,17 @@ export async function POST(request, { params }) {
         });
       }
     } catch (_) { /* notification errors must not fail the request */ }
+
+    await logAction(request, {
+      userId:       parseInt(userId, 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.AWARD_CREATED,
+      resourceType: 'contract',
+      resourceId:   contractResult.insertId,
+      resourceName: contract.rfq_title,
+      changes:      { contract_ref: contractRef, vendor: contract.vendor_name },
+      status:       'success',
+    });
 
     return Response.json({ message: 'Contract awarded', data: contract }, { status: 201 });
   } catch (err) {

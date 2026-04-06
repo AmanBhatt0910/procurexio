@@ -7,8 +7,14 @@ import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
-const ROLES = ['company_admin', 'manager', 'employee'];
+// Roles available when inviting a new member (company_admin is excluded — only 1 per company)
+const INVITE_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE];
+
+// Roles available when editing an existing member (company_admin excluded for same reason)
+const EDIT_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE];
 
 function getInitials(name) {
   if (!name) return '??';
@@ -22,26 +28,39 @@ function getInitials(name) {
 }
 
 export default function UsersPage() {
+  const { user: currentUser } = useAuth();
+  const currentRole = currentUser?.role;
+  const isAdmin = currentRole === ROLES.COMPANY_ADMIN || currentRole === ROLES.SUPER_ADMIN;
+
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
 
   const [inviteOpen,  setInviteOpen]  = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole,  setInviteRole]  = useState('employee');
+  const [inviteRole,  setInviteRole]  = useState(ROLES.EMPLOYEE);
   const [inviting,    setInviting]    = useState(false);
 
   const [editUser,   setEditUser]   = useState(null);
   const [editRole,   setEditRole]   = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  async function loadUsers() {
-    const res = await fetch('/api/company/users');
-    if (res.ok) setUsers((await res.json()).data);
+  const [page, setPage]   = useState(1);
+  const [meta, setMeta]   = useState({ total: 0, totalPages: 1 });
+  const PAGE_LIMIT = 20;
+
+  async function loadUsers(p = 1) {
+    setLoading(true);
+    const res = await fetch(`/api/company/users?page=${p}&limit=${PAGE_LIMIT}`);
+    if (res.ok) {
+      const json = await res.json();
+      setUsers(json.data);
+      setMeta(json.meta || {});
+    }
     setLoading(false);
   }
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(page); }, [page]);
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -62,7 +81,7 @@ export default function UsersPage() {
         showToast(`Invitation sent to ${inviteEmail}`);
         setInviteOpen(false);
         setInviteEmail('');
-        setInviteRole('employee');
+        setInviteRole(ROLES.EMPLOYEE);
       } else {
         showToast(data.error, 'error');
       }
@@ -89,7 +108,7 @@ export default function UsersPage() {
       if (res.ok) {
         showToast('User role updated.');
         setEditUser(null);
-        loadUsers();
+        loadUsers(page);
       } else {
         showToast(data.error, 'error');
       }
@@ -156,7 +175,7 @@ export default function UsersPage() {
       width: 80,
       // ✅ need full row to check role and pass to openEdit — use (_val, row)
       render: (_val, row) => (
-        row.role === 'vendor_user' ? null : (
+        row.role === ROLES.VENDOR_USER || !isAdmin ? null : (
           <button
             onClick={() => openEdit(row)}
             style={{
@@ -175,7 +194,7 @@ export default function UsersPage() {
     },
   ];
 
-  const inviteBtn = (
+  const inviteBtn = isAdmin ? (
     <button
       onClick={() => setInviteOpen(true)}
       style={{
@@ -193,7 +212,7 @@ export default function UsersPage() {
       </svg>
       Invite Member
     </button>
-  );
+  ) : null;
 
   return (
     <DashboardLayout pageTitle="Users">
@@ -213,12 +232,18 @@ export default function UsersPage() {
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: .855rem; font-weight: 500; z-index: 999; box-shadow: var(--shadow); animation: toastIn .2s ease; }
         .toast--success { background: #166534; color: #fff; }
         .toast--error   { background: #991b1b; color: #fff; }
-        @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 0 0; flex-wrap: wrap; }
+        .page-info { font-size: .82rem; color: var(--ink-faint); font-family: 'DM Sans', sans-serif; }
+        .page-btns { display: flex; gap: 6px; }
+        .page-btn { padding: 6px 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); font-family: 'DM Sans', sans-serif; font-size: .83rem; font-weight: 500; color: var(--ink); cursor: pointer; transition: background .15s; }
+        .page-btn:hover:not(:disabled) { background: var(--surface); }
+        .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
       `}</style>
 
       <PageHeader
         title="Team Members"
-        subtitle={`${users.length} member${users.length !== 1 ? 's' : ''} in your organization`}
+        subtitle={`${meta.total ?? users.length} member${(meta.total ?? users.length) !== 1 ? 's' : ''} in your organization`}
         action={inviteBtn}
       />
 
@@ -228,6 +253,29 @@ export default function UsersPage() {
         loading={loading}
         emptyMessage="No team members yet. Invite your first colleague."
       />
+
+      {/* Pagination */}
+      {!loading && meta.totalPages > 1 && (
+        <div className="pagination">
+          <span className="page-info">
+            Showing {((page - 1) * PAGE_LIMIT) + 1}–{Math.min(page * PAGE_LIMIT, meta.total)} of {meta.total} members
+          </span>
+          <div className="page-btns">
+            <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
+            {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
+              let p;
+              if (meta.totalPages <= 5) p = i + 1;
+              else if (page <= 3) p = i + 1;
+              else if (page >= meta.totalPages - 2) p = meta.totalPages - 4 + i;
+              else p = page - 2 + i;
+              return (
+                <button key={p} className={`page-btn${page === p ? ' active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+              );
+            })}
+            <button className="page-btn" disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite Team Member">
@@ -251,7 +299,7 @@ export default function UsersPage() {
               value={inviteRole}
               onChange={e => setInviteRole(e.target.value)}
             >
-              {ROLES.map(r => (
+              {INVITE_ROLES.map(r => (
                 <option key={r} value={r}>{roleLabel(r)}</option>
               ))}
             </select>
@@ -309,7 +357,7 @@ export default function UsersPage() {
                 value={editRole}
                 onChange={e => setEditRole(e.target.value)}
               >
-                {ROLES.map(r => (
+                {EDIT_ROLES.map(r => (
                   <option key={r} value={r}>{roleLabel(r)}</option>
                 ))}
               </select>
