@@ -65,7 +65,7 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
   }, 0);
 
   const gstAmount  = subtotal * (gst / 100);
-  const totalBid   = subtotal + gstAmount;
+  const totalBid   = subtotal;
 
   return (
     <>
@@ -226,10 +226,10 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
               <tr className="subtotal-row">
                 <td colSpan={readOnly ? 5 : 5} />
                 <td style={{ textAlign: 'right' }}>
-                  <span className="gst-badge">GST {gst}%</span>
+                  <span className="gst-badge">GST {gst}% (informational)</span>
                 </td>
                 <td className="price-cell" style={{ fontSize: '.95rem', color: '#1d4ed8' }}>
-                  +{gstAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {gstAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 {!readOnly && <td />}
               </tr>
