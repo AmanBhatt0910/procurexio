@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS rfqs (
   deadline         DATETIME       DEFAULT NULL,
   budget           DECIMAL(15,2)  DEFAULT NULL,
   currency         VARCHAR(8)     NOT NULL DEFAULT 'USD',
+  payment_terms    TEXT           DEFAULT NULL,
+  freight_charges  DECIMAL(10,2)  DEFAULT NULL,
+  remarks          TEXT           DEFAULT NULL,
   created_by BIGINT UNSIGNED NOT NULL,
   created_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -1,5 +1,5 @@
 -- ============================================================
--- Module 5: Bidding Schema
+-- Module 5: Bidding Schema (UPDATED)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS bids (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS bids (
   total_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
   currency VARCHAR(8) NOT NULL DEFAULT 'USD',
   gst DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  payment_terms TEXT DEFAULT NULL,
+  freight_charges DECIMAL(10,2) DEFAULT NULL,
+  last_remarks TEXT DEFAULT NULL,
   submitted_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

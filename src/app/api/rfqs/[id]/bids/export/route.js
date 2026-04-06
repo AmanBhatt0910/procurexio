@@ -1,3 +1,4 @@
+// src/app/api/rfqs/[id]/bids/export/route.js
 // Export bids as structured CSV (Quotation format) or JSON for an RFQ
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
@@ -28,10 +29,10 @@ export async function GET(request, { params }) {
   const format = searchParams.get('format') || 'csv';
 
   try {
-    // Fetch RFQ - Using only columns that exist in the rfqs table
+    // Fetch RFQ
     const [[rfq]] = await pool.query(
-      `SELECT id, title, reference_number, status, deadline, currency, 
-              description, budget, created_at
+      `SELECT id, title, reference_number, status, deadline, currency,
+              payment_terms, freight_charges, remarks
        FROM rfqs WHERE id = ? AND company_id = ?`,
       [rfqId, companyId]
     );
@@ -56,7 +57,7 @@ export async function GET(request, { params }) {
     const [rfqItems] = await pool.query(
       `SELECT id, description, quantity, unit, target_price
        FROM rfq_items WHERE rfq_id = ? AND company_id = ?
-       ORDER BY sort_order ASC, id ASC`,
+       ORDER BY id ASC`,
       [rfqId, companyId]
     );
 
@@ -101,20 +102,17 @@ export async function GET(request, { params }) {
     const csvLines = [];
 
     // Row 1: Title
-    csvLines.push(row(`Quotation for: ${rfq.title}`));
-    
-    // Row 2: Reference Number
-    csvLines.push(row(`Reference: ${rfq.reference_number}`));
+    csvLines.push(row(`Quotation for Item: ${rfq.title}`));
 
-    // Row 3: Vendor header (Empty×3, then vendor names for L1/L2/L3, two cols each)
+    // Row 2: Vendor header (Empty×3, then vendor names for L1/L2/L3, two cols each)
     const vendorHeaderCells = ['', '', ''];
     for (let i = 0; i < topBids.length; i++) {
       vendorHeaderCells.push(`Vendor L${i + 1}: ${topBids[i].vendor_name}`, '');
     }
     csvLines.push(vendorHeaderCells.map(escCsv).join(','));
 
-    // Row 4: Column headers
-    const colHeaders = ['Item Code', 'Qty', 'Unit'];
+    // Row 3: Column headers
+    const colHeaders = ['Item Code', 'Qty', 'GST'];
     for (let i = 0; i < topBids.length; i++) {
       colHeaders.push(`L${i + 1} Amt (excl. GST)`, `L${i + 1} Total (incl. GST)`);
     }
@@ -126,7 +124,7 @@ export async function GET(request, { params }) {
       const itemCells = [
         `${idx + 1}. ${item.description}`,
         item.quantity,
-        item.unit || '',
+        '',  // GST column intentionally empty per item; bid-level GST rate shown in summary row after totals
       ];
       for (const bid of topBids) {
         const bi    = bidItemsMap[bid.bid_id]?.[item.id];
@@ -169,11 +167,11 @@ export async function GET(request, { params }) {
     // Blank separator
     csvLines.push('');
 
-    // Footer section - these come from bids table, not rfqs
+    // Footer section
     const getFooterVal = (bid, field) => bid[field] || '';
     csvLines.push(row('Payment Terms', '', ...topBids.map(b => getFooterVal(b, 'payment_terms'))));
     csvLines.push(row('Freight Charges', '', ...topBids.map(b => b.freight_charges || '')));
-    csvLines.push(row('Remarks', '', ...topBids.map(b => getFooterVal(b, 'last_remarks'))));
+    csvLines.push(row('Last Remarks', '', ...topBids.map(b => getFooterVal(b, 'last_remarks'))));
 
     const csv = csvLines.join('\r\n');
     const filename = `quotation-${rfq.reference_number}-${Date.now()}.csv`;
