@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- ================================================================
 -- SEED: Super admin account
 -- Change email/password before running in production.
--- Password below = "Admin@1234" (bcrypt hash, 12 rounds)
+-- Password below = "Admin@1234" (bcrypt hash, cost 12)
+-- company_id is intentionally NULL — super_admin is not tenant-scoped.
 -- ================================================================
 INSERT IGNORE INTO users (id, company_id, name, email, password, role)
 VALUES (
@@ -68,7 +69,7 @@ VALUES (
   NULL,
   'Super Admin',
   'admin@procurexio.com',
-  '$2b$12$K7rdBF2oMQUCJFHFkYiH7OAfXZe5G9RkPkFNq4OHkGHqJhVRU3.Hy',
+  '$2b$12$IpCywGZz9sfADX73cLoAjOkYBqrePR3RAKhuukJwvGjBMngCqBdGO',
   'super_admin'
 );
 

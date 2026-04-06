@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS bid_attachments (
   INDEX idx_ba_rfq     (rfq_id),
   INDEX idx_ba_vendor  (vendor_id),
   INDEX idx_ba_company (company_id),
+  INDEX idx_ba_uploaded_by (uploaded_by),
 
-  CONSTRAINT fk_ba_bid    FOREIGN KEY (bid_id)    REFERENCES bids(id)      ON DELETE CASCADE,
-  CONSTRAINT fk_ba_rfq    FOREIGN KEY (rfq_id)    REFERENCES rfqs(id)      ON DELETE CASCADE,
-  CONSTRAINT fk_ba_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id)   ON DELETE CASCADE,
-  CONSTRAINT fk_ba_co     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+  CONSTRAINT fk_ba_bid         FOREIGN KEY (bid_id)     REFERENCES bids(id)      ON DELETE CASCADE,
+  CONSTRAINT fk_ba_rfq         FOREIGN KEY (rfq_id)     REFERENCES rfqs(id)      ON DELETE CASCADE,
+  CONSTRAINT fk_ba_vendor      FOREIGN KEY (vendor_id)  REFERENCES vendors(id)   ON DELETE CASCADE,
+  CONSTRAINT fk_ba_co          FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ba_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES users(id)   ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
