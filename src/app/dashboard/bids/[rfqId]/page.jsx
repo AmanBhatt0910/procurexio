@@ -239,7 +239,7 @@ export default function VendorBidWorkspacePage() {
         const qty = parseFloat(item.quantity)   || 1;
         return sum + (up * qty);
       }, 0);
-      const newTotal = newSubtotal * (1 + gst / 100);
+      const newTotal = newSubtotal;
 
       // Enforce ₹100 minimum change when editing a previously submitted bid
       if (bid?.status === 'submitted' && bid?.total_amount != null) {
