@@ -192,7 +192,8 @@ export async function POST(request, { params }) {
   } catch (err) {
     await conn.rollback();
     console.error('Award error:', err);
-    return Response.json({ error: 'Failed to award contract' }, { status: 500 });  } finally {
+    return Response.json({ error: 'Failed to award contract' }, { status: 500 });
+  } finally {
     conn.release();
   }
 }

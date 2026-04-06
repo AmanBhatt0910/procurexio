@@ -149,7 +149,8 @@ export async function PUT(request, { params }) {
     );
 
     // When an RFQ is published, notify all invited vendor users
-    if (updates.status === 'published') {      try {
+    if (updates.status === 'published') {
+      try {
         const vendorUsers = await query(
           `SELECT u.id AS userId, u.company_id AS companyId
              FROM rfq_vendors rv
