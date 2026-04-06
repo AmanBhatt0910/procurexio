@@ -84,7 +84,13 @@ export async function GET(request) {
     if (userId)       { conditions.push('al.user_id = ?');       params.push(parseInt(userId, 10)); }
     if (companyId)    { conditions.push('u.company_id = ?');     params.push(parseInt(companyId, 10)); }
     if (dateFrom)     { conditions.push('al.created_at >= ?');   params.push(dateFrom); }
-    if (dateTo)       { conditions.push('al.created_at <= ?');   params.push(dateTo + ' 23:59:59'); }
+    if (dateTo)       {
+      // Build end-of-day timestamp in UTC from the YYYY-MM-DD date string
+      const endOfDay = new Date(dateTo);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      conditions.push('al.created_at <= ?');
+      params.push(endOfDay.toISOString().slice(0, 19).replace('T', ' '));
+    }
     if (search)       {
       conditions.push('(al.user_email LIKE ? OR al.resource_name LIKE ? OR al.action_type LIKE ?)');
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);

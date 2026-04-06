@@ -158,12 +158,12 @@ export const ACTION = {
   BID_WITHDRAWN:            'bid_withdrawn',
   BID_RESUBMITTED:          'bid_resubmitted',
 
-  // Evaluations
-  EVALUATION_SUBMITTED:     'evaluation_submitted',
-
   // Awards / Contracts
   AWARD_CREATED:            'award_created',
   AWARD_CANCELLED:          'award_cancelled',
+
+  // Evaluations
+  EVALUATION_SUBMITTED:     'evaluation_submitted',
 
   // Invitations
   INVITATION_CREATED:       'invitation_created',

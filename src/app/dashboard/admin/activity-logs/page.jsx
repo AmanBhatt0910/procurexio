@@ -153,7 +153,7 @@ export default function ActivityLogsPage() {
     const rows = data.data || [];
 
     if (format === 'csv') {
-      const headers = ['id','created_at','action_type','description','user_email','actor_name','resource_type','resource_name','status','ip_address'];
+      const headers = ['id', 'created_at', 'action_type', 'description', 'user_email', 'actor_name', 'resource_type', 'resource_name', 'status', 'ip_address'];
       const lines   = [
         headers.join(','),
         ...rows.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))
