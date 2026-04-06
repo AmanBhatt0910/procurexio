@@ -92,6 +92,9 @@ export default function ActivityLogsPage() {
   const [actionFilter, setActionFilter]     = useState('');
   const [statusFilter, setStatusFilter]     = useState('');
   const [resourceFilter, setResourceFilter] = useState('');
+  const [dateFrom, setDateFrom]             = useState('');
+  const [dateTo, setDateTo]                 = useState('');
+  const [searchQuery, setSearchQuery]       = useState('');
   const [availableActions, setAvailableActions] = useState([]);
   const [expandedId, setExpandedId]   = useState(null);
 
@@ -102,6 +105,9 @@ export default function ActivityLogsPage() {
       if (actionFilter)   params.set('action_type',   actionFilter);
       if (statusFilter)   params.set('status',        statusFilter);
       if (resourceFilter) params.set('resource_type', resourceFilter);
+      if (dateFrom)       params.set('date_from',     dateFrom);
+      if (dateTo)         params.set('date_to',       dateTo);
+      if (searchQuery)    params.set('search',        searchQuery);
 
       const res  = await fetch(`/api/admin/activity-logs?${params}`);
       const data = await res.json();
@@ -115,12 +121,12 @@ export default function ActivityLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [actionFilter, statusFilter, resourceFilter]);
+  }, [actionFilter, statusFilter, resourceFilter, dateFrom, dateTo, searchQuery]);
 
   useEffect(() => {
     setPage(1);
     fetchLogs(1);
-  }, [actionFilter, statusFilter, resourceFilter, fetchLogs]);
+  }, [actionFilter, statusFilter, resourceFilter, dateFrom, dateTo, searchQuery, fetchLogs]);
 
   useEffect(() => {
     fetchLogs(page);
@@ -131,6 +137,39 @@ export default function ActivityLogsPage() {
       setter(e.target.value);
       setPage(1);
     };
+  }
+
+  async function handleExport(format) {
+    const params = new URLSearchParams({ page: 1, limit: 1000 });
+    if (actionFilter)   params.set('action_type',   actionFilter);
+    if (statusFilter)   params.set('status',        statusFilter);
+    if (resourceFilter) params.set('resource_type', resourceFilter);
+    if (dateFrom)       params.set('date_from',     dateFrom);
+    if (dateTo)         params.set('date_to',       dateTo);
+    if (searchQuery)    params.set('search',        searchQuery);
+
+    const res  = await fetch(`/api/admin/activity-logs?${params}`);
+    const data = await res.json();
+    const rows = data.data || [];
+
+    if (format === 'csv') {
+      const headers = ['id','created_at','action_type','description','user_email','actor_name','resource_type','resource_name','status','ip_address'];
+      const lines   = [
+        headers.join(','),
+        ...rows.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))
+      ];
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'activity-logs.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'activity-logs.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
   const RESOURCE_TYPES = ['user', 'vendor', 'rfq', 'bid', 'contract', 'invitation', 'company'];
@@ -327,6 +366,15 @@ export default function ActivityLogsPage() {
 
         {/* Filter bar */}
         <div className="al-filters">
+          <input
+            className="al-select"
+            type="text"
+            placeholder="Search user, resource, action…"
+            value={searchQuery}
+            onChange={handleFilterChange(setSearchQuery)}
+            style={{ minWidth: 200 }}
+          />
+
           <select
             className="al-select"
             value={actionFilter}
@@ -362,9 +410,36 @@ export default function ActivityLogsPage() {
             <option value="error">Error</option>
           </select>
 
+          <input
+            className="al-select"
+            type="date"
+            value={dateFrom}
+            onChange={handleFilterChange(setDateFrom)}
+            title="From date"
+          />
+          <input
+            className="al-select"
+            type="date"
+            value={dateTo}
+            onChange={handleFilterChange(setDateTo)}
+            title="To date"
+          />
+
           <span className="al-stats">
             {!loading && `${meta.total?.toLocaleString() ?? 0} event${meta.total !== 1 ? 's' : ''}`}
           </span>
+
+          <button
+            className="al-page-btn"
+            onClick={() => handleExport('csv')}
+            title="Export as CSV"
+            style={{ marginLeft: 'auto' }}
+          >⬇ CSV</button>
+          <button
+            className="al-page-btn"
+            onClick={() => handleExport('json')}
+            title="Export as JSON"
+          >⬇ JSON</button>
         </div>
 
         <div className="al-timeline">

@@ -270,6 +270,16 @@ export async function DELETE(request, { params }) {
     );
 
     await conn.commit();
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.AWARD_CANCELLED,
+      resourceType: 'contract',
+      resourceId:   contract.id,
+      resourceName: `Contract #${contract.contract_reference || contract.id}`,
+      changes:      { rfqId: id, contractId: contract.id },
+      status:       'success',
+    });
     return Response.json({ message: 'Award cancelled successfully' });
   } catch (err) {
     await conn.rollback();
