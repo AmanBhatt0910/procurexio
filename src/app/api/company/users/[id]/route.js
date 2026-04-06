@@ -1,6 +1,7 @@
 // src/app/api/company/users/[id]/route.js
 import pool from '@/lib/db';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 const ALLOWED_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
 
@@ -72,6 +73,16 @@ export async function PUT(request, { params }) {
       `UPDATE users SET ${updates.join(', ')} WHERE id = ? AND company_id = ?`,
       values
     );
+
+    await logAction(request, {
+      userId:       parseInt(actorId, 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   role !== undefined ? ACTION.USER_ROLE_CHANGED : ACTION.USER_UPDATED,
+      resourceType: 'user',
+      resourceId:   parseInt(targetId, 10),
+      changes:      role !== undefined ? { role_from: target[0].role, role_to: role } : null,
+      status:       'success',
+    });
 
     return Response.json({ message: 'User updated' });
   } catch (err) {

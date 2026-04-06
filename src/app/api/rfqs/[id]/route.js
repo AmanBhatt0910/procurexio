@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
 import { autoCloseIfExpired } from '@/lib/rfqUtils';
+import { logAction, ACTION } from '@/lib/audit';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
 const TRANSITIONS = {
@@ -148,8 +149,7 @@ export async function PUT(request, { params }) {
     );
 
     // When an RFQ is published, notify all invited vendor users
-    if (updates.status === 'published') {
-      try {
+    if (updates.status === 'published') {      try {
         const vendorUsers = await query(
           `SELECT u.id AS userId, u.company_id AS companyId
              FROM rfq_vendors rv
@@ -168,6 +168,19 @@ export async function PUT(request, { params }) {
         }
       } catch (_) { /* notification errors must not fail the request */ }
     }
+
+    // Log the update action
+    const actionType = updates.status ? ACTION.RFQ_STATUS_CHANGED : ACTION.RFQ_UPDATED;
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType,
+      resourceType: 'rfq',
+      resourceId:   parseInt(id, 10),
+      resourceName: rfq.title,
+      changes:      updates.status ? { from: rfq.status, to: updates.status } : null,
+      status:       'success',
+    });
 
     return Response.json({ message: 'RFQ updated', data: { rfq: updated[0] } });
   } catch (err) {

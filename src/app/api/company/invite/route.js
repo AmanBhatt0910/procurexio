@@ -5,6 +5,7 @@ import { sendInviteEmail,
          sendVendorInviteEmail } from '@/lib/mailer';
 import crypto                  from 'crypto';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];
@@ -134,6 +135,15 @@ export async function POST(request) {
     }
 
     const message = pendingInvite.length ? 'Invitation resent' : 'Invitation sent';
+    await logAction(request, {
+      userId:       parseInt(request.headers.get('x-user-id'), 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.INVITATION_CREATED,
+      resourceType: 'invitation',
+      resourceName: normalizedEmail,
+      changes:      { role: inviteRole, resent: pendingInvite.length > 0 },
+      status:       'success',
+    });
     return Response.json({
       message,
       data: { email: normalizedEmail, role: inviteRole },
