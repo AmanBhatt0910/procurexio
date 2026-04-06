@@ -405,9 +405,10 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
         }
         @media (max-width: 768px) {
           .nav-item {
-            padding: 11px 20px !important;
-            justify-content: flex-start !important;
+            padding: 11px 20px;
+            justify-content: flex-start;
             font-size: .9rem;
+            min-height: 44px;
           }
         }
         .nav-item:hover:not(.nav-item--disabled) {

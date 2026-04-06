@@ -28,7 +28,10 @@ export default function PageHeader({ title, subtitle, action }) {
           margin-top: 4px;
         }
         .page-header-action {
-          padding: 10px 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 18px;
           background: var(--ink);
           color: var(--white);
           border: none;
@@ -39,12 +42,11 @@ export default function PageHeader({ title, subtitle, action }) {
           cursor: pointer;
           white-space: nowrap;
           flex-shrink: 0;
-          min-height: 44px;
         }
         .page-header-action:hover { opacity: .85; }
         @media (max-width: 480px) {
           .page-header { flex-direction: column; gap: 12px; margin-bottom: 20px; }
-          .page-header-action { width: 100%; text-align: center; }
+          .page-header-action { width: 100%; }
           .page-header-title { font-size: 1.2rem; }
         }
       `}</style>

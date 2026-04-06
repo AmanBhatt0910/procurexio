@@ -218,7 +218,7 @@ export default function TopBar({ user, title, onMenuToggle }) {
           border: none;
           width: 100%;
           text-align: left;
-          min-height: 40px;
+          min-height: 44px;
         }
         .topbar-menu-item:hover { background: var(--surface); }
         .topbar-menu-item--danger { color: #c0392b; }
