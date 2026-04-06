@@ -1,6 +1,7 @@
 // src/app/api/rfqs/[id]/bids/[bidId]/evaluate/route.js
 import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
+import { logAction, ACTION } from '@/lib/audit';
 
 export async function POST(request, { params }) {
   const { id, bidId } = await params;
@@ -52,6 +53,17 @@ export async function POST(request, { params }) {
      WHERE be.bid_id = ? AND be.evaluated_by = ? AND be.company_id = ?`,
     [bidId, userId, companyId]
   );
+
+  await logAction(request, {
+    userId:       parseInt(userId, 10) || null,
+    userEmail:    request.headers.get('x-user-email') || null,
+    actionType:   ACTION.EVALUATION_SUBMITTED,
+    resourceType: 'bid',
+    resourceId:   parseInt(bidId, 10) || null,
+    resourceName: `Bid #${bidId} on RFQ #${id}`,
+    changes:      { score: score ?? null },
+    status:       'success',
+  });
 
   return Response.json({ message: 'Evaluation saved', data: rows[0] });
 }

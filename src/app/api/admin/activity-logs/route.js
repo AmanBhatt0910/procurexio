@@ -25,9 +25,12 @@ const ACTION_DESCRIPTIONS = {
   rfq_created:             'RFQ created',
   rfq_updated:             'RFQ details updated',
   rfq_status_changed:      'RFQ status changed',
+  rfq_deleted:             'RFQ deleted',
   bid_created:             'Bid started (draft)',
+  bid_updated:             'Bid draft updated',
   bid_submitted:           'Bid submitted',
   bid_withdrawn:           'Bid withdrawn',
+  bid_resubmitted:         'Submitted bid revised',
   award_created:           'Contract awarded',
   award_cancelled:         'Contract award cancelled',
   evaluation_submitted:    'Bid evaluation submitted',
@@ -51,6 +54,9 @@ export async function GET(request) {
   const status       = searchParams.get('status')        || null;
   const userId       = searchParams.get('user_id')       || null;
   const companyId    = searchParams.get('company_id')    || null;
+  const dateFrom     = searchParams.get('date_from')     || null;
+  const dateTo       = searchParams.get('date_to')       || null;
+  const search       = searchParams.get('search')        || null;
 
   try {
     // Check if audit_logs table exists (graceful fallback during migration)
@@ -77,6 +83,18 @@ export async function GET(request) {
     if (status)       { conditions.push('al.status = ?');        params.push(status); }
     if (userId)       { conditions.push('al.user_id = ?');       params.push(parseInt(userId, 10)); }
     if (companyId)    { conditions.push('u.company_id = ?');     params.push(parseInt(companyId, 10)); }
+    if (dateFrom)     { conditions.push('al.created_at >= ?');   params.push(dateFrom); }
+    if (dateTo)       {
+      // Build end-of-day timestamp in UTC from the YYYY-MM-DD date string
+      const endOfDay = new Date(dateTo);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      conditions.push('al.created_at <= ?');
+      params.push(endOfDay.toISOString().slice(0, 19).replace('T', ' '));
+    }
+    if (search)       {
+      conditions.push('(al.user_email LIKE ? OR al.resource_name LIKE ? OR al.action_type LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

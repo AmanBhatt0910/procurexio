@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logAction, ACTION } from '@/lib/audit';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -54,6 +55,15 @@ export async function POST(request, { params }) {
         [rfqId, vendorId, companyId]
       );
       await conn.commit();
+      await logAction(request, {
+        userId:       parseInt(userId, 10) || null,
+        userEmail:    request.headers.get('x-user-email') || null,
+        actionType:   ACTION.BID_WITHDRAWN,
+        resourceType: 'bid',
+        resourceId:   bid.id,
+        resourceName: `RFQ #${rfqId}`,
+        status:       'success',
+      });
       return NextResponse.json({ message: 'Bid withdrawn' });
     } catch (e) {
       await conn.rollback();

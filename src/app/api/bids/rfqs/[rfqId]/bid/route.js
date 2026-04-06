@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { validateCurrency } from '@/lib/validation';
+import { logAction, ACTION } from '@/lib/audit';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -57,6 +58,16 @@ export async function POST(request, { params }) {
        VALUES (?, ?, ?, 'draft', ?, ?, 0.00)`,
       [rfqId, vendorId, companyId, notes, currency]
     );
+
+    await logAction(request, {
+      userId:       parseInt(userId, 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.BID_CREATED,
+      resourceType: 'bid',
+      resourceId:   result.insertId,
+      resourceName: `RFQ #${rfqId}`,
+      status:       'success',
+    });
 
     return NextResponse.json({ message: 'Bid created', data: { bidId: result.insertId } }, { status: 201 });
   } catch (err) {
@@ -137,6 +148,16 @@ export async function PUT(request, { params }) {
       );
 
       await conn.commit();
+      await logAction(request, {
+        userId:       parseInt(userId, 10) || null,
+        userEmail:    request.headers.get('x-user-email') || null,
+        actionType:   ACTION.BID_UPDATED,
+        resourceType: 'bid',
+        resourceId:   bid.id,
+        resourceName: `RFQ #${rfqId}`,
+        changes:      { totalAmount },
+        status:       'success',
+      });
       return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount } });
     } catch (e) {
       await conn.rollback();

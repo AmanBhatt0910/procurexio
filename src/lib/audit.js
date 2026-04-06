@@ -2,22 +2,23 @@
 //
 // Centralized audit logging for Procurexio.
 //
-// Every significant user action is written to the `audit_logs` database table
-// for security, compliance, and operational visibility.
+// Every significant user action is written to:
+//   1. The `audit_logs` database table (for querying / admin dashboard)
+//   2. Category log files under /logs (for backup / long-term storage)
 //
 // Usage:
 //   import { logAction } from '@/lib/audit';
 //   await logAction(request, {
 //     userId:       user.id,
 //     userEmail:    user.email,
-//     actionType:   'login_success',
+//     actionType:   ACTION.LOGIN_SUCCESS,
 //     resourceType: 'user',
 //     resourceId:   user.id,
 //     status:       'success',
 //   });
 
 import pool from '@/lib/db';
-import { log } from '@/lib/logger';
+import { log, logToFile } from '@/lib/logger';
 
 /**
  * Extract the client IP from a Next.js Request object.
@@ -34,14 +35,14 @@ function getIP(request) {
 }
 
 /**
- * Write an audit log entry to the database.
+ * Write an audit log entry to the database AND physical log files.
  * Failures are caught and logged to stderr — never allowed to crash the request.
  *
  * @param {Request|null} request - The incoming HTTP request (for IP / User-Agent)
  * @param {object}       details
  * @param {number|null}  [details.userId]        - Authenticated user ID
  * @param {string|null}  [details.userEmail]      - Authenticated user email (stored for immutability)
- * @param {string}       details.actionType       - e.g. 'login_success', 'rfq_created'
+ * @param {string}       details.actionType       - e.g. ACTION.LOGIN_SUCCESS
  * @param {string|null}  [details.resourceType]   - e.g. 'user', 'rfq', 'bid', 'company'
  * @param {number|null}  [details.resourceId]     - PK of the affected resource
  * @param {string|null}  [details.resourceName]   - Human-readable name of the resource
@@ -69,7 +70,25 @@ export async function logAction(request, details = {}) {
 
   const ip        = getIP(request);
   const userAgent = request?.headers?.get('user-agent') || null;
+  const timestamp = new Date().toISOString();
 
+  // ── 1. Write to physical log files (non-blocking, never throws) ───────────
+  logToFile({
+    timestamp,
+    actionType,
+    userId,
+    userEmail,
+    resourceType,
+    resourceId,
+    resourceName,
+    changes,
+    status,
+    statusReason,
+    ipAddress: ip,
+    userAgent,
+  });
+
+  // ── 2. Write to the database ──────────────────────────────────────────────
   try {
     await pool.execute(
       `INSERT INTO audit_logs
@@ -130,11 +149,14 @@ export const ACTION = {
   RFQ_CREATED:              'rfq_created',
   RFQ_UPDATED:              'rfq_updated',
   RFQ_STATUS_CHANGED:       'rfq_status_changed',
+  RFQ_DELETED:              'rfq_deleted',
 
   // Bids
   BID_CREATED:              'bid_created',
+  BID_UPDATED:              'bid_updated',
   BID_SUBMITTED:            'bid_submitted',
   BID_WITHDRAWN:            'bid_withdrawn',
+  BID_RESUBMITTED:          'bid_resubmitted',
 
   // Awards / Contracts
   AWARD_CREATED:            'award_created',

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { createNotifications } from '@/lib/notifications';
 import { sendBidUpdatedEmail } from '@/lib/mailer';
+import { logAction, ACTION } from '@/lib/audit';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -171,6 +172,17 @@ export async function PUT(request, { params }) {
         }
       }
     } catch (_) { /* notification errors must not fail the request */ }
+
+    await logAction(request, {
+      userId:       parseInt(userId, 10) || null,
+      userEmail:    request.headers.get('x-user-email') || null,
+      actionType:   ACTION.BID_RESUBMITTED,
+      resourceType: 'bid',
+      resourceId:   bid.id,
+      resourceName: rfq.title || `RFQ #${rfqId}`,
+      changes:      { oldTotalAmount: parseFloat(bid.total_amount), newTotalAmount },
+      status:       'success',
+    });
 
     return NextResponse.json({
       message: 'Bid updated',

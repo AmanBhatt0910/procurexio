@@ -68,3 +68,6 @@ dbprocesscode.tst
 
 # Private file uploads (bid attachments — stored locally, not in source control)
 /private/uploads/
+
+# Application log files (generated at runtime — not in source control)
+/logs/
