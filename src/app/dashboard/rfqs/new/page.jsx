@@ -223,7 +223,7 @@ export default function NewRFQPage() {
             <div>
               <label className="field-label">Deadline</label>
               <input
-                type="datetime-local"
+                type="date"
                 className="form-input"
                 value={form.deadline}
                 onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}

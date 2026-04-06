@@ -95,6 +95,7 @@ export default function VendorBidWorkspacePage() {
   const [bidItems, setBidItems]   = useState([]);
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
+  const [gst, setGst]             = useState(0);
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
   const [companyCurrency, setCompanyCurrency] = useState('USD');
 
@@ -128,6 +129,8 @@ export default function VendorBidWorkspacePage() {
         setNotes(json.data.bid.notes || '');
         // Use saved bid currency, then company currency, then USD
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
+        // Load saved GST rate
+        setGst(Number(json.data.bid.gst) || 0);
         // Load attachments if bid exists
         try {
           const attRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`);
@@ -214,7 +217,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currency }),
+        body: JSON.stringify({ currency, gst }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -230,18 +233,19 @@ export default function VendorBidWorkspacePage() {
   async function handleSave() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      // Calculate new total from bidItems
-      const newTotal = bidItems.reduce((sum, item) => {
+      // Calculate new subtotal from bidItems (before GST)
+      const newSubtotal = bidItems.reduce((sum, item) => {
         const up  = parseFloat(item.unit_price) || 0;
         const qty = parseFloat(item.quantity)   || 1;
         return sum + (up * qty);
       }, 0);
+      const newTotal = newSubtotal * (1 + gst / 100);
 
-      // Enforce ₹100 minimum increment when editing a previously submitted bid
+      // Enforce ₹100 minimum change when editing a previously submitted bid
       if (bid?.status === 'submitted' && bid?.total_amount != null) {
         const prevTotal = parseFloat(bid.total_amount);
-        if (newTotal > 0 && newTotal >= prevTotal - 99.99) {
-          setError(`Your revised bid (₹${newTotal.toFixed(2)}) must be at least ₹100 lower than your previous bid (₹${prevTotal.toFixed(2)}). Minimum new bid: ₹${(prevTotal - 100).toFixed(2)}.`);
+        if (newTotal > 0 && newTotal > prevTotal - 100) {
+          setError(`Your revised bid (₹${newTotal.toFixed(2)}) must be at least ₹100 lower than your current bid (₹${prevTotal.toFixed(2)}). Minimum new bid: ₹${(prevTotal - 100).toFixed(2)}.`);
           setSaving(false);
           return;
         }
@@ -250,7 +254,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, items: bidItems }),
+        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -270,7 +274,7 @@ export default function VendorBidWorkspacePage() {
       await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, items: bidItems }),
+        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
       });
       // Then submit
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
@@ -293,7 +297,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, items: bidItems }),
+        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -568,7 +572,7 @@ export default function VendorBidWorkspacePage() {
                     <div className="update-panel">
                       <div className="update-panel-title">✏️ Updating Your Submitted Bid</div>
                       <div className="update-panel-sub">
-                        Minimum change: ₹100 from your current bid of{' '}
+                        Your new bid must be at least 100 lower than your current bid of{' '}
                         {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
                         Adjust your item prices below, then click &ldquo;Save Update&rdquo;.
                       </div>
@@ -587,6 +591,19 @@ export default function VendorBidWorkspacePage() {
                       >
                         {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
                           .map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>GST Rate</label>
+                      <select
+                        className="form-control"
+                        value={gst}
+                        onChange={e => setGst(Number(e.target.value))}
+                        disabled={!canEdit && !updateMode}
+                      >
+                        <option value={0}>0% (No GST)</option>
+                        <option value={7}>7% GST</option>
+                        <option value={18}>18% GST</option>
                       </select>
                     </div>
                     <div className="form-group" style={{ flex: 3 }}>
@@ -608,6 +625,7 @@ export default function VendorBidWorkspacePage() {
                     <BidItemsForm
                       rfqItems={rfqItems}
                       initialItems={bid.items || []}
+                      gst={gst}
                       onChange={setBidItems}
                       readOnly={!canEdit && !updateMode}
                     />
