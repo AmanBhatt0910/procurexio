@@ -74,3 +74,15 @@ CREATE TABLE IF NOT EXISTS vendor_category_map (
   CONSTRAINT fk_vcm_category
     FOREIGN KEY (category_id) REFERENCES vendor_categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE users
+ADD CONSTRAINT fk_users_vendor
+FOREIGN KEY (vendor_id)
+REFERENCES vendors(id)
+ON DELETE SET NULL;
+
+ALTER TABLE invitations
+ADD CONSTRAINT fk_invitations_vendor
+FOREIGN KEY (vendor_id)
+REFERENCES vendors(id)
+ON DELETE CASCADE;

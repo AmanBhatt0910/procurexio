@@ -53,12 +53,7 @@ CREATE TABLE IF NOT EXISTS users (
   CONSTRAINT fk_users_company
     FOREIGN KEY (company_id)
     REFERENCES companies(id)
-    ON DELETE CASCADE,
-
-  CONSTRAINT fk_users_vendor
-    FOREIGN KEY (vendor_id)
-    REFERENCES vendors(id)
-    ON DELETE SET NULL
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -133,10 +128,5 @@ CREATE TABLE IF NOT EXISTS invitations (
   CONSTRAINT fk_invitations_company
     FOREIGN KEY (company_id)
     REFERENCES companies(id)
-    ON DELETE CASCADE,
-
-  CONSTRAINT fk_invitations_vendor
-    FOREIGN KEY (vendor_id)
-    REFERENCES vendors(id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
