@@ -10,6 +10,7 @@ export default function PageHeader({ title, subtitle, action }) {
           justify-content: space-between;
           margin-bottom: 28px;
           gap: 16px;
+          flex-wrap: wrap;
         }
         .page-header-text {}
         .page-header-title {
@@ -27,7 +28,7 @@ export default function PageHeader({ title, subtitle, action }) {
           margin-top: 4px;
         }
         .page-header-action {
-          padding: 8px 18px;
+          padding: 10px 18px;
           background: var(--ink);
           color: var(--white);
           border: none;
@@ -38,8 +39,14 @@ export default function PageHeader({ title, subtitle, action }) {
           cursor: pointer;
           white-space: nowrap;
           flex-shrink: 0;
+          min-height: 44px;
         }
         .page-header-action:hover { opacity: .85; }
+        @media (max-width: 480px) {
+          .page-header { flex-direction: column; gap: 12px; margin-bottom: 20px; }
+          .page-header-action { width: 100%; text-align: center; }
+          .page-header-title { font-size: 1.2rem; }
+        }
       `}</style>
 
       <div className="page-header">

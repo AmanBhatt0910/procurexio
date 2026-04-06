@@ -178,11 +178,13 @@ export default function Features() {
         @media (max-width: 900px) {
           .features-grid { grid-template-columns: repeat(2, 1fr); }
           .features-header { flex-direction: column; align-items: flex-start; }
+          .features-section { padding: 80px 24px; }
         }
         @media (max-width: 560px) {
           .features-grid { grid-template-columns: 1fr; }
-          .features-section { padding: 64px 20px; }
-          .feature-item { padding: 28px 24px; }
+          .features-section { padding: 64px 16px; }
+          .feature-item { padding: 28px 20px; }
+          .section-heading { font-size: clamp(1.6rem, 6vw, 2.2rem); }
         }
       `}</style>
 

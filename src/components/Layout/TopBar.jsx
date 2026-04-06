@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
 
-export default function TopBar({ user, title }) {
+export default function TopBar({ user, title, onMenuToggle }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { unreadCount } = useNotifications();
@@ -36,6 +36,30 @@ export default function TopBar({ user, title }) {
           z-index: 10;
           gap: 16px;
         }
+        @media (max-width: 768px) {
+          .topbar { padding: 0 16px; gap: 10px; }
+        }
+        .topbar-menu-btn {
+          display: none;
+          background: none;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          width: 36px;
+          height: 36px;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--ink);
+          transition: background .15s, border-color .15s;
+          flex-shrink: 0;
+        }
+        .topbar-menu-btn:hover {
+          background: var(--surface);
+          border-color: #d1ccc7;
+        }
+        @media (max-width: 768px) {
+          .topbar-menu-btn { display: flex; }
+        }
         .topbar-title {
           font-family: 'Syne', sans-serif;
           font-weight: 600;
@@ -43,12 +67,21 @@ export default function TopBar({ user, title }) {
           color: var(--ink);
           letter-spacing: -.02em;
           flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        @media (max-width: 480px) {
+          .topbar-title { font-size: .9rem; }
         }
         .topbar-right {
           display: flex;
           align-items: center;
           gap: 8px;
           position: relative;
+        }
+        @media (max-width: 480px) {
+          .topbar-right { gap: 6px; }
         }
 
         /* ── Bell button ── */
@@ -109,6 +142,9 @@ export default function TopBar({ user, title }) {
           background: var(--surface);
           border-color: #d1ccc7;
         }
+        @media (max-width: 480px) {
+          .topbar-user-btn { padding: 5px 8px 5px 5px; gap: 0; }
+        }
         .topbar-avatar {
           width: 28px;
           height: 28px;
@@ -122,6 +158,7 @@ export default function TopBar({ user, title }) {
           font-size: .65rem;
           color: #fff;
           letter-spacing: .02em;
+          flex-shrink: 0;
         }
         .topbar-user-name {
           font-family: 'DM Sans', sans-serif;
@@ -134,11 +171,20 @@ export default function TopBar({ user, title }) {
           color: var(--ink-faint);
           font-family: 'DM Sans', sans-serif;
         }
+        .topbar-user-info {
+          display: block;
+        }
+        @media (max-width: 480px) {
+          .topbar-user-info { display: none; }
+        }
         .topbar-chevron {
           color: var(--ink-faint);
           transition: transform .15s;
         }
         .topbar-chevron--open { transform: rotate(180deg); }
+        @media (max-width: 480px) {
+          .topbar-chevron { display: none; }
+        }
         .topbar-menu {
           position: absolute;
           right: 0;
@@ -172,6 +218,7 @@ export default function TopBar({ user, title }) {
           border: none;
           width: 100%;
           text-align: left;
+          min-height: 40px;
         }
         .topbar-menu-item:hover { background: var(--surface); }
         .topbar-menu-item--danger { color: #c0392b; }
@@ -184,6 +231,17 @@ export default function TopBar({ user, title }) {
       `}</style>
 
       <header className="topbar">
+        {/* Mobile hamburger */}
+        <button
+          className="topbar-menu-btn"
+          onClick={onMenuToggle}
+          aria-label="Open menu"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+
         <span className="topbar-title">{title}</span>
 
         <div className="topbar-right">
@@ -206,7 +264,7 @@ export default function TopBar({ user, title }) {
           {/* User menu */}
           <button className="topbar-user-btn" onClick={() => setMenuOpen(o => !o)}>
             <div className="topbar-avatar">{initials}</div>
-            <div>
+            <div className="topbar-user-info">
               <div className="topbar-user-name">{user?.name ?? 'User'}</div>
               <div className="topbar-user-role">{user?.role?.replace('_', ' ')}</div>
             </div>

@@ -249,7 +249,7 @@ function filterNavItems(items, userRole) {
     .filter(Boolean);
 }
 
-const Sidebar = memo(function Sidebar({ company, user }) {
+const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose }) {
   const pathname     = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { unreadCount } = useNotifications();
@@ -277,10 +277,25 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           background: var(--ink);
           display: flex;
           flex-direction: column;
-          transition: width .22s cubic-bezier(.4,0,.2,1);
+          transition: width .22s cubic-bezier(.4,0,.2,1), transform .25s cubic-bezier(.4,0,.2,1);
           flex-shrink: 0;
           position: relative;
           overflow: hidden;
+        }
+        @media (max-width: 768px) {
+          .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 50;
+            width: 240px !important;
+            transform: translateX(-100%);
+            box-shadow: 4px 0 24px rgba(15,14,13,.2);
+          }
+          .sidebar.sidebar--mobile-open {
+            transform: translateX(0);
+          }
         }
         .sidebar-logo {
           display: flex;
@@ -290,6 +305,12 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           justify-content: ${collapsed ? 'center' : 'flex-start'};
           border-bottom: 1px solid rgba(255,255,255,.07);
           height: 64px;
+        }
+        @media (max-width: 768px) {
+          .sidebar-logo {
+            padding: 20px 20px;
+            justify-content: space-between;
+          }
         }
         .sidebar-logo-mark {
           width: 30px;
@@ -315,6 +336,31 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           opacity: ${collapsed ? 0 : 1};
           transition: opacity .15s;
           letter-spacing: -.02em;
+          flex: 1;
+        }
+        @media (max-width: 768px) {
+          .sidebar-logo-text { opacity: 1 !important; }
+        }
+        .sidebar-mobile-close {
+          display: none;
+          background: rgba(255,255,255,.07);
+          border: none;
+          border-radius: 6px;
+          width: 26px;
+          height: 26px;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: rgba(255,255,255,.6);
+          transition: background .15s, color .15s;
+          flex-shrink: 0;
+        }
+        .sidebar-mobile-close:hover {
+          background: rgba(255,255,255,.14);
+          color: #fff;
+        }
+        @media (max-width: 768px) {
+          .sidebar-mobile-close { display: flex; }
         }
         .sidebar-nav {
           flex: 1;
@@ -332,6 +378,9 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           white-space: nowrap;
           opacity: ${collapsed ? 0 : 1};
           transition: opacity .1s;
+        }
+        @media (max-width: 768px) {
+          .nav-section-label { opacity: 1 !important; }
         }
         .nav-item {
           display: flex;
@@ -352,6 +401,14 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           background: none;
           width: 100%;
           text-align: left;
+          min-height: 44px;
+        }
+        @media (max-width: 768px) {
+          .nav-item {
+            padding: 11px 20px !important;
+            justify-content: flex-start !important;
+            font-size: .9rem;
+          }
         }
         .nav-item:hover:not(.nav-item--disabled) {
           color: rgba(255,255,255,.85);
@@ -385,6 +442,9 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           transition: opacity .1s;
           flex: 1;
         }
+        @media (max-width: 768px) {
+          .nav-label { opacity: 1 !important; }
+        }
         .nav-badge {
           font-size: .6rem;
           background: rgba(255,255,255,.08);
@@ -393,6 +453,9 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           border-radius: 20px;
           font-weight: 500;
           opacity: ${collapsed ? 0 : 1};
+        }
+        @media (max-width: 768px) {
+          .nav-badge { opacity: 1 !important; }
         }
         /* Notification unread count badge — uses accent colour */
         .nav-badge--notif {
@@ -405,12 +468,21 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           opacity: ${collapsed ? 0 : 1};
           transition: opacity .1s;
         }
+        @media (max-width: 768px) {
+          .nav-badge--notif { opacity: 1 !important; }
+        }
         .sidebar-footer {
           padding: ${collapsed ? '16px 0' : '16px 20px'};
           border-top: 1px solid rgba(255,255,255,.07);
           display: flex;
           align-items: center;
           justify-content: ${collapsed ? 'center' : 'space-between'};
+        }
+        @media (max-width: 768px) {
+          .sidebar-footer {
+            padding: 16px 20px !important;
+            justify-content: space-between !important;
+          }
         }
         .sidebar-company-name {
           font-family: 'DM Sans', sans-serif;
@@ -422,6 +494,10 @@ const Sidebar = memo(function Sidebar({ company, user }) {
           max-width: 120px;
           opacity: ${collapsed ? 0 : 1};
           transition: opacity .1s;
+        }
+        @media (max-width: 768px) {
+          .sidebar-company-name { opacity: 1 !important; max-width: 160px; }
+          .collapse-btn { display: none !important; }
         }
         .collapse-btn {
           background: rgba(255,255,255,.07);
@@ -443,10 +519,19 @@ const Sidebar = memo(function Sidebar({ company, user }) {
         }
       `}</style>
 
-      <aside className="sidebar">
+      <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-mark">P</div>
           <span className="sidebar-logo-text">Procurexio</span>
+          <button
+            className="sidebar-mobile-close"
+            onClick={onMobileClose}
+            aria-label="Close menu"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -462,6 +547,7 @@ const Sidebar = memo(function Sidebar({ company, user }) {
                       active={isActive(sub.href, sub.exact)}
                       collapsed={collapsed}
                       unreadCount={sub.isNotifications ? unreadCount : 0}
+                      onNavigate={onMobileClose}
                     />
                   ))}
                 </div>
@@ -474,6 +560,7 @@ const Sidebar = memo(function Sidebar({ company, user }) {
                 active={isActive(item.href, item.exact)}
                 collapsed={collapsed}
                 unreadCount={item.isNotifications ? unreadCount : 0}
+                onNavigate={onMobileClose}
               />
             );
           })}
@@ -503,7 +590,7 @@ const Sidebar = memo(function Sidebar({ company, user }) {
 
 export default Sidebar;
 
-function NavLink({ item, active, collapsed, unreadCount = 0 }) {
+function NavLink({ item, active, collapsed, unreadCount = 0, onNavigate }) {
   const cls = [
     'nav-item',
     active  ? 'nav-item--active'   : '',
@@ -529,7 +616,7 @@ function NavLink({ item, active, collapsed, unreadCount = 0 }) {
   }
 
   return (
-    <Link href={item.href} className={cls} title={collapsed ? item.label : undefined}>
+    <Link href={item.href} className={cls} title={collapsed ? item.label : undefined} onClick={onNavigate}>
       <span className="nav-icon">{item.icon}</span>
       <span className="nav-label">{item.label}</span>
       {badge}

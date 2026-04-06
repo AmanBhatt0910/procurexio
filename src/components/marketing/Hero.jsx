@@ -294,16 +294,24 @@ export default function Hero() {
         .mock-footer-label { font-size: .72rem; color: var(--ink-faint); }
 
         @media (max-width: 900px) {
-          .hero-section { padding: 120px 20px 80px; }
-          .hero-layout { grid-template-columns: 1fr; gap: 48px; }
+          .hero-section { padding: 120px 24px 80px; }
+          .hero-layout { grid-template-columns: 1fr; gap: 40px; }
           .hero-stats { gap: 20px; }
           .hero-right { order: -1; }
+          .mock-card { max-width: 480px; margin: 0 auto; }
+        }
+        @media (max-width: 640px) {
+          .hero-section { padding: 100px 16px 60px; }
+          .hero-sub { font-size: 1rem; }
+          .hero-stats { gap: 16px; flex-wrap: wrap; }
+          .hero-stat-num { font-size: 1.3rem; }
         }
         @media (max-width: 480px) {
-          .hero-title { font-size: 2.4rem; }
+          .hero-title { font-size: clamp(2rem, 8vw, 2.6rem); }
           .hero-actions { flex-direction: column; }
           .hero-actions a { text-align: center; justify-content: center; }
-          .hero-stats { flex-wrap: wrap; gap: 16px; }
+          .mock-stats-row { grid-template-columns: repeat(3, 1fr); }
+          .mock-rfq-row { flex-direction: column; align-items: flex-start; gap: 6px; }
         }
       `}</style>
 

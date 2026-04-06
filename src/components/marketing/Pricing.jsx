@@ -302,12 +302,18 @@ export default function Pricing() {
           text-underline-offset: 2px;
         }
 
+        @media (max-width: 900px) and (min-width: 641px) {
+          .pricing-grid { grid-template-columns: repeat(2, 1fr); max-width: 700px; margin: 0 auto; }
+          .pricing-grid > :nth-child(2) { margin-top: 0; }
+          .pricing-section { padding: 80px 24px; }
+        }
         @media (max-width: 860px) {
           .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
           .pricing-grid > :nth-child(2) { margin-top: 0; }
         }
         @media (max-width: 560px) {
-          .pricing-section { padding: 64px 20px; }
+          .pricing-section { padding: 64px 16px; }
+          .pricing-heading { font-size: clamp(1.6rem, 6vw, 2.2rem); }
         }
       `}</style>
 

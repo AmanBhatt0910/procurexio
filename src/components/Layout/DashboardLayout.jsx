@@ -1,7 +1,7 @@
 'use client';
 // src/components/Layout/DashboardLayout.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { NotificationProvider } from '@/context/NotificationContext';
@@ -17,6 +17,10 @@ export default function DashboardLayout({ children, pageTitle }) {
   const [user,       setUser]       = useState(sessionUserCache);
   const [company,    setCompany]    = useState(sessionCompanyCache);
   const [userLoaded, setUserLoaded] = useState(sessionUserCache !== null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const openMobileSidebar  = useCallback(() => setMobileSidebarOpen(true),  []);
+  const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
   useEffect(() => {
     async function load() {
@@ -96,6 +100,21 @@ export default function DashboardLayout({ children, pageTitle }) {
           to   { opacity: 1; transform: translateY(0); }
         }
 
+        /* Mobile overlay backdrop */
+        .sidebar-mobile-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(15,14,13,.5);
+          z-index: 49;
+          animation: backdropIn .2s ease;
+        }
+        .sidebar-mobile-backdrop.open { display: block; }
+        @keyframes backdropIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
         /* Sidebar skeleton shown before user role resolves */
         .sidebar-skeleton {
           width: 224px;
@@ -104,6 +123,21 @@ export default function DashboardLayout({ children, pageTitle }) {
           flex-shrink: 0;
           display: flex;
           flex-direction: column;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 768px) {
+          .dashboard-content {
+            padding: 20px 16px;
+          }
+          .sidebar-skeleton {
+            display: none;
+          }
+        }
+        @media (max-width: 480px) {
+          .dashboard-content {
+            padding: 16px 12px;
+          }
         }
         .sidebar-skeleton-logo {
           height: 64px;
@@ -141,8 +175,13 @@ export default function DashboardLayout({ children, pageTitle }) {
       `}</style>
 
       <div className="dashboard-shell">
+        {/* Mobile overlay backdrop */}
+        <div
+          className={`sidebar-mobile-backdrop${mobileSidebarOpen ? ' open' : ''}`}
+          onClick={closeMobileSidebar}
+        />
         {userLoaded ? (
-          <Sidebar company={company} user={user} />
+          <Sidebar company={company} user={user} mobileOpen={mobileSidebarOpen} onMobileClose={closeMobileSidebar} />
         ) : (
           <div className="sidebar-skeleton">
             <div className="sidebar-skeleton-logo">
@@ -157,7 +196,7 @@ export default function DashboardLayout({ children, pageTitle }) {
           </div>
         )}
         <div className="dashboard-main">
-          <TopBar user={user} title={pageTitle} />
+          <TopBar user={user} title={pageTitle} onMenuToggle={openMobileSidebar} />
           <main className="dashboard-content">
             {children}
           </main>

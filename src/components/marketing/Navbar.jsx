@@ -187,6 +187,10 @@ export default function Navbar() {
           .nav-mobile-toggle { display: flex; }
           .nav-inner { padding: 0 20px; }
         }
+        @media (max-width: 480px) {
+          .nav-inner { padding: 0 16px; }
+          .nav-mobile-menu { padding: 12px 16px 20px; }
+        }
       `}</style>
 
       <header className={`nav-root${scrolled ? ' scrolled' : ''}`}>
