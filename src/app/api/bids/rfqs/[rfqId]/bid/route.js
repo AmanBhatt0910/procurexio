@@ -46,6 +46,7 @@ export async function POST(request, { params }) {
     const body = await request.json().catch(() => ({}));
     const notes    = body.notes    || null;
     const currency = (body.currency || rfq.currency || 'USD').toString().trim().toUpperCase();
+    const gst      = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
 
     // Validate currency against allowlist
     const currencyError = validateCurrency(currency);
@@ -54,9 +55,9 @@ export async function POST(request, { params }) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, total_amount)
-       VALUES (?, ?, ?, 'draft', ?, ?, 0.00)`,
-      [rfqId, vendorId, companyId, notes, currency]
+      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, gst, total_amount)
+       VALUES (?, ?, ?, 'draft', ?, ?, ?, 0.00)`,
+      [rfqId, vendorId, companyId, notes, currency, gst]
     );
 
     await logAction(request, {
@@ -114,6 +115,7 @@ export async function PUT(request, { params }) {
     const currency = body.currency
       ? body.currency.toString().trim().toUpperCase()
       : (rfq.currency || 'USD');
+    const gst = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
 
     // Validate currency against allowlist
     const currencyError = validateCurrency(currency);
@@ -140,11 +142,15 @@ export async function PUT(request, { params }) {
         );
       }
 
+      // Apply GST to total
+      const gstAmount  = totalAmount * (gst / 100);
+      const grandTotal = totalAmount + gstAmount;
+
       // Update bid header
       await conn.query(
-        `UPDATE bids SET notes = ?, currency = ?, total_amount = ?, updated_at = NOW()
+        `UPDATE bids SET notes = ?, currency = ?, gst = ?, total_amount = ?, updated_at = NOW()
          WHERE id = ?`,
-        [notes || null, currency || rfq.currency, totalAmount, bid.id]
+        [notes || null, currency || rfq.currency, gst, grandTotal, bid.id]
       );
 
       await conn.commit();
@@ -155,10 +161,10 @@ export async function PUT(request, { params }) {
         resourceType: 'bid',
         resourceId:   bid.id,
         resourceName: `RFQ #${rfqId}`,
-        changes:      { totalAmount },
+        changes:      { totalAmount: grandTotal, gst },
         status:       'success',
       });
-      return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount } });
+      return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount: grandTotal, gst } });
     } catch (e) {
       await conn.rollback();
       throw e;

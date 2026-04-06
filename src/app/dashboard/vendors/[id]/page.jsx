@@ -263,7 +263,24 @@ export default function VendorDetailPage() {
             ))}
           </span>
         }
-        action={editBtn}
+        action={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => router.push('/dashboard/vendors')}
+              style={{
+                background: 'none', color: 'var(--ink-soft)', border: '1px solid var(--border)',
+                padding: '9px 16px', borderRadius: 8,
+                fontFamily: 'DM Sans, sans-serif', fontWeight: 500, fontSize: '.855rem',
+                cursor: 'pointer', transition: 'background .15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              ← Back
+            </button>
+            {editBtn}
+          </div>
+        }
       />
 
       <div className="detail-grid">
