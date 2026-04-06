@@ -2,7 +2,7 @@
 import pool from '@/lib/db';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 
-const ALLOWED_ROLES = [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
+const ALLOWED_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
 
 // PUT /api/company/users/[id] — update role or active status
 export async function PUT(request, { params }) {

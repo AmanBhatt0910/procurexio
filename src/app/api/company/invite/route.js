@@ -6,7 +6,7 @@ import { sendInviteEmail,
 import crypto                  from 'crypto';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 
-const TEAM_ROLES   = [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE];
+const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];
 const ALL_ROLES    = [...TEAM_ROLES, ...VENDOR_ROLES];
 
