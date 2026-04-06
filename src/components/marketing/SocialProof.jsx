@@ -75,10 +75,14 @@ export default function SocialProof() {
           to { transform: translateX(-50%); }
         }
 
+        @media (max-width: 768px) {
+          .proof-strip { padding: 24px 20px; }
+          .proof-inner { gap: 20px; }
+        }
         @media (max-width: 600px) {
           .proof-inner { flex-direction: column; gap: 16px; align-items: flex-start; }
           .proof-divider { display: none; }
-          .proof-strip { padding: 20px; }
+          .proof-strip { padding: 20px 16px; }
         }
       `}</style>
 

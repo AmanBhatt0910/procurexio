@@ -143,12 +143,14 @@ export default function Footer() {
         .footer-bottom-link:hover { color: var(--ink-soft); }
 
         @media (max-width: 900px) {
-          .footer-top { grid-template-columns: 1fr 1fr; }
+          .footer-top { grid-template-columns: 1fr 1fr; gap: 36px; }
+          .footer-root { padding: 56px 24px 36px; }
         }
         @media (max-width: 560px) {
           .footer-top { grid-template-columns: 1fr; gap: 32px; }
-          .footer-root { padding: 48px 20px 32px; }
+          .footer-root { padding: 48px 16px 32px; }
           .footer-bottom { flex-direction: column; align-items: flex-start; gap: 16px; }
+          .footer-bottom-links { gap: 16px; flex-wrap: wrap; }
         }
       `}</style>
 

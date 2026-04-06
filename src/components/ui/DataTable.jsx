@@ -10,7 +10,10 @@ export default function DataTable({ columns, rows, loading, emptyMessage = 'No d
           border-radius: var(--radius);
           overflow: hidden;
         }
-        .dt-scroll { overflow-x: auto; }
+        .dt-scroll {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
         .dt-table {
           width: 100%;
           border-collapse: collapse;
@@ -59,6 +62,10 @@ export default function DataTable({ columns, rows, loading, emptyMessage = 'No d
           display: inline-block;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) {
+          .dt-th { padding: 10px 12px; font-size: .68rem; }
+          .dt-td { padding: 12px 12px; font-size: .82rem; }
+        }
       `}</style>
 
       <div className="dt-wrapper">

@@ -309,11 +309,18 @@ export default function ProductPreview() {
           .mock-table-row { grid-template-columns: 2fr 1fr 1fr; }
           .mock-th:nth-child(4), .mock-th:nth-child(5),
           .mock-td:nth-child(4), .mock-td:nth-child(5) { display: none; }
-          .preview-float-cards { grid-template-columns: 1fr; }
+          .preview-float-cards { grid-template-columns: 1fr 1fr; }
+          .preview-section { padding: 80px 24px; }
         }
         @media (max-width: 560px) {
-          .preview-section { padding: 64px 20px; }
+          .preview-section { padding: 56px 16px; }
           .mock-kpi-row { grid-template-columns: 1fr 1fr; }
+          .preview-float-cards { grid-template-columns: 1fr; }
+          .preview-heading { font-size: clamp(1.6rem, 6vw, 2.2rem); }
+          .mock-main { padding: 16px; }
+          .mock-table-head,
+          .mock-table-row { grid-template-columns: 2fr 1fr; }
+          .mock-th:nth-child(3), .mock-td:nth-child(3) { display: none; }
         }
       `}</style>
 

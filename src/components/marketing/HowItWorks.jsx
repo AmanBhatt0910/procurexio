@@ -152,7 +152,13 @@ export default function HowItWorks() {
         @media (max-width: 860px) {
           .hiw-steps { grid-template-columns: 1fr; }
           .hiw-connector { display: none; }
-          .hiw-wrapper { padding: 64px 20px; }
+          .hiw-wrapper { padding: 64px 24px; }
+          .hiw-header { margin-bottom: 40px; }
+        }
+        @media (max-width: 560px) {
+          .hiw-wrapper { padding: 56px 16px; }
+          .hiw-step { padding: 24px 20px; }
+          .hiw-heading { font-size: clamp(1.6rem, 6vw, 2.2rem); }
         }
       `}</style>
 

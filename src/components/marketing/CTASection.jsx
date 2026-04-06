@@ -139,9 +139,14 @@ export default function CTASection() {
           .cta-actions { width: 100%; }
           .cta-btn-main { width: 100%; justify-content: center; }
         }
-        @media (max-width: 560px) {
-          .cta-wrapper { padding: 0 20px 64px; }
+        @media (max-width: 640px) {
+          .cta-wrapper { padding: 0 24px 80px; }
           .cta-card { padding: 40px 28px; border-radius: 16px; }
+          .cta-heading { font-size: clamp(1.5rem, 5vw, 2rem); }
+        }
+        @media (max-width: 560px) {
+          .cta-wrapper { padding: 0 16px 64px; }
+          .cta-card { padding: 32px 20px; }
         }
       `}</style>
 

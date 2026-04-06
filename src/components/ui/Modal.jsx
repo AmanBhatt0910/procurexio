@@ -63,17 +63,32 @@ export default function Modal({ open, onClose, title, children, width = 480 }) {
           background: none;
           border: 1px solid var(--border);
           border-radius: 6px;
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           color: var(--ink-soft);
           transition: background .12s, color .12s;
+          flex-shrink: 0;
         }
         .modal-close:hover { background: var(--surface); color: var(--ink); }
         .modal-body { padding: 24px; }
+        @media (max-width: 560px) {
+          .modal-backdrop { padding: 12px; align-items: flex-end; }
+          .modal-box {
+            border-radius: 16px 16px 12px 12px;
+            max-height: 85vh;
+            animation: modalInMobile .2s ease;
+          }
+          @keyframes modalInMobile {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .modal-header { padding: 16px 20px 14px; }
+          .modal-body { padding: 20px; }
+        }
       `}</style>
 
       <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
