@@ -7,8 +7,14 @@ import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
-const ROLES = ['company_admin', 'manager', 'employee'];
+// Roles available when inviting a new member (company_admin is excluded — only 1 per company)
+const INVITE_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE];
+
+// Roles available when editing an existing member (company_admin excluded for same reason)
+const EDIT_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE];
 
 function getInitials(name) {
   if (!name) return '??';
@@ -22,13 +28,17 @@ function getInitials(name) {
 }
 
 export default function UsersPage() {
+  const { user: currentUser } = useAuth();
+  const currentRole = currentUser?.role;
+  const isAdmin = currentRole === ROLES.COMPANY_ADMIN || currentRole === ROLES.SUPER_ADMIN;
+
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
 
   const [inviteOpen,  setInviteOpen]  = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole,  setInviteRole]  = useState('employee');
+  const [inviteRole,  setInviteRole]  = useState(ROLES.EMPLOYEE);
   const [inviting,    setInviting]    = useState(false);
 
   const [editUser,   setEditUser]   = useState(null);
@@ -62,7 +72,7 @@ export default function UsersPage() {
         showToast(`Invitation sent to ${inviteEmail}`);
         setInviteOpen(false);
         setInviteEmail('');
-        setInviteRole('employee');
+        setInviteRole(ROLES.EMPLOYEE);
       } else {
         showToast(data.error, 'error');
       }
@@ -156,7 +166,7 @@ export default function UsersPage() {
       width: 80,
       // ✅ need full row to check role and pass to openEdit — use (_val, row)
       render: (_val, row) => (
-        row.role === 'vendor_user' ? null : (
+        row.role === ROLES.VENDOR_USER || !isAdmin ? null : (
           <button
             onClick={() => openEdit(row)}
             style={{
@@ -175,7 +185,7 @@ export default function UsersPage() {
     },
   ];
 
-  const inviteBtn = (
+  const inviteBtn = isAdmin ? (
     <button
       onClick={() => setInviteOpen(true)}
       style={{
@@ -193,7 +203,7 @@ export default function UsersPage() {
       </svg>
       Invite Member
     </button>
-  );
+  ) : null;
 
   return (
     <DashboardLayout pageTitle="Users">
@@ -251,7 +261,7 @@ export default function UsersPage() {
               value={inviteRole}
               onChange={e => setInviteRole(e.target.value)}
             >
-              {ROLES.map(r => (
+              {INVITE_ROLES.map(r => (
                 <option key={r} value={r}>{roleLabel(r)}</option>
               ))}
             </select>
@@ -309,7 +319,7 @@ export default function UsersPage() {
                 value={editRole}
                 onChange={e => setEditRole(e.target.value)}
               >
-                {ROLES.map(r => (
+                {EDIT_ROLES.map(r => (
                   <option key={r} value={r}>{roleLabel(r)}</option>
                 ))}
               </select>

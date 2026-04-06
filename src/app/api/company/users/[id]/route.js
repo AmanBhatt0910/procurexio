@@ -1,7 +1,8 @@
 // src/app/api/company/users/[id]/route.js
 import pool from '@/lib/db';
+import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 
-const ALLOWED_ROLES = ['company_admin', 'manager', 'employee', 'vendor_user'];
+const ALLOWED_ROLES = [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
 
 // PUT /api/company/users/[id] — update role or active status
 export async function PUT(request, { params }) {
@@ -13,7 +14,7 @@ export async function PUT(request, { params }) {
   if (!companyId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!['super_admin', 'company_admin'].includes(actorRole)) {
+  if (!hasPermission(actorRole, PERMISSIONS.MANAGE_COMPANY)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
   if (String(actorId) === String(targetId)) {
@@ -25,6 +26,11 @@ export async function PUT(request, { params }) {
 
   if (role !== undefined && !ALLOWED_ROLES.includes(role)) {
     return Response.json({ error: 'Invalid role' }, { status: 400 });
+  }
+
+  // Prevent promoting a user to company_admin — only one is allowed per company
+  if (role === ROLES.COMPANY_ADMIN) {
+    return Response.json({ error: 'Only one company admin is allowed per company' }, { status: 400 });
   }
 
   try {
