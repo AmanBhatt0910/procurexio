@@ -124,7 +124,7 @@ export async function GET(request, { params }) {
       const itemCells = [
         `${idx + 1}. ${item.description}`,
         item.quantity,
-        '',  // Item-level GST shown per vendor below
+        '',  // GST column intentionally empty per item; bid-level GST rate shown in summary row after totals
       ];
       for (const bid of topBids) {
         const bi    = bidItemsMap[bid.bid_id]?.[item.id];

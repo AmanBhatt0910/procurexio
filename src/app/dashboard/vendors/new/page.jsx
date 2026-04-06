@@ -119,12 +119,12 @@ export default function NewVendorPage() {
       if (!inviteRes.ok) {
         // Vendor was created but invite failed — show warning and go to vendor profile
         showToast(`Vendor created, but invite failed: ${inviteData.error}`, 'error');
-        setTimeout(() => router.push(`/dashboard/vendors/${vendorId}`), 2500);
+        setTimeout(() => router.push(`/dashboard/vendors/${vendorId}`), 1500);
         return;
       }
 
       showToast(`Vendor created and invite sent to ${form.email}!`);
-      setTimeout(() => router.push('/dashboard/vendors'), 1200);
+      setTimeout(() => router.push('/dashboard/vendors'), 1500);
     } finally {
       setSaving(false);
     }

@@ -3,8 +3,6 @@
 'use client';
 import { useReducer, useEffect } from 'react';
 
-const GST_OPTIONS = [0, 7, 18];
-
 function rowsReducer(state, action) {
   switch (action.type) {
     case 'RESET':
