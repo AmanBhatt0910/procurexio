@@ -82,6 +82,8 @@ const AUTH_RATE_PATHS = [
   '/api/auth/forgot-password',
   '/api/auth/register',
   '/api/auth/invite',
+  '/api/auth/google',      // Google OAuth login, callback, and link endpoints
+  '/api/auth/link-google', // Link-Google redirect endpoint
 ];
 
 /**

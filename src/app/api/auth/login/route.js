@@ -99,6 +99,15 @@ export async function POST(request) {
       );
     }
 
+    // Google-only accounts have no password — direct them to Google Sign-In
+    if (!user.password) {
+      logAuthEvent('login_failure', { email: user.email, userId: user.id, ip, reason: 'google_only_account' });
+      return NextResponse.json(
+        { error: 'This account uses Google Sign-In. Please sign in with Google.' },
+        { status: 401 }
+      );
+    }
+
     const valid = await comparePassword(password, user.password);
     if (!valid) {
       const newAttempts = (user.failed_login_attempts || 0) + 1;

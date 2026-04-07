@@ -38,6 +38,7 @@ const SECURITY_ACTION_TYPES = new Set([
   'user_role_changed', 'user_deactivated',
   'company_status_changed',
   'invitation_created', 'invitation_accepted',
+  'google_login', 'google_account_linked', 'google_account_unlinked', 'google_auto_linked',
 ]);
 
 // ── Sensitive-field redaction ────────────────────────────────────────────────

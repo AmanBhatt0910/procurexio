@@ -20,6 +20,65 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+Create a `.env.local` file at the project root with the following variables:
+
+```env
+# ── Database ──────────────────────────────────────────────────────
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=procurement_db
+
+# ── JWT / Auth ────────────────────────────────────────────────────
+JWT_SECRET=your-very-secret-key-min-32-chars
+JWT_EXPIRES_IN=7d
+
+# ── Cookie ────────────────────────────────────────────────────────
+# Set to "false" for plain HTTP deployments, "true" to force Secure
+# COOKIE_SECURE=false
+
+# ── Email (Resend) ────────────────────────────────────────────────
+RESEND_API_KEY=re_...
+INVITE_FROM_EMAIL=no-reply@procurexio.com
+
+# ── App ───────────────────────────────────────────────────────────
+NEXT_PUBLIC_APP_NAME=Procurexio
+NEXT_PUBLIC_BASE_URL=http://localhost:3001
+
+# ── Google OAuth (optional — enables "Login with Google") ─────────
+# 1. Go to https://console.cloud.google.com/
+# 2. Create a project (or select an existing one)
+# 3. Enable the "Google+ API" or "Google Identity" service
+# 4. Navigate to APIs & Services → Credentials → Create OAuth 2.0 Client ID
+# 5. Application type: Web application
+# 6. Add an Authorized Redirect URI:
+#      http://localhost:3001/api/auth/google/callback  (development)
+#      https://yourdomain.com/api/auth/google/callback (production)
+# 7. Copy the Client ID and Client Secret below
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+```
+
+### Google OAuth Database Migration
+
+Before enabling Google OAuth, run the migration once against your database:
+
+```bash
+mysql -u root -p procurement_db < src/sql/9_oauth_schema.sql
+```
+
+This migration:
+- Adds `google_id`, `auth_method`, `oauth_linked_at` columns to the `users` table
+- Makes the `password` column nullable (for Google-only accounts)
+- Adds `auth_method` column to `user_sessions`
+- Creates the `oauth_accounts` table
+
+All existing data is fully preserved — no records are modified.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

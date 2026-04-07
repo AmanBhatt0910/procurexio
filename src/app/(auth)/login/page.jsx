@@ -8,6 +8,20 @@ import Link from 'next/link';
 import AuthInput from '@/components/auth/AuthInput';
 import AuthButton from '@/components/auth/AuthButton';
 
+/** Map OAuth error codes from the callback to human-readable messages. */
+const OAUTH_ERROR_MESSAGES = {
+  oauth_denied:          'Google sign-in was cancelled. Please try again.',
+  oauth_invalid:         'Invalid OAuth request. Please try again.',
+  oauth_invalid_state:   'Invalid OAuth state. Please try again.',
+  oauth_state_mismatch:  'Security check failed. Please try again.',
+  oauth_not_configured:  'Google sign-in is not available right now.',
+  oauth_profile_error:   'Could not retrieve your Google profile. Please try again.',
+  oauth_error:           'Google sign-in encountered an error. Please try again.',
+  no_account:            'No account found for this Google address. Please register or ask for an invite.',
+  account_inactive:      'Your account has been deactivated. Please contact your administrator.',
+  not_authenticated:     'Please sign in first.',
+};
+
 // Separate component that uses useSearchParams
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -16,8 +30,17 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Resolve any OAuth error code from the query string on first render
+  useEffect(() => {
+    const errorCode = searchParams.get('error');
+    if (errorCode && OAUTH_ERROR_MESSAGES[errorCode]) {
+      setError(OAUTH_ERROR_MESSAGES[errorCode]);
+    }
+  }, [searchParams]);
 
   // On mount, verify whether the user is already signed in.
   // If they are, skip the login form entirely and send them straight to the
@@ -83,64 +106,102 @@ function LoginForm() {
     }
   }
 
+  function handleGoogleLogin() {
+    setError('');
+    setGoogleLoading(true);
+    // Full-page navigation so the browser sends cookies along
+    window.location.href = '/api/auth/google/login';
+  }
+
   // While we're checking whether the user is already authenticated, render
   // nothing to avoid a flash of the login form before the redirect fires.
   if (checkingAuth) return null;
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
-      {error && (
-        <div className="form-error">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          {error}
-        </div>
-      )}
+    <>
+      {/* Google OAuth button */}
+      <button
+        type="button"
+        className="google-btn"
+        onClick={handleGoogleLogin}
+        disabled={googleLoading || loading}
+      >
+        {googleLoading ? (
+          <span className="auth-btn-spinner-wrap">
+            <svg className="auth-btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
+            </svg>
+            Redirecting to Google…
+          </span>
+        ) : (
+          <span className="google-btn-inner">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </span>
+        )}
+      </button>
 
-      <AuthInput
-        label="Work email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@company.com"
-        required
-        autoComplete="email"
-        icon={
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-        }
-      />
+      <div className="divider">or sign in with email</div>
 
-      <div>
-        <div className="form-row" style={{ marginBottom: 6 }}>
-          <label className="auth-input-label">Password <span className="auth-input-required">*</span></label>
-          <Link href="/forgot-password" className="forgot-link">
-            Forgot password?
-          </Link>
-        </div>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        {error && (
+          <div className="form-error">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {error}
+          </div>
+        )}
+
         <AuthInput
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          label="Work email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@company.com"
           required
-          autoComplete="current-password"
+          autoComplete="email"
           icon={
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
             </svg>
           }
         />
-      </div>
 
-      <AuthButton loading={loading}>Sign in</AuthButton>
-    </form>
+        <div>
+          <div className="form-row" style={{ marginBottom: 6 }}>
+            <label className="auth-input-label">Password <span className="auth-input-required">*</span></label>
+            <Link href="/forgot-password" className="forgot-link">
+              Forgot password?
+            </Link>
+          </div>
+          <AuthInput
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            autoComplete="current-password"
+            icon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            }
+          />
+        </div>
+
+        <AuthButton loading={loading}>Sign in</AuthButton>
+      </form>
+    </>
   );
 }
 
@@ -303,6 +364,36 @@ export default function LoginPage() {
 
         /* Form */
         .auth-form { display: flex; flex-direction: column; gap: 20px; }
+
+        /* Google OAuth button */
+        .google-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px 24px;
+          border: 1.5px solid var(--border);
+          border-radius: var(--radius);
+          background: var(--white);
+          font-family: 'DM Sans', sans-serif;
+          font-size: .93rem;
+          font-weight: 500;
+          color: var(--ink);
+          cursor: pointer;
+          transition: background .15s, border-color .15s, box-shadow .15s, transform .1s;
+          margin-bottom: 4px;
+        }
+        .google-btn:hover:not(:disabled) {
+          background: #f7f5f3;
+          border-color: #ccc8c2;
+          box-shadow: 0 2px 8px rgba(15,14,13,.07);
+          transform: translateY(-1px);
+        }
+        .google-btn:active:not(:disabled) { transform: translateY(0); }
+        .google-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .google-btn-inner { display: flex; align-items: center; gap: 10px; }
+
 
         /* Input styles */
         .auth-input-wrapper { display: flex; flex-direction: column; gap: 6px; }
