@@ -1,38 +1,82 @@
 // src/app/api/rfqs/[id]/bids/export/route.js
-// Export bids as PDF for an RFQ
+// Export bids as PDF for an RFQ (uses pdf-lib — no AFM font files required)
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import PDFDocument from 'pdfkit';
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  PageSizes,
+} from 'pdf-lib';
 
-// Colour palette matching app design system
-const INK       = '#0f0e0d';
-const INK_SOFT  = '#6b6660';
-const INK_FAINT = '#b8b3ae';
-const ACCENT    = '#c8501a';
-const SURFACE   = '#faf9f7';
-const BORDER    = '#e4e0db';
-const WHITE     = '#ffffff';
+// ─── colour helpers ───────────────────────────────────────────────────────────
+// pdf-lib uses rgb(r,g,b) with values 0-1
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+function hex(h) {
+  const n = parseInt(h.replace('#', ''), 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+const C_INK      = hex('#0f0e0d');
+const C_INK_SOFT = hex('#6b6660');
+const C_INK_FAINT= hex('#b8b3ae');
+const C_ACCENT   = hex('#c8501a');
+const C_SURFACE  = hex('#faf9f7');
+const C_BORDER   = hex('#e4e0db');
+const C_WHITE    = rgb(1, 1, 1);
+const C_GREEN    = hex('#1a7a4a');
+const C_TOTAL_BG = hex('#f0ede9');
+
+// ─── text helpers ─────────────────────────────────────────────────────────────
 
 function fmt(n, decimals = 2) {
   const num = parseFloat(n) || 0;
-  return num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
 }
 
-// Collect a pdfkit stream into a Buffer
-function streamToBuffer(stream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', chunk => chunks.push(chunk));
-    stream.on('end',  ()    => resolve(Buffer.concat(chunks)));
-    stream.on('error', err  => reject(err));
-  });
+function trunc(str, max) {
+  if (!str) return '';
+  return str.length > max ? str.slice(0, max - 1) + '...' : str;
+}
+
+// ─── low-level drawing helpers ────────────────────────────────────────────────
+
+function fillRect(page, x, y, w, h, color) {
+  page.drawRectangle({ x, y, width: w, height: h, color });
+}
+
+function drawText(page, text, { x, y, size, font, color, maxWidth, align = 'left' }) {
+  const safeText = String(text ?? '');
+  if (!safeText) return;
+
+  // Truncate to fit maxWidth if provided
+  let display = safeText;
+  if (maxWidth && maxWidth > 0) {
+    while (display.length > 1 && font.widthOfTextAtSize(display, size) > maxWidth) {
+      display = display.slice(0, -2) + '.';
+    }
+  }
+
+  let drawX = x;
+  if (align === 'right' && maxWidth) {
+    const tw = font.widthOfTextAtSize(display, size);
+    drawX = x + maxWidth - tw;
+  } else if (align === 'center' && maxWidth) {
+    const tw = font.widthOfTextAtSize(display, size);
+    drawX = x + (maxWidth - tw) / 2;
+  }
+
+  page.drawText(display, { x: drawX, y, size, font, color });
 }
 
 // ─── route ────────────────────────────────────────────────────────────────────
@@ -81,7 +125,7 @@ export async function GET(request, { params }) {
     );
 
     const bidIds = bids.map(b => b.bid_id);
-    let bidItemsMap = {};
+    const bidItemsMap = {};
     if (bidIds.length > 0) {
       const safeIds = bidIds.map(id => parseInt(id, 10)).filter(Number.isFinite);
       const [bidItemRows] = await pool.query(
@@ -99,135 +143,183 @@ export async function GET(request, { params }) {
       }
     }
 
-    // JSON passthrough
+    // ── JSON passthrough ───────────────────────────────────────────────────────
     if (format === 'json') {
       return NextResponse.json({
         rfq,
         exportedAt: new Date().toISOString(),
-        bids: bids.map(b => ({ ...b, total_amount: parseFloat(b.total_amount), gst: parseFloat(b.gst) || 0 })),
+        bids: bids.map(b => ({
+          ...b,
+          total_amount: parseFloat(b.total_amount),
+          gst: parseFloat(b.gst) || 0,
+        })),
         items: rfqItems,
         bidItems: bidItemsMap,
       });
     }
 
-    // ── PDF generation ─────────────────────────────────────────────────────────
+    // ── PDF generation (pdf-lib — no AFM files needed) ─────────────────────────
     const topBids = bids.slice(0, 3);
-    const pageWidth  = 841.89; // A4 landscape width in pts
-    const pageHeight = 595.28; // A4 landscape height in pts
-    const margin     = 36;
-    const contentW   = pageWidth - margin * 2;
 
-    const doc = new PDFDocument({
-      size: 'A4',
-      layout: 'landscape',
-      margin,
-      info: {
-        Title:    `Bid Comparison — ${rfq.reference_number}`,
-        Subject:  rfq.title,
-        Creator:  'ProcureXio',
-      },
-    });
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.setTitle(`Bid Comparison - ${rfq.reference_number}`);
+    pdfDoc.setSubject(rfq.title);
+    pdfDoc.setCreator('ProcureXio');
+
+    // Embed standard fonts (built into every PDF viewer, no external files)
+    const fontBold   = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontNormal = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // A4 landscape
+    const [pageWidth, pageHeight] = [PageSizes.A4[1], PageSizes.A4[0]]; // swap for landscape
+    const page   = pdfDoc.addPage([pageWidth, pageHeight]);
+    const margin = 36;
+    const contentW = pageWidth - margin * 2;
+
+    // pdf-lib y=0 is bottom-left; we track a cursor from top
+    // Helper: convert top-origin y to pdf-lib bottom-origin y
+    const py = (topY) => pageHeight - topY;
 
     // ── Header bar ─────────────────────────────────────────────────────────────
-    doc.rect(0, 0, pageWidth, 56).fill(INK);
-    doc.fontSize(16).font('Helvetica-Bold').fillColor(WHITE)
-       .text('ProcureXio', margin, 16, { continued: true })
-       .fontSize(10).font('Helvetica').fillColor('#b8b3ae')
-       .text('  ·  Bid Comparison Report', { baseline: 'alphabetic' });
-    doc.fontSize(9).fillColor('#b8b3ae')
-       .text(`Generated ${fmtDate(new Date())}`, margin, 38);
+    const headerH = 56;
+    fillRect(page, 0, py(headerH), pageWidth, headerH, C_INK);
 
-    // RFQ title block
-    const titleY = 72;
-    doc.fontSize(15).font('Helvetica-Bold').fillColor(INK)
-       .text(rfq.title, margin, titleY, { width: contentW * 0.6 });
-    const afterTitle = doc.y + 4;
-    doc.fontSize(9).font('Helvetica').fillColor(INK_SOFT)
-       .text(`Ref: ${rfq.reference_number}`, margin, afterTitle, { continued: true })
-       .text(`   ·   Deadline: ${fmtDate(rfq.deadline)}`, { continued: true })
-       .text(`   ·   Status: ${(rfq.status || '').toUpperCase()}`, { continued: true })
-       .text(`   ·   Currency: ${rfq.currency || '—'}`);
-
-    // Horizontal rule
-    const ruleY = doc.y + 10;
-    doc.moveTo(margin, ruleY).lineTo(pageWidth - margin, ruleY)
-       .strokeColor(BORDER).lineWidth(0.75).stroke();
-
-    // ── Comparison table ───────────────────────────────────────────────────────
-    const tableStartY = ruleY + 14;
-    const colW = {
-      idx:   22,
-      desc:  contentW - 22 - 80 - 60 - (topBids.length * 130),
-      qty:   80,
-      unit:  60,
-    };
-    const vendorColW = topBids.length > 0 ? 130 : 0;
-
-    // Minimum description width
-    if (colW.desc < 100) colW.desc = 100;
-
-    // Column X positions
-    const col = {};
-    col.idx  = margin;
-    col.desc = col.idx  + colW.idx;
-    col.qty  = col.desc + colW.desc;
-    col.unit = col.qty  + colW.qty;
-    const vendorCols = topBids.map((_, i) => col.unit + colW.unit + i * vendorColW);
-
-    // ── Table header row ───────────────────────────────────────────────────────
-    const headerH = 28;
-    doc.rect(margin, tableStartY, contentW, headerH).fill(INK);
-
-    const headerTextY = tableStartY + 9;
-    doc.fontSize(7.5).font('Helvetica-Bold').fillColor(WHITE);
-    doc.text('#',           col.idx  + 2,  headerTextY, { width: colW.idx,  align: 'center' });
-    doc.text('Item',        col.desc + 4,  headerTextY, { width: colW.desc - 4 });
-    doc.text('Qty',         col.qty  + 4,  headerTextY, { width: colW.qty  - 8, align: 'right' });
-    doc.text('Unit',        col.unit + 4,  headerTextY, { width: colW.unit - 4, align: 'center' });
-    topBids.forEach((bid, i) => {
-      const label = `L${i + 1}: ${bid.vendor_name.length > 14 ? bid.vendor_name.slice(0, 13) + '…' : bid.vendor_name}`;
-      doc.text(label, vendorCols[i] + 4, headerTextY, { width: vendorColW - 8, align: 'right' });
+    drawText(page, 'ProcureXio', {
+      x: margin, y: py(32), size: 16, font: fontBold, color: C_WHITE,
+    });
+    drawText(page, '  Bid Comparison Report', {
+      x: margin + fontBold.widthOfTextAtSize('ProcureXio', 16) + 4,
+      y: py(32), size: 10, font: fontNormal, color: C_INK_FAINT,
+    });
+    drawText(page, `Generated ${fmtDate(new Date())}`, {
+      x: margin, y: py(50), size: 8, font: fontNormal, color: C_INK_FAINT,
     });
 
+    // ── RFQ title block ────────────────────────────────────────────────────────
+    let cursorY = headerH + 14;
+
+    drawText(page, trunc(rfq.title, 80), {
+      x: margin, y: py(cursorY + 14), size: 14, font: fontBold, color: C_INK,
+    });
+    cursorY += 22;
+
+    const meta = `Ref: ${rfq.reference_number}   |   Deadline: ${fmtDate(rfq.deadline)}   |   Status: ${(rfq.status || '').toUpperCase()}   |   Currency: ${rfq.currency || '-'}`;
+    drawText(page, trunc(meta, 120), {
+      x: margin, y: py(cursorY + 10), size: 8, font: fontNormal, color: C_INK_SOFT,
+    });
+    cursorY += 16;
+
+    // Horizontal rule
+    page.drawLine({
+      start: { x: margin, y: py(cursorY) },
+      end:   { x: pageWidth - margin, y: py(cursorY) },
+      thickness: 0.75,
+      color: C_BORDER,
+    });
+    cursorY += 14;
+
+    // ── Empty state guard ──────────────────────────────────────────────────────
+    if (bids.length === 0) {
+      drawText(page, 'No submitted bids found for this RFQ.', {
+        x: margin, y: py(cursorY + 14), size: 10, font: fontNormal, color: C_INK_SOFT,
+      });
+      const pdfBytes = await pdfDoc.save();
+      const filename = `bid-comparison-${rfq.reference_number}-${Date.now()}.pdf`;
+      return new NextResponse(Buffer.from(pdfBytes), {
+        headers: {
+          'Content-Type':        'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control':       'no-cache',
+        },
+      });
+    }
+
+    // ── Column layout ──────────────────────────────────────────────────────────
+    const vendorColW = 130;
+    const fixedW     = 22 + 80 + 60 + topBids.length * vendorColW;
+    const descW      = Math.max(contentW - fixedW, 100);
+
+    const colIdx  = margin;
+    const colDesc = colIdx  + 22;
+    const colQty  = colDesc + descW;
+    const colUnit = colQty  + 80;
+    const vendorCols = topBids.map((_, i) => colUnit + 60 + i * vendorColW);
+
+    // ── Table header row ───────────────────────────────────────────────────────
+    const tableHeaderH = 26;
+    fillRect(page, margin, py(cursorY + tableHeaderH), contentW, tableHeaderH, C_INK);
+
+    const thY = py(cursorY + tableHeaderH - 8);
+    const thSize = 7.5;
+    drawText(page, '#',    { x: colIdx  + 2,  y: thY, size: thSize, font: fontBold, color: C_WHITE, maxWidth: 18,       align: 'center' });
+    drawText(page, 'Item', { x: colDesc + 4,  y: thY, size: thSize, font: fontBold, color: C_WHITE, maxWidth: descW - 8 });
+    drawText(page, 'Qty',  { x: colQty  + 4,  y: thY, size: thSize, font: fontBold, color: C_WHITE, maxWidth: 72,       align: 'right'  });
+    drawText(page, 'Unit', { x: colUnit + 4,  y: thY, size: thSize, font: fontBold, color: C_WHITE, maxWidth: 52,       align: 'center' });
+    topBids.forEach((bid, i) => {
+      const label = `L${i + 1}: ${trunc(bid.vendor_name, 14)}`;
+      drawText(page, label, {
+        x: vendorCols[i] + 4, y: thY, size: thSize,
+        font: fontBold, color: C_WHITE, maxWidth: vendorColW - 8, align: 'right',
+      });
+    });
+
+    cursorY += tableHeaderH;
+
     // ── Item rows ──────────────────────────────────────────────────────────────
-    let rowY = tableStartY + headerH;
-    const rowH = 22;
+    const rowH = 20;
     rfqItems.forEach((item, idx) => {
-      const bg = idx % 2 === 0 ? WHITE : SURFACE;
-      doc.rect(margin, rowY, contentW, rowH).fill(bg);
+      const bg = idx % 2 === 0 ? C_WHITE : C_SURFACE;
+      fillRect(page, margin, py(cursorY + rowH), contentW, rowH, bg);
 
-      const textY = rowY + 7;
-      doc.fontSize(8).font('Helvetica').fillColor(INK_SOFT)
-         .text(String(idx + 1), col.idx + 2, textY, { width: colW.idx, align: 'center' });
-      doc.fillColor(INK)
-         .text(item.description.length > 42 ? item.description.slice(0, 41) + '…' : item.description,
-               col.desc + 4, textY, { width: colW.desc - 8 });
-      doc.fillColor(INK_SOFT)
-         .text(fmt(item.quantity, 0), col.qty + 4, textY, { width: colW.qty - 8, align: 'right' })
-         .text(item.unit || '—',      col.unit + 4, textY, { width: colW.unit - 4, align: 'center' });
+      const rowTextY = py(cursorY + rowH - 6);
+      const rowSize  = 8;
 
-      topBids.forEach((bid, i) => {
-        const bi      = bidItemsMap[bid.bid_id]?.[item.id];
-        const up      = bi ? bi.unit_price : 0;
-        const qty     = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
-        const lineAmt = up * qty;
-        const gstRate = parseFloat(bid.gst) || 0;
-        const lineTotal = lineAmt * (1 + gstRate / 100);
-
-        const isLowest = i === 0 && lineAmt > 0;
-        doc.fillColor(isLowest ? '#1a7a4a' : INK).font(isLowest ? 'Helvetica-Bold' : 'Helvetica')
-           .text(lineTotal > 0 ? fmt(lineTotal) : '—', vendorCols[i] + 4, textY,
-                 { width: vendorColW - 8, align: 'right' });
+      drawText(page, String(idx + 1), {
+        x: colIdx + 2, y: rowTextY, size: rowSize,
+        font: fontNormal, color: C_INK_SOFT, maxWidth: 18, align: 'center',
+      });
+      drawText(page, trunc(item.description, 48), {
+        x: colDesc + 4, y: rowTextY, size: rowSize,
+        font: fontNormal, color: C_INK, maxWidth: descW - 8,
+      });
+      drawText(page, fmt(item.quantity, 0), {
+        x: colQty + 4, y: rowTextY, size: rowSize,
+        font: fontNormal, color: C_INK_SOFT, maxWidth: 72, align: 'right',
+      });
+      drawText(page, item.unit || '-', {
+        x: colUnit + 4, y: rowTextY, size: rowSize,
+        font: fontNormal, color: C_INK_SOFT, maxWidth: 52, align: 'center',
       });
 
-      rowY += rowH;
+      topBids.forEach((bid, i) => {
+        const bi        = bidItemsMap[bid.bid_id]?.[item.id];
+        const up        = bi ? bi.unit_price : 0;
+        const qty       = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
+        const lineAmt   = up * qty;
+        const gstRate   = parseFloat(bid.gst) || 0;
+        const lineTotal = lineAmt * (1 + gstRate / 100);
+        const isLowest  = i === 0 && lineAmt > 0;
+
+        drawText(page, lineTotal > 0 ? fmt(lineTotal) : '-', {
+          x: vendorCols[i] + 4, y: rowTextY, size: rowSize,
+          font: isLowest ? fontBold : fontNormal,
+          color: isLowest ? C_GREEN : C_INK,
+          maxWidth: vendorColW - 8, align: 'right',
+        });
+      });
+
+      cursorY += rowH;
     });
 
     // ── Totals row ─────────────────────────────────────────────────────────────
-    doc.rect(margin, rowY, contentW, rowH + 2).fill('#f0ede9');
-    const totY = rowY + 7;
-    doc.fontSize(8).font('Helvetica-Bold').fillColor(INK)
-       .text('TOTAL (incl. GST)', col.desc + 4, totY, { width: colW.desc + colW.qty + colW.unit - 8 });
+    const totRowH = rowH + 2;
+    fillRect(page, margin, py(cursorY + totRowH), contentW, totRowH, C_TOTAL_BG);
+    const totTextY = py(cursorY + totRowH - 7);
+
+    drawText(page, 'TOTAL (incl. GST)', {
+      x: colDesc + 4, y: totTextY, size: 8,
+      font: fontBold, color: C_INK, maxWidth: descW + 80 + 60 - 8,
+    });
 
     topBids.forEach((bid, i) => {
       const subtotal = rfqItems.reduce((sum, item) => {
@@ -239,77 +331,87 @@ export async function GET(request, { params }) {
       const gstRate    = parseFloat(bid.gst) || 0;
       const grandTotal = subtotal * (1 + gstRate / 100);
 
-      doc.fillColor(i === 0 ? ACCENT : INK)
-         .text(`${bid.currency || rfq.currency} ${fmt(grandTotal)}`,
-               vendorCols[i] + 4, totY, { width: vendorColW - 8, align: 'right' });
+      drawText(page, `${bid.currency || rfq.currency || ''} ${fmt(grandTotal)}`, {
+        x: vendorCols[i] + 4, y: totTextY, size: 8,
+        font: fontBold,
+        color: i === 0 ? C_ACCENT : C_INK,
+        maxWidth: vendorColW - 8, align: 'right',
+      });
     });
 
-    rowY += rowH + 2;
+    cursorY += totRowH;
 
     // GST rate row
-    doc.rect(margin, rowY, contentW, rowH).fill(SURFACE);
-    doc.fontSize(7.5).font('Helvetica').fillColor(INK_SOFT)
-       .text('GST Rate', col.desc + 4, rowY + 7, { width: colW.desc + colW.qty + colW.unit - 8 });
+    fillRect(page, margin, py(cursorY + rowH), contentW, rowH, C_SURFACE);
+    const gstTextY = py(cursorY + rowH - 6);
+    drawText(page, 'GST Rate', {
+      x: colDesc + 4, y: gstTextY, size: 7.5,
+      font: fontNormal, color: C_INK_SOFT, maxWidth: descW + 80 + 60 - 8,
+    });
     topBids.forEach((bid, i) => {
       const gstRate = parseFloat(bid.gst) || 0;
-      doc.text(`${gstRate}%`, vendorCols[i] + 4, rowY + 7, { width: vendorColW - 8, align: 'right' });
+      drawText(page, `${gstRate}%`, {
+        x: vendorCols[i] + 4, y: gstTextY, size: 7.5,
+        font: fontNormal, color: C_INK_SOFT, maxWidth: vendorColW - 8, align: 'right',
+      });
     });
 
-    rowY += rowH + 14;
+    cursorY += rowH + 16;
 
-    // ── Summary section ─────────────────────────────────────────────────────────
-    if (topBids.length > 0) {
-      // Section header
-      doc.fontSize(9).font('Helvetica-Bold').fillColor(INK)
-         .text('Vendor Summary', margin, rowY);
-      rowY += 16;
+    // ── Vendor summary section ─────────────────────────────────────────────────
+    drawText(page, 'Vendor Summary', {
+      x: margin, y: py(cursorY + 10), size: 9, font: fontBold, color: C_INK,
+    });
+    cursorY += 18;
 
-      const summaryRowH = 20;
-      const summaryFields = [
-        { label: 'Vendor',          key: b => b.vendor_name },
-        { label: 'Payment Terms',   key: b => b.payment_terms ? `Net ${b.payment_terms} days` : '—' },
-        { label: 'Freight / Unit',  key: b => b.freight_charges > 0 ? `${b.currency || rfq.currency} ${fmt(b.freight_charges)}` : '—' },
-        { label: 'Bid Rate / Factor', key: b => b.rate !== '' && b.rate != null ? String(b.rate) : '—' },
-        { label: 'Remarks',         key: b => b.last_remarks || '—' },
-        { label: 'Submitted',       key: b => fmtDate(b.submitted_at) },
-      ];
+    const summaryRowH = 18;
+    const labelColW   = 130;
+    const vendorSumW  = (contentW - labelColW) / Math.max(topBids.length, 1);
 
-      const labelColW  = 130;
-      const vendorSumW = (contentW - labelColW) / topBids.length;
+    const summaryFields = [
+      { label: 'Vendor',            val: b => b.vendor_name },
+      { label: 'Payment Terms',     val: b => b.payment_terms ? `Net ${b.payment_terms} days` : '-' },
+      { label: 'Freight / Unit',    val: b => parseFloat(b.freight_charges) > 0 ? `${b.currency || rfq.currency || ''} ${fmt(b.freight_charges)}` : '-' },
+      { label: 'Bid Rate / Factor', val: b => b.rate !== '' && b.rate != null ? String(b.rate) : '-' },
+      { label: 'Remarks',           val: b => b.last_remarks || '-' },
+      { label: 'Submitted',         val: b => fmtDate(b.submitted_at) },
+    ];
 
-      summaryFields.forEach((field, fi) => {
-        const bg = fi % 2 === 0 ? SURFACE : WHITE;
-        doc.rect(margin, rowY, contentW, summaryRowH).fill(bg);
+    summaryFields.forEach((field, fi) => {
+      const bg = fi % 2 === 0 ? C_SURFACE : C_WHITE;
+      fillRect(page, margin, py(cursorY + summaryRowH), contentW, summaryRowH, bg);
 
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor(INK_SOFT)
-           .text(field.label, margin + 6, rowY + 6, { width: labelColW - 10 });
-
-        topBids.forEach((bid, bi) => {
-          const val = field.key(bid);
-          const textVal = val.length > 36 ? val.slice(0, 35) + '…' : val;
-          doc.font('Helvetica').fillColor(INK)
-             .text(textVal, margin + labelColW + bi * vendorSumW + 4, rowY + 6,
-                   { width: vendorSumW - 8 });
-        });
-
-        rowY += summaryRowH;
+      const sY = py(cursorY + summaryRowH - 5);
+      drawText(page, field.label, {
+        x: margin + 6, y: sY, size: 7.5,
+        font: fontBold, color: C_INK_SOFT, maxWidth: labelColW - 10,
       });
-    }
+
+      topBids.forEach((bid, bi) => {
+        drawText(page, trunc(field.val(bid), 38), {
+          x: margin + labelColW + bi * vendorSumW + 4, y: sY, size: 7.5,
+          font: fontNormal, color: C_INK, maxWidth: vendorSumW - 8,
+        });
+      });
+
+      cursorY += summaryRowH;
+    });
 
     // ── Footer ─────────────────────────────────────────────────────────────────
-    const footerY = pageHeight - 28;
-    doc.rect(0, footerY, pageWidth, 28).fill(INK);
-    doc.fontSize(7.5).font('Helvetica').fillColor('#b8b3ae')
-       .text(
-         `ProcureXio  ·  Bid Comparison Export  ·  ${rfq.reference_number}  ·  Confidential`,
-         margin, footerY + 9, { width: contentW, align: 'center' }
-       );
+    const footerH = 26;
+    fillRect(page, 0, 0, pageWidth, footerH, C_INK);
+    const footerText = `ProcureXio  |  Bid Comparison Export  |  ${rfq.reference_number}  |  Confidential`;
+    const ftW = fontNormal.widthOfTextAtSize(footerText, 7.5);
+    drawText(page, footerText, {
+      x: (pageWidth - ftW) / 2, y: 8, size: 7.5,
+      font: fontNormal, color: C_INK_FAINT,
+    });
 
-    doc.end();
-    const pdfBuffer = await streamToBuffer(doc);
-
+    // ── Serialise & respond ────────────────────────────────────────────────────
+    const pdfBytes = await pdfDoc.save();
     const filename = `bid-comparison-${rfq.reference_number}-${Date.now()}.pdf`;
-    return new NextResponse(pdfBuffer, {
+
+    return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type':        'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
