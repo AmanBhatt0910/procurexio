@@ -68,7 +68,8 @@ export async function GET(request, { params }) {
 
     // Fetch own bid
     const [[bid]] = await pool.query(
-      `SELECT id, status, notes, total_amount, currency, submitted_at, created_at, updated_at
+      `SELECT id, status, notes, total_amount, currency, gst, rate, payment_terms, freight_charges,
+              submitted_at, created_at, updated_at
        FROM bids WHERE rfq_id = ? AND vendor_id = ? AND company_id = ?`,
       [rfqId, vendorId, companyId]
     );

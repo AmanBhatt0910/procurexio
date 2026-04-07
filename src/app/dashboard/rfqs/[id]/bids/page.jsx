@@ -34,10 +34,10 @@ export default function RFQBidsPage() {
 
   useEffect(() => { fetchBids(); }, [fetchBids]);
 
-  const exportCSV = async () => {
+  const exportPDF = async () => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/rfqs/${rfqId}/bids/export?format=csv`);
+      const res = await fetch(`/api/rfqs/${rfqId}/bids/export?format=pdf`);
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -45,7 +45,7 @@ export default function RFQBidsPage() {
       a.href = url;
       const cd = res.headers.get('Content-Disposition') || '';
       const match = cd.match(/filename="([^"]+)"/);
-      a.download = match ? match[1] : `bids-${rfqId}.csv`;
+      a.download = match ? match[1] : `bids-${rfqId}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -202,11 +202,11 @@ export default function RFQBidsPage() {
                   </button>
                   <button
                     className="btn"
-                    onClick={exportCSV}
+                    onClick={exportPDF}
                     disabled={exporting}
                     style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                   >
-                    {exporting ? 'Exporting…' : '⬇ Export CSV'}
+                    {exporting ? 'Exporting…' : '⬇ Export PDF'}
                   </button>
                 </div>
               }
