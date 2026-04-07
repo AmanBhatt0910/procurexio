@@ -44,9 +44,12 @@ export async function POST(request, { params }) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const notes    = body.notes    || null;
-    const currency = (body.currency || rfq.currency || 'USD').toString().trim().toUpperCase();
-    const gst      = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
+    const notes          = body.notes    || null;
+    const currency       = (body.currency || rfq.currency || 'USD').toString().trim().toUpperCase();
+    const gst            = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
+    const rate           = body.rate           != null ? parseFloat(body.rate)           || null : null;
+    const paymentTerms   = body.payment_terms  != null ? parseInt(body.payment_terms, 10) || null : null;
+    const freightCharges = body.freight_charge != null ? parseFloat(body.freight_charge) || null : null;
 
     // Validate currency against allowlist
     const currencyError = validateCurrency(currency);
@@ -55,9 +58,9 @@ export async function POST(request, { params }) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, gst, total_amount)
-       VALUES (?, ?, ?, 'draft', ?, ?, ?, 0.00)`,
-      [rfqId, vendorId, companyId, notes, currency, gst]
+      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, gst, total_amount, rate, payment_terms, freight_charges)
+       VALUES (?, ?, ?, 'draft', ?, ?, ?, 0.00, ?, ?, ?)`,
+      [rfqId, vendorId, companyId, notes, currency, gst, rate, paymentTerms, freightCharges]
     );
 
     await logAction(request, {

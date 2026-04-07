@@ -96,6 +96,9 @@ export default function VendorBidWorkspacePage() {
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
   const [gst, setGst]             = useState(0);
+  const [rate, setRate]           = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [freightCharge, setFreightCharge] = useState('');
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
   const [companyCurrency, setCompanyCurrency] = useState('USD');
 
@@ -131,6 +134,10 @@ export default function VendorBidWorkspacePage() {
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
         // Load saved GST rate
         setGst(Number(json.data.bid.gst) || 0);
+        // Load read-only creation fields
+        setRate(json.data.bid.rate != null ? String(json.data.bid.rate) : '');
+        setPaymentTerms(json.data.bid.payment_terms != null ? String(json.data.bid.payment_terms) : '');
+        setFreightCharge(json.data.bid.freight_charges != null ? String(json.data.bid.freight_charges) : '');
         // Load attachments if bid exists
         try {
           const attRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`);
@@ -217,7 +224,13 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currency, gst }),
+        body: JSON.stringify({
+          currency,
+          gst,
+          rate:           rate           !== '' ? rate           : null,
+          payment_terms:  paymentTerms   !== '' ? paymentTerms   : null,
+          freight_charge: freightCharge  !== '' ? freightCharge  : null,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -542,9 +555,79 @@ export default function VendorBidWorkspacePage() {
             {/* Bid section */}
             {!bid ? (
               <div className="bid-card">
-                <div className="start-box">
-                  <h3>Start Your Bid</h3>
-                  <p>You haven&apos;t created a bid for this RFQ yet. Click below to begin.</p>
+                <div style={{ marginBottom: 20 }}>
+                  <span className="section-label" style={{ display: 'block', marginBottom: 8 }}>Start Your Bid</span>
+                  <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 20px' }}>
+                    Fill in the details below to create your bid for this RFQ. These fields can only be set once.
+                  </p>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Currency</label>
+                      <select
+                        className="form-control"
+                        value={currency}
+                        onChange={e => setCurrency(e.target.value)}
+                        disabled={isPastDeadline}
+                      >
+                        {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
+                          .map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>GST Rate</label>
+                      <select
+                        className="form-control"
+                        value={gst}
+                        onChange={e => setGst(Number(e.target.value))}
+                        disabled={isPastDeadline}
+                      >
+                        <option value={0}>0% (No GST)</option>
+                        <option value={7}>7% GST</option>
+                        <option value={18}>18% GST</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Bid Rate / Factor <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}>(optional)</span></label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="0.0001"
+                        placeholder="e.g. 1.05"
+                        value={rate}
+                        onChange={e => setRate(e.target.value)}
+                        disabled={isPastDeadline}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Payment Terms (days)</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 30 for Net 30"
+                        value={paymentTerms}
+                        onChange={e => setPaymentTerms(e.target.value)}
+                        disabled={isPastDeadline}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Freight Charge per Unit</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={freightCharge}
+                        onChange={e => setFreightCharge(e.target.value)}
+                        disabled={isPastDeadline}
+                      />
+                    </div>
+                  </div>
                   <button
                     className="btn btn-accent"
                     disabled={isPastDeadline || saving}
@@ -575,6 +658,39 @@ export default function VendorBidWorkspacePage() {
                         Your new bid must be at least 100 lower than your current bid of{' '}
                         {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
                         Adjust your item prices below, then click &ldquo;Save Update&rdquo;.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Read-only creation fields (rate, payment terms, freight charge) */}
+                  {(rate !== '' || paymentTerms !== '' || freightCharge !== '') && (
+                    <div style={{
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20,
+                    }}>
+                      <div style={{ fontSize: '.72rem', fontWeight: 600, letterSpacing: '.08em',
+                        textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 12 }}>
+                        Bid Terms (set at creation — read only)
+                      </div>
+                      <div className="form-row" style={{ margin: 0, gap: 12 }}>
+                        {rate !== '' && (
+                          <div className="form-group" style={{ minWidth: 0 }}>
+                            <label>Bid Rate / Factor</label>
+                            <input className="form-control" value={rate} readOnly disabled />
+                          </div>
+                        )}
+                        {paymentTerms !== '' && (
+                          <div className="form-group" style={{ minWidth: 0 }}>
+                            <label>Payment Terms (days)</label>
+                            <input className="form-control" value={paymentTerms} readOnly disabled />
+                          </div>
+                        )}
+                        {freightCharge !== '' && (
+                          <div className="form-group" style={{ minWidth: 0 }}>
+                            <label>Freight Charge per Unit</label>
+                            <input className="form-control" value={freightCharge} readOnly disabled />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
