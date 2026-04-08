@@ -110,8 +110,27 @@ export default function NewRFQPage() {
     currency:    'USD',
   });
   const [items, setItems]   = useState([]);
+  const [budgetAutoFilled, setBudgetAutoFilled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState('');
+
+  // Auto-calculate budget whenever items change
+  useEffect(() => {
+    const calculated = items.reduce((sum, item) => {
+      const qty   = parseFloat(item.quantity)    || 0;
+      const price = parseFloat(item.target_price) || 0;
+      return sum + qty * price;
+    }, 0);
+    if (calculated > 0) {
+      setForm(f => ({ ...f, budget: calculated.toFixed(2) }));
+      setBudgetAutoFilled(true);
+    } else if (budgetAutoFilled) {
+      // Only clear if it was previously auto-filled (not manually entered)
+      setForm(f => ({ ...f, budget: '' }));
+      setBudgetAutoFilled(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   // Auto-fill currency from company settings
   useEffect(() => {
@@ -230,12 +249,24 @@ export default function NewRFQPage() {
               />
             </div>
             <div>
-              <label className="field-label">Budget</label>
+              <label className="field-label">
+                Budget
+                {budgetAutoFilled && (
+                  <span style={{ marginLeft: 6, fontSize: '.72rem', fontWeight: 400,
+                    color: '#1a7a4a', background: '#e8f5ee', border: '1px solid #6ee7b7',
+                    borderRadius: 4, padding: '1px 6px' }}>
+                    Auto-calculated
+                  </span>
+                )}
+              </label>
               <input
                 type="number"
                 className="form-input"
                 value={form.budget}
-                onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}
+                onChange={e => {
+                  setBudgetAutoFilled(false);
+                  setForm(f => ({ ...f, budget: e.target.value }));
+                }}
                 placeholder="0.00"
                 min="0"
               />

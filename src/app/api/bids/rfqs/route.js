@@ -79,7 +79,7 @@ export async function GET(request) {
        WHERE rv.vendor_id = ? AND rv.company_id = ?
          AND rv.status IN ('invited','viewed','submitted')
          AND r.status IN ('published','closed')
-       ORDER BY r.deadline ASC
+       ORDER BY b.submitted_at DESC, r.created_at DESC
        LIMIT ? OFFSET ?`,
       [vendorId, vendorId, companyId, limit, offset]
     );

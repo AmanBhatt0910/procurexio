@@ -134,7 +134,7 @@ export async function PUT(request, { params }) {
         const up      = parseFloat(unit_price) || 0;
         const qty     = parseFloat(quantity)   || 1;
         const taxRate = parseFloat(tax_rate)   || 0;
-        totalAmount += up * qty * (1 + taxRate / 100);
+        totalAmount += up * qty;
         await conn.query(
           `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes, tax_rate)
            VALUES (?, ?, ?, ?, ?, ?, ?)
