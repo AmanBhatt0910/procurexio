@@ -26,6 +26,7 @@ function RegisterInner() {
 
   // Form state
   const [form, setForm] = useState({ companyName: '', name: '', email: '', password: '' });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors,   setErrors]   = useState({});
   const [loading,  setLoading]  = useState(false);
   const [apiError, setApiError] = useState('');
@@ -67,6 +68,8 @@ function RegisterInner() {
     if (!form.password)                     errs.password    = 'Password is required.';
     if (form.password && form.password.length < 8)
       errs.password = 'At least 8 characters.';
+    if (!token && !termsAccepted)
+      errs.terms = 'You must agree to the Terms of Service and Privacy Policy.';
     return errs;
   }
 
@@ -459,11 +462,28 @@ function RegisterInner() {
           </AuthButton>
 
           {!isInvite && (
-            <p className="form-terms">
-              By creating an account you agree to our{' '}
-              <a href="/terms">Terms of Service</a> and{' '}
-              <a href="/privacy">Privacy Policy</a>.
-            </p>
+            <div className="form-terms-check">
+              <label className="terms-label">
+                <input
+                  type="checkbox"
+                  className="terms-checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => {
+                    setTermsAccepted(e.target.checked);
+                    if (errors.terms) setErrors(prev => ({ ...prev, terms: '' }));
+                  }}
+                />
+                <span className="terms-text">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noreferrer">Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
+                </span>
+              </label>
+              {errors.terms && (
+                <p className="auth-input-error terms-error">{errors.terms}</p>
+              )}
+            </div>
           )}
         </form>
 
@@ -675,6 +695,19 @@ export default function RegisterPage() {
           font-size: .78rem; color: var(--ink-faint); line-height: 1.5; text-align: center;
         }
         .form-terms a { color: var(--ink-soft); text-decoration: underline; }
+
+        .form-terms-check { display: flex; flex-direction: column; gap: 6px; }
+        .terms-label {
+          display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+        }
+        .terms-checkbox {
+          width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px;
+          accent-color: var(--ink); cursor: pointer;
+        }
+        .terms-text { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; }
+        .terms-text a { color: var(--ink); text-decoration: underline; }
+        .terms-text a:hover { color: var(--accent); }
+        .terms-error { margin-top: 0; }
 
         .form-footer { margin-top: 28px; text-align: center; font-size: .85rem; color: var(--ink-soft); }
         .form-footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
