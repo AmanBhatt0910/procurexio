@@ -15,7 +15,10 @@ function RedirectToDashboard() {
 }
 
 // ── Countdown Timer Component ──────────────────────────────────────────────
-const MS_PER_DAY = 86400000;
+const MS_PER_DAY    = 86400000;
+const MS_PER_HOUR   = 3600000;
+const MS_PER_MINUTE = 60000;
+const MS_PER_SECOND = 1000;
 const pad = n => String(n).padStart(2, '0');
 
 function CountdownTimer({ deadline }) {
@@ -29,14 +32,14 @@ function CountdownTimer({ deadline }) {
       setTimeLeft({
         expired: false,
         diff,
-        days:    Math.floor(diff / 86400000),
-        hours:   Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000)  / 60000),
-        seconds: Math.floor((diff % 60000)    / 1000),
+        days:    Math.floor(diff / MS_PER_DAY),
+        hours:   Math.floor((diff % MS_PER_DAY)    / MS_PER_HOUR),
+        minutes: Math.floor((diff % MS_PER_HOUR)   / MS_PER_MINUTE),
+        seconds: Math.floor((diff % MS_PER_MINUTE) / MS_PER_SECOND),
       });
     };
     calc();
-    const id = setInterval(calc, 1000);
+    const id = setInterval(calc, MS_PER_SECOND);
     return () => clearInterval(id);
   }, [deadline]);
 
