@@ -1,6 +1,6 @@
 'use client';
 
-// ── BidSubmissionSection — action buttons and ₹100 update guidance ─────────
+// ── BidSubmissionSection — action buttons and minimum-reduction update guidance
 export default function BidSubmissionSection({
   bid,
   canEdit,
@@ -15,16 +15,17 @@ export default function BidSubmissionSection({
   onEnterUpdateMode,
   onOpenConfirmModal,
 }) {
-  // Real-time calculation for ₹100 minimum check (tax excluded — reference only)
+  // Real-time calculation for 100-unit minimum check (tax excluded — reference only)
   const currentTotal = bidItems.reduce((sum, item) => {
     const up  = parseFloat(item.unit_price) || 0;
     const qty = parseFloat(item.quantity)   || 0;
     return sum + up * qty;
   }, 0);
 
-  const submittedTotal = parseFloat(bid?.total_amount || 0);
-  const maxAllowed     = submittedTotal - 100;
-  const meetsMinimum   = currentTotal <= maxAllowed && currentTotal > 0;
+  const submittedTotal = parseFloat(bid?.total_amount) || 0;
+  // Guard: only compute reduction logic when submittedTotal is positive (submitted bids)
+  const maxAllowed     = submittedTotal > 0 ? submittedTotal - 100 : 0;
+  const meetsMinimum   = submittedTotal > 0 && currentTotal <= maxAllowed && currentTotal > 0;
   // How much more the user needs to reduce (always non-negative)
   const shortfall      = Math.max(0, currentTotal - maxAllowed);
 
@@ -74,7 +75,7 @@ export default function BidSubmissionSection({
         </div>
       )}
 
-      {/* ── Update mode actions with real-time ₹100 feedback ── */}
+      {/* ── Update mode actions with real-time minimum-reduction feedback ── */}
       {canUpdate && updateMode && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
           {hasPrices && (

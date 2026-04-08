@@ -802,7 +802,7 @@ export default function VendorBidWorkspacePage() {
                     )}
                   </div>
 
-                  {/* Action buttons with ₹100 real-time validation */}
+                  {/* Action buttons with 100-unit real-time validation */}
                   <BidSubmissionSection
                     bid={bid}
                     canEdit={canEdit}
