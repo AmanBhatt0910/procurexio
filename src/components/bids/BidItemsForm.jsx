@@ -19,6 +19,7 @@ function rowsReducer(state, action) {
 function computeRows(rfqItems, initialItems) {
   return rfqItems.map(item => {
     const existing = initialItems.find(i => i.rfq_item_id === item.id);
+    const parsedTaxRate = existing ? parseFloat(existing.tax_rate) : NaN;
     return {
       rfq_item_id:  item.id,
       description:  item.description,
@@ -26,7 +27,7 @@ function computeRows(rfqItems, initialItems) {
       unit:         item.unit,
       target_price: item.target_price,
       unit_price:   existing ? existing.unit_price : '',
-      tax_rate:     existing ? (parseFloat(existing.tax_rate) || 0) : 0,
+      tax_rate:     Number.isNaN(parsedTaxRate) ? 0 : parsedTaxRate,
       notes:        existing ? existing.notes : '',
     };
   });
