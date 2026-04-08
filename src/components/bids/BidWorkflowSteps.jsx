@@ -107,11 +107,15 @@ export default function BidWorkflowSteps({ currentStep = 1, isLocked = false }) 
               aria-current={active ? 'step' : undefined}
               style={{ opacity: locked ? 0.4 : 1 }}
             >
-              <div className="wf-icon-wrap">
+              <div
+                className="wf-icon-wrap"
+                aria-label={completed ? `${step.label} (completed)` : step.label}
+                role="img"
+              >
                 {completed ? '✓' : step.icon}
               </div>
               <span className="wf-step-label">
-                <span className="step-short">{step.shortLabel}</span>
+                {step.shortLabel}
               </span>
             </div>
           );

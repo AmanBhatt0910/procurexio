@@ -1068,7 +1068,7 @@ export default function VendorBidWorkspacePage() {
                 </div>
               </div>
               <p className="confirm-text">
-                Please review your item prices before confirming. This action will notify the buyer.
+                Please review your item prices before confirming. The buyer will receive a notification and will be able to see your prices immediately.
               </p>
               <div className="confirm-actions">
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>
