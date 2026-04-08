@@ -55,6 +55,9 @@ function RankCard({ rank, totalBids }) {
   );
 }
 
+// Minimum bid reduction required when updating a submitted bid (in currency units)
+const MIN_BID_REDUCTION = 100;
+
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
   const router    = useRouter();
@@ -673,11 +676,11 @@ export default function VendorBidWorkspacePage() {
                       <div className="update-panel-sub">
                         {(() => {
                           const total    = parseFloat(bid.total_amount || 0);
-                          const maxBid   = total - 100;
+                          const maxBid   = total - MIN_BID_REDUCTION;
                           const fmtAmt   = (n) => `${currency} ${parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                           return (
                             <>
-                              Your new bid must be at least <strong>100 {currency} lower</strong> than your
+                              Your new bid must be at least <strong>{MIN_BID_REDUCTION} {currency} lower</strong> than your
                               current bid of {fmtAmt(total)}. Maximum allowed: {fmtAmt(maxBid)}.
                               Adjust your item prices below — live feedback shows whether your total qualifies.
                             </>
@@ -1094,7 +1097,7 @@ export default function VendorBidWorkspacePage() {
                     Updating your submitted bid
                   </div>
                   <div style={{ fontSize: '.82rem', color: '#8a6500', opacity: .85 }}>
-                    Your new prices must be at least <strong>100 {currency} lower</strong> than your current bid.
+                    Your new prices must be at least <strong>{MIN_BID_REDUCTION} {currency} lower</strong> than your current bid.
                   </div>
                 </div>
               </div>
