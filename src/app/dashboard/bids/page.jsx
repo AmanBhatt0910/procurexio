@@ -19,7 +19,7 @@ const MS_PER_DAY    = 86400000;
 const MS_PER_HOUR   = 3600000;
 const MS_PER_MINUTE = 60000;
 const MS_PER_SECOND = 1000;
-const pad = n => String(n).padStart(2, '0');
+const padTimeValue = n => String(n).padStart(2, '0');
 
 function CountdownTimer({ deadline }) {
   const [timeLeft, setTimeLeft] = useState(null);
@@ -74,7 +74,7 @@ function CountdownTimer({ deadline }) {
     }}>
       {icon}{' '}
       {timeLeft.days > 0 && `${timeLeft.days}d `}
-      {pad(timeLeft.hours)}h {pad(timeLeft.minutes)}m {pad(timeLeft.seconds)}s
+      {padTimeValue(timeLeft.hours)}h {padTimeValue(timeLeft.minutes)}m {padTimeValue(timeLeft.seconds)}s
     </span>
   );
 }

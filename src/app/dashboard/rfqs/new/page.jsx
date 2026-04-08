@@ -262,7 +262,7 @@ export default function NewRFQPage() {
                 type="number"
                 className="form-input"
                 value={displayBudget}
-                onChange={e => setBudgetOverride(e.target.value)}
+                onChange={e => setBudgetOverride(e.target.value || null)}
                 placeholder="0.00"
                 min="0"
               />
