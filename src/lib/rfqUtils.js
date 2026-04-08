@@ -71,7 +71,8 @@ export async function sendRFQClosureEmails(rfqId) {
     const bid = bids[i];
     // Each vendor may have multiple users — fetch the primary user email
     const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ${MAX_VENDOR_USERS_PER_EMAIL}`,
+      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ?`,
+      [bid.vendor_id, MAX_VENDOR_USERS_PER_EMAIL]
     );
     if (!vendorUsers.length) continue;
 
@@ -104,8 +105,8 @@ export async function sendRFQClosureEmails(rfqId) {
     if (biddedVendorIds.has(invited.vendor_id)) continue; // already handled above
 
     const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ${MAX_VENDOR_USERS_PER_EMAIL}`,
-      [invited.vendor_id]
+      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ?`,
+      [invited.vendor_id, MAX_VENDOR_USERS_PER_EMAIL]
     );
     if (!vendorUsers.length) continue;
 
