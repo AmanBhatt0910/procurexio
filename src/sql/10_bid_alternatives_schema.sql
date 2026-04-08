@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS bid_alternative_items (
   alt_description TEXT,
   alt_specifications TEXT,
   alt_unit_price DECIMAL(15,2) DEFAULT NULL,
-  alt_quantity DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+  alt_quantity DECIMAL(10,2) DEFAULT 1.00,
   reason_for_alternative TEXT,
   notes VARCHAR(512),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

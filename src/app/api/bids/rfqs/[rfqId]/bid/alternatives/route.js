@@ -122,7 +122,7 @@ export async function POST(request, { params }) {
         alt_description?.trim() || null,
         alt_specifications?.trim() || null,
         alt_unit_price != null && alt_unit_price !== '' ? parseFloat(alt_unit_price) : null,
-        alt_quantity != null && alt_quantity !== '' ? parseFloat(alt_quantity) : 1,
+        alt_quantity != null && alt_quantity !== '' ? parseFloat(alt_quantity) : null,
         reason_for_alternative?.trim() || null,
         notes?.trim() || null,
       ]

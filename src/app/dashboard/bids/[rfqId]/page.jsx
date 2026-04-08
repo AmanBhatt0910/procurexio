@@ -174,6 +174,17 @@ function OutcomeBanner({ outcome }) {
   );
 }
 
+const EMPTY_ALT_FORM = {
+  rfq_item_id: '',
+  alt_name: '',
+  alt_description: '',
+  alt_specifications: '',
+  alt_unit_price: '',
+  alt_quantity: '',
+  reason_for_alternative: '',
+  notes: '',
+};
+
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
   const router    = useRouter();
@@ -206,16 +217,7 @@ export default function VendorBidWorkspacePage() {
   // Alternative items state
   const [altItems, setAltItems] = useState([]);
   const [altModal, setAltModal] = useState(false);
-  const [altForm, setAltForm] = useState({
-    rfq_item_id: '',
-    alt_name: '',
-    alt_description: '',
-    alt_specifications: '',
-    alt_unit_price: '',
-    alt_quantity: '',
-    reason_for_alternative: '',
-    notes: '',
-  });
+  const [altForm, setAltForm] = useState(EMPTY_ALT_FORM);
   const [altSaving, setAltSaving] = useState(false);
   const [altError, setAltError] = useState('');
 
@@ -723,10 +725,7 @@ export default function VendorBidWorkspacePage() {
                   <span className="section-label">RFQ Details</span>
                   <RFQStatusBadge status={rfq.status} />
                 </div>
-                {rfq.deadline && !isPastDeadline && !isClosed && (
-                  <CountdownTimer deadline={rfq.deadline} />
-                )}
-                {(isPastDeadline || isClosed) && (
+                {rfq.deadline && (
                   <CountdownTimer deadline={rfq.deadline} />
                 )}
               </div>
@@ -780,7 +779,7 @@ export default function VendorBidWorkspacePage() {
                       </div>
                       <div className="rfq-item-qty-badge">
                         <span style={{ color: 'var(--ink-faint)', fontSize: '.72rem' }}>Qty</span>
-                        {parseFloat(item.quantity).toLocaleString()} {item.unit || ''}
+                        {parseFloat(item.quantity).toLocaleString()}
                       </div>
                       {item.target_price != null && parseFloat(item.target_price) > 0 ? (
                         <div className="rfq-item-price-badge">
@@ -1142,10 +1141,11 @@ export default function VendorBidWorkspacePage() {
                     <button
                       className="btn btn-outline"
                       style={{ fontSize: '.8rem', padding: '6px 14px' }}
-                      onClick={() => { setAltModal(true); setAltError('');
-                        setAltForm({ rfq_item_id: rfqItems[0]?.id || '',
-                          alt_name: '', alt_description: '', alt_specifications: '',
-                          alt_unit_price: '', alt_quantity: '', reason_for_alternative: '', notes: '' }); }}
+                      onClick={() => {
+                        setAltModal(true);
+                        setAltError('');
+                        setAltForm({ ...EMPTY_ALT_FORM, rfq_item_id: rfqItems[0]?.id || '' });
+                      }}
                     >
                       + Suggest Alternative
                     </button>
