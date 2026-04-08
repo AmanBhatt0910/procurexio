@@ -46,8 +46,6 @@ export async function POST(request, { params }) {
     const body = await request.json().catch(() => ({}));
     const notes          = body.notes    || null;
     const currency       = (body.currency || rfq.currency || 'USD').toString().trim().toUpperCase();
-    const gst            = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
-    const rate           = body.rate           != null ? parseFloat(body.rate)           || null : null;
     const paymentTerms   = body.payment_terms  != null ? parseInt(body.payment_terms, 10) || null : null;
     const freightCharges = body.freight_charge != null ? parseFloat(body.freight_charge) || null : null;
 
@@ -58,9 +56,9 @@ export async function POST(request, { params }) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, gst, total_amount, rate, payment_terms, freight_charges)
-       VALUES (?, ?, ?, 'draft', ?, ?, ?, 0.00, ?, ?, ?)`,
-      [rfqId, vendorId, companyId, notes, currency, gst, rate, paymentTerms, freightCharges]
+      `INSERT INTO bids (rfq_id, vendor_id, company_id, status, notes, currency, gst, total_amount, payment_terms, freight_charges)
+       VALUES (?, ?, ?, 'draft', ?, ?, 0, 0.00, ?, ?)`,
+      [rfqId, vendorId, companyId, notes, currency, paymentTerms, freightCharges]
     );
 
     await logAction(request, {
@@ -118,7 +116,6 @@ export async function PUT(request, { params }) {
     const currency = body.currency
       ? body.currency.toString().trim().toUpperCase()
       : (rfq.currency || 'USD');
-    const gst = [0, 7, 18].includes(Number(body.gst)) ? Number(body.gst) : 0;
 
     // Validate currency against allowlist
     const currencyError = validateCurrency(currency);
@@ -133,27 +130,24 @@ export async function PUT(request, { params }) {
       // Upsert bid_items
       let totalAmount = 0;
       for (const item of items) {
-        const { rfq_item_id, unit_price, quantity, notes: iNotes } = item;
-        const up  = parseFloat(unit_price)  || 0;
-        const qty = parseFloat(quantity)     || 1;
-        totalAmount += up * qty;
+        const { rfq_item_id, unit_price, quantity, notes: iNotes, tax_rate } = item;
+        const up      = parseFloat(unit_price) || 0;
+        const qty     = parseFloat(quantity)   || 1;
+        const taxRate = parseFloat(tax_rate)   || 0;
+        totalAmount += up * qty * (1 + taxRate / 100);
         await conn.query(
-          `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes)`,
-          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null]
+          `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes, tax_rate)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = VALUES(tax_rate)`,
+          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null, taxRate]
         );
       }
 
-      // Apply GST to total
-      const gstAmount  = totalAmount * (gst / 100);
-      const grandTotal = totalAmount + gstAmount;
-
-      // Update bid header
+      // Update bid header (gst=0 since tax is now per line item)
       await conn.query(
-        `UPDATE bids SET notes = ?, currency = ?, gst = ?, total_amount = ?, updated_at = NOW()
+        `UPDATE bids SET notes = ?, currency = ?, gst = 0, total_amount = ?, updated_at = NOW()
          WHERE id = ?`,
-        [notes || null, currency || rfq.currency, gst, grandTotal, bid.id]
+        [notes || null, currency || rfq.currency, totalAmount, bid.id]
       );
 
       await conn.commit();
@@ -164,10 +158,10 @@ export async function PUT(request, { params }) {
         resourceType: 'bid',
         resourceId:   bid.id,
         resourceName: `RFQ #${rfqId}`,
-        changes:      { totalAmount: grandTotal, gst },
+        changes:      { totalAmount },
         status:       'success',
       });
-      return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount: grandTotal, gst } });
+      return NextResponse.json({ message: 'Bid updated', data: { bidId: bid.id, totalAmount } });
     } catch (e) {
       await conn.rollback();
       throw e;

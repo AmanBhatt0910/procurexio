@@ -197,8 +197,6 @@ export default function VendorBidWorkspacePage() {
   const [bidItems, setBidItems]   = useState([]);
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
-  const [gst, setGst]             = useState(0);
-  const [rate, setRate]           = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [freightCharge, setFreightCharge] = useState('');
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
@@ -241,10 +239,7 @@ export default function VendorBidWorkspacePage() {
         setNotes(json.data.bid.notes || '');
         // Use saved bid currency, then company currency, then USD
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
-        // Load saved GST rate
-        setGst(Number(json.data.bid.gst) || 0);
         // Load read-only creation fields
-        setRate(json.data.bid.rate != null ? String(json.data.bid.rate) : '');
         setPaymentTerms(json.data.bid.payment_terms != null ? String(json.data.bid.payment_terms) : '');
         setFreightCharge(json.data.bid.freight_charges != null ? String(json.data.bid.freight_charges) : '');
         // Load attachments if bid exists
@@ -343,8 +338,6 @@ export default function VendorBidWorkspacePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currency,
-          gst,
-          rate:           rate           !== '' ? rate           : null,
           payment_terms:  paymentTerms   !== '' ? paymentTerms   : null,
           freight_charge: freightCharge  !== '' ? freightCharge  : null,
         }),
@@ -364,12 +357,12 @@ export default function VendorBidWorkspacePage() {
     setSaving(true); setError(''); setSuccess('');
     try {
       // Calculate new subtotal from bidItems (before GST)
-      const newSubtotal = bidItems.reduce((sum, item) => {
-        const up  = parseFloat(item.unit_price) || 0;
-        const qty = parseFloat(item.quantity)   || 1;
-        return sum + (up * qty);
+      const newTotal = bidItems.reduce((sum, item) => {
+        const up      = parseFloat(item.unit_price) || 0;
+        const qty     = parseFloat(item.quantity)   || 1;
+        const taxRate = parseFloat(item.tax_rate)   || 0;
+        return sum + up * qty * (1 + taxRate / 100);
       }, 0);
-      const newTotal = newSubtotal;
 
       // Enforce ₹100 minimum change when editing a previously submitted bid
       if (bid?.status === 'submitted' && bid?.total_amount != null) {
@@ -384,7 +377,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -404,7 +397,7 @@ export default function VendorBidWorkspacePage() {
       await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       // Then submit
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
@@ -427,7 +420,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -829,34 +822,6 @@ export default function VendorBidWorkspacePage() {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>GST Rate</label>
-                      <select
-                        className="form-control"
-                        value={gst}
-                        onChange={e => setGst(Number(e.target.value))}
-                        disabled={isPastDeadline}
-                      >
-                        <option value={0}>0% (No GST)</option>
-                        <option value={5}>5% GST</option>
-                        <option value={18}>18% GST</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Bid Rate / Factor <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}>(optional)</span></label>
-                      <input
-                        className="form-control"
-                        type="number"
-                        min="0"
-                        step="0.0001"
-                        placeholder="e.g. 1.05"
-                        value={rate}
-                        onChange={e => setRate(e.target.value)}
-                        disabled={isPastDeadline}
-                      />
-                    </div>
-                    <div className="form-group">
                       <label>Payment Terms (days)</label>
                       <input
                         className="form-control"
@@ -917,8 +882,8 @@ export default function VendorBidWorkspacePage() {
                     </div>
                   )}
 
-                  {/* Read-only creation fields (rate, payment terms, freight charge) */}
-                  {(rate !== '' || paymentTerms !== '' || freightCharge !== '') && (
+                  {/* Read-only creation fields (payment terms, freight charge) */}
+                  {(paymentTerms !== '' || freightCharge !== '') && (
                     <div style={{
                       background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20,
@@ -928,12 +893,6 @@ export default function VendorBidWorkspacePage() {
                         Bid Terms (set at creation — read only)
                       </div>
                       <div className="form-row" style={{ margin: 0, gap: 12 }}>
-                        {rate !== '' && (
-                          <div className="form-group" style={{ minWidth: 0 }}>
-                            <label>Bid Rate / Factor</label>
-                            <input className="form-control" value={rate} readOnly disabled />
-                          </div>
-                        )}
                         {paymentTerms !== '' && (
                           <div className="form-group" style={{ minWidth: 0 }}>
                             <label>Payment Terms (days)</label>
@@ -964,19 +923,6 @@ export default function VendorBidWorkspacePage() {
                           .map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>GST Rate</label>
-                      <select
-                        className="form-control"
-                        value={gst}
-                        onChange={e => setGst(Number(e.target.value))}
-                        disabled={!canEdit && !updateMode}
-                      >
-                        <option value={0}>0% (No GST)</option>
-                        <option value={5}>5% GST</option>
-                        <option value={18}>18% GST</option>
-                      </select>
-                    </div>
                     <div className="form-group" style={{ flex: 3 }}>
                       <label>Notes / Cover Message (optional)</label>
                       <textarea
@@ -996,7 +942,6 @@ export default function VendorBidWorkspacePage() {
                     <BidItemsForm
                       rfqItems={rfqItems}
                       initialItems={bid.items || []}
-                      gst={gst}
                       onChange={setBidItems}
                       readOnly={!canEdit && !updateMode}
                     />

@@ -77,7 +77,7 @@ export async function GET(request, { params }) {
     let bidItems = [];
     if (bid) {
       const [bi] = await pool.query(
-        `SELECT rfq_item_id, unit_price, quantity, total_price, notes
+        `SELECT rfq_item_id, unit_price, quantity, total_price, notes, tax_rate
          FROM bid_items WHERE bid_id = ?`,
         [bid.id]
       );

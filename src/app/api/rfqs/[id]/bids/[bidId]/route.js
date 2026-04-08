@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
 
     const [items] = await pool.query(
       `SELECT bi.rfq_item_id, ri.description, ri.unit, ri.target_price,
-              bi.unit_price, bi.quantity, bi.total_price, bi.notes
+              bi.unit_price, bi.quantity, bi.total_price, bi.notes, bi.tax_rate
        FROM bid_items bi
        JOIN rfq_items ri ON ri.id = bi.rfq_item_id
        WHERE bi.bid_id = ?

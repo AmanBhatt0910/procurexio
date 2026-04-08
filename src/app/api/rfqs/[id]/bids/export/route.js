@@ -129,7 +129,7 @@ export async function GET(request, { params }) {
     if (bidIds.length > 0) {
       const safeIds = bidIds.map(id => parseInt(id, 10)).filter(Number.isFinite);
       const [bidItemRows] = await pool.query(
-        `SELECT bid_id, rfq_item_id, unit_price, quantity
+        `SELECT bid_id, rfq_item_id, unit_price, quantity, tax_rate
          FROM bid_items
          WHERE bid_id IN (${safeIds.map(() => '?').join(',')})`,
         safeIds
@@ -139,6 +139,7 @@ export async function GET(request, { params }) {
         bidItemsMap[item.bid_id][item.rfq_item_id] = {
           unit_price: parseFloat(item.unit_price) || 0,
           quantity:   parseFloat(item.quantity)   || 0,
+          tax_rate:   parseFloat(item.tax_rate)   || 0,
         };
       }
     }
@@ -295,10 +296,10 @@ export async function GET(request, { params }) {
         const bi        = bidItemsMap[bid.bid_id]?.[item.id];
         const up        = bi ? bi.unit_price : 0;
         const qty       = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
-        const lineAmt   = up * qty;
-        const gstRate   = parseFloat(bid.gst) || 0;
-        const lineTotal = lineAmt * (1 + gstRate / 100);
-        const isLowest  = i === 0 && lineAmt > 0;
+        const taxRate   = bi ? (bi.tax_rate ?? 0) : 0;
+        const lineNet   = up * qty;
+        const lineTotal = lineNet * (1 + taxRate / 100);
+        const isLowest  = i === 0 && lineNet > 0;
 
         drawText(page, lineTotal > 0 ? fmt(lineTotal) : '-', {
           x: vendorCols[i] + 4, y: rowTextY, size: rowSize,
@@ -316,20 +317,19 @@ export async function GET(request, { params }) {
     fillRect(page, margin, py(cursorY + totRowH), contentW, totRowH, C_TOTAL_BG);
     const totTextY = py(cursorY + totRowH - 7);
 
-    drawText(page, 'TOTAL (incl. GST)', {
+    drawText(page, 'TOTAL (incl. tax)', {
       x: colDesc + 4, y: totTextY, size: 8,
       font: fontBold, color: C_INK, maxWidth: descW + 80 + 60 - 8,
     });
 
     topBids.forEach((bid, i) => {
-      const subtotal = rfqItems.reduce((sum, item) => {
-        const bi  = bidItemsMap[bid.bid_id]?.[item.id];
-        const up  = bi ? bi.unit_price : 0;
-        const qty = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
-        return sum + up * qty;
+      const grandTotal = rfqItems.reduce((sum, item) => {
+        const bi      = bidItemsMap[bid.bid_id]?.[item.id];
+        const up      = bi ? bi.unit_price : 0;
+        const qty     = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
+        const taxRate = bi ? (bi.tax_rate ?? 0) : 0;
+        return sum + up * qty * (1 + taxRate / 100);
       }, 0);
-      const gstRate    = parseFloat(bid.gst) || 0;
-      const grandTotal = subtotal * (1 + gstRate / 100);
 
       drawText(page, `${bid.currency || rfq.currency || ''} ${fmt(grandTotal)}`, {
         x: vendorCols[i] + 4, y: totTextY, size: 8,
@@ -341,22 +341,7 @@ export async function GET(request, { params }) {
 
     cursorY += totRowH;
 
-    // GST rate row
-    fillRect(page, margin, py(cursorY + rowH), contentW, rowH, C_SURFACE);
-    const gstTextY = py(cursorY + rowH - 6);
-    drawText(page, 'GST Rate', {
-      x: colDesc + 4, y: gstTextY, size: 7.5,
-      font: fontNormal, color: C_INK_SOFT, maxWidth: descW + 80 + 60 - 8,
-    });
-    topBids.forEach((bid, i) => {
-      const gstRate = parseFloat(bid.gst) || 0;
-      drawText(page, `${gstRate}%`, {
-        x: vendorCols[i] + 4, y: gstTextY, size: 7.5,
-        font: fontNormal, color: C_INK_SOFT, maxWidth: vendorColW - 8, align: 'right',
-      });
-    });
-
-    cursorY += rowH + 16;
+    cursorY += 16;
 
     // ── Vendor summary section ─────────────────────────────────────────────────
     drawText(page, 'Vendor Summary', {
@@ -372,7 +357,6 @@ export async function GET(request, { params }) {
       { label: 'Vendor',            val: b => b.vendor_name },
       { label: 'Payment Terms',     val: b => b.payment_terms ? `Net ${b.payment_terms} days` : '-' },
       { label: 'Freight / Unit',    val: b => parseFloat(b.freight_charges) > 0 ? `${b.currency || rfq.currency || ''} ${fmt(b.freight_charges)}` : '-' },
-      { label: 'Bid Rate / Factor', val: b => b.rate !== '' && b.rate != null ? String(b.rate) : '-' },
       { label: 'Remarks',           val: b => b.last_remarks || '-' },
       { label: 'Submitted',         val: b => fmtDate(b.submitted_at) },
     ];
