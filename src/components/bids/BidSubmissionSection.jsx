@@ -25,7 +25,8 @@ export default function BidSubmissionSection({
   const submittedTotal = parseFloat(bid?.total_amount || 0);
   const maxAllowed     = submittedTotal - 100;
   const meetsMinimum   = currentTotal <= maxAllowed && currentTotal > 0;
-  const shortfall      = maxAllowed - currentTotal;
+  // How much more the user needs to reduce (always non-negative)
+  const shortfall      = Math.max(0, currentTotal - maxAllowed);
 
   const hasPrices = bidItems.length > 0 && bidItems.some(i => (parseFloat(i.unit_price) || 0) > 0);
 
@@ -92,7 +93,7 @@ export default function BidSubmissionSection({
               ) : (
                 <>
                   ⚠ Current total ({currency} {currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — reduce by{' '}
-                  at least {currency} {shortfall > 0 ? shortfall.toFixed(2) : '100.00'} more to meet the minimum 100 {currency} reduction.
+                  at least {currency} {shortfall.toFixed(2)} more to meet the minimum 100 {currency} reduction.
                   Required maximum: {currency} {maxAllowed.toFixed(2)}.
                 </>
               )}

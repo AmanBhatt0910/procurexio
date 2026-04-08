@@ -100,7 +100,7 @@ export async function PUT(request, { params }) {
 
     // Validate minimum 100-unit reduction — new bid must be at least 100 lower than current
     const oldTotal = parseFloat(bid.total_amount);
-    if (newTotalAmount >= oldTotal - 100) {
+    if (newTotalAmount > oldTotal - 100) {
       const cur = currency || rfq.currency || '';
       return NextResponse.json(
         {
