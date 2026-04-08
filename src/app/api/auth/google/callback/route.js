@@ -48,6 +48,26 @@ async function exchangeCodeForTokens(code, redirectUri) {
   return res.json();
 }
 
+/**
+ * Get the base URL from the request headers
+ * This ensures redirects use the correct domain (production or localhost)
+ */
+function getBaseUrl(request) {
+  const headers = request.headers;
+  const protocol = headers.get('x-forwarded-proto') || 'https';
+  const host = headers.get('host') || headers.get('x-forwarded-host');
+  
+  // For development, allow localhost with ports
+  if (host && (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    return `${protocol}://${host}`;
+  }
+  
+  // For production, use the actual domain
+  // Remove any port numbers for production domains
+  const cleanHost = host ? host.split(':')[0] : host;
+  return `${protocol}://${cleanHost}`;
+}
+
 /** Fetch the authenticated user's profile from Google using an access token. */
 async function fetchGoogleProfile(accessToken) {
   const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -81,7 +101,9 @@ function buildClearStateCookie(isSecure) {
  * All error/rejection paths use this so the CSRF token is consumed immediately.
  */
 function redirectAndClearState(request, path, clearStateCookie) {
-  const res = NextResponse.redirect(new URL(path, request.url));
+  const baseUrl = getBaseUrl(request);
+  const redirectUrl = new URL(path, baseUrl);
+  const res = NextResponse.redirect(redirectUrl);
   res.headers.append('Set-Cookie', clearStateCookie);
   return res;
 }
@@ -98,6 +120,7 @@ export async function GET(request) {
 
   const isSecure       = getCookieSecure(request);
   const clearStateCookie = buildClearStateCookie(isSecure);
+  const baseUrl = getBaseUrl(request);
 
   // ── User declined consent on Google's screen ────────────────────────────
   if (error) {
@@ -209,9 +232,9 @@ export async function GET(request) {
         status:       'success',
       });
 
-      const res = NextResponse.redirect(
-        new URL('/dashboard?linked=google', request.url)
-      );
+      // Fix: Use baseUrl instead of request.url
+      const dashboardUrl = new URL('/dashboard?linked=google', baseUrl);
+      const res = NextResponse.redirect(dashboardUrl);
       res.headers.append('Set-Cookie', clearStateCookie);
       return res;
     }
@@ -355,7 +378,9 @@ export async function GET(request) {
       ? '/dashboard/admin'
       : (intendedRedirect || '/dashboard');
 
-    const response = NextResponse.redirect(new URL(dest, request.url));
+    // Fix: Use baseUrl instead of request.url
+    const redirectUrl = new URL(dest, baseUrl);
+    const response = NextResponse.redirect(redirectUrl);
     response.headers.set('Set-Cookie', authCookie);
     response.headers.append('Set-Cookie', clearStateCookie);
     return response;
