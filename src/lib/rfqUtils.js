@@ -66,17 +66,44 @@ export async function sendRFQClosureEmails(rfqId) {
   const totalBids = bids.length;
   const biddedVendorIds = new Set(bids.map(b => b.vendor_id));
 
+  // Collect all relevant vendor IDs upfront (both bidders and invited non-bidders)
+  const [invitedVendors] = await pool.query(
+    `SELECT rv.vendor_id, v.name AS vendor_name
+       FROM rfq_vendors rv
+       JOIN vendors v ON v.id = rv.vendor_id
+      WHERE rv.rfq_id = ?`,
+    [rfqId]
+  );
+
+  // Combine all vendor IDs so we can fetch their users in a single query
+  const nonBidderVendors = invitedVendors.filter(iv => !biddedVendorIds.has(iv.vendor_id));
+  const allVendorIds = [
+    ...bids.map(b => b.vendor_id),
+    ...nonBidderVendors.map(iv => iv.vendor_id),
+  ];
+
+  // Fetch user emails for all vendors in one query, grouped per vendor
+  const vendorUserMap = new Map(); // vendor_id → string[]
+  if (allVendorIds.length) {
+    const placeholders = allVendorIds.map(() => '?').join(', ');
+    const [userRows] = await pool.query(
+      `SELECT u.vendor_id, u.email
+         FROM users u
+        WHERE u.vendor_id IN (${placeholders}) AND u.is_active = 1`,
+      allVendorIds
+    );
+    for (const row of userRows) {
+      if (!vendorUserMap.has(row.vendor_id)) vendorUserMap.set(row.vendor_id, []);
+      const list = vendorUserMap.get(row.vendor_id);
+      if (list.length < MAX_VENDOR_USERS_PER_EMAIL) list.push(row.email);
+    }
+  }
+
   // Send ranked emails to vendors who bid
   for (let i = 0; i < bids.length; i++) {
     const bid = bids[i];
-    // Each vendor may have multiple users — fetch the primary user email
-    const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ?`,
-      [bid.vendor_id, MAX_VENDOR_USERS_PER_EMAIL]
-    );
-    if (!vendorUsers.length) continue;
-
-    const emails = vendorUsers.map(u => u.email);
+    const emails = vendorUserMap.get(bid.vendor_id) || [];
+    if (!emails.length) continue;
     try {
       await sendRFQClosedEmail({
         to:            emails,
@@ -93,24 +120,9 @@ export async function sendRFQClosureEmails(rfqId) {
   }
 
   // Send emails to invited vendors who did NOT bid
-  const [invitedVendors] = await pool.query(
-    `SELECT rv.vendor_id, v.name AS vendor_name
-       FROM rfq_vendors rv
-       JOIN vendors v ON v.id = rv.vendor_id
-      WHERE rv.rfq_id = ?`,
-    [rfqId]
-  );
-
-  for (const invited of invitedVendors) {
-    if (biddedVendorIds.has(invited.vendor_id)) continue; // already handled above
-
-    const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ?`,
-      [invited.vendor_id, MAX_VENDOR_USERS_PER_EMAIL]
-    );
-    if (!vendorUsers.length) continue;
-
-    const emails = vendorUsers.map(u => u.email);
+  for (const invited of nonBidderVendors) {
+    const emails = vendorUserMap.get(invited.vendor_id) || [];
+    if (!emails.length) continue;
     try {
       await sendRFQClosedEmail({
         to:            emails,

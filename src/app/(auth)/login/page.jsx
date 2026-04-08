@@ -111,6 +111,8 @@ function LoginForm() {
     setGoogleLoading(true);
     // Full-page navigation so the browser sends cookies along.
     // Forward the redirect destination so the OAuth callback can honour it.
+    // Only forward a non-default redirect path so the OAuth callback doesn't
+    // needlessly embed '/dashboard' in the state parameter (it's the fallback anyway).
     const dest = redirect.startsWith('/') && redirect !== '/dashboard' ? redirect : null;
     const loginUrl = dest
       ? `/api/auth/google/login?redirect=${encodeURIComponent(dest)}`
