@@ -4,5 +4,5 @@
 -- ============================================================
 
 ALTER TABLE bid_items
-  ADD COLUMN IF NOT EXISTS tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00
+  ADD COLUMN tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00
   AFTER notes;
