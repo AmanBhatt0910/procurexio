@@ -8,3 +8,4 @@ mysql -u root -p procurement_db < 5evaluation_schema.sql
 mysql -u root -p procurement_db < 6notification_schema.sql
 mysql -u root -p procurement_db < 7_security_schema.sql
 mysql -u root -p procurement_db < 8bid_attachments_schema.sql
+mysql -u root -p procurement_db < 9_oauth_schema.sql
