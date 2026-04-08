@@ -31,13 +31,17 @@ export async function GET(request) {
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get('action') === 'link' ? 'link' : 'login';
+  // Preserve the intended destination so the callback can redirect there after login
+  const redirect = searchParams.get('redirect') || null;
 
   // ── CSRF protection ────────────────────────────────────────────────────────
   // Generate a random token that is stored in an HttpOnly cookie and also
   // embedded inside the OAuth state parameter.  The callback verifies that
   // both values match before accepting any token from Google.
   const csrf  = randomBytes(32).toString('hex');
-  const state = Buffer.from(JSON.stringify({ csrf, action })).toString('base64url');
+  const statePayload = { csrf, action };
+  if (redirect) statePayload.redirect = redirect;
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
   const params = new URLSearchParams({
     client_id:     clientId,

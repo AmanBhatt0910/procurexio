@@ -16,7 +16,6 @@ export const MAX_LENGTHS = {
   title:       500,
   description: 5000,
   address:     500,
-  notes:       2000,
   currency:    10,
   url:         2048,
   password:    1024, // bcrypt hard limit is 72 bytes; reject absurdly long inputs

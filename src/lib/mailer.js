@@ -593,6 +593,58 @@ export async function sendBidUpdatedEmail({ to, managerName, vendorName, rfqTitl
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// sendRFQClosedEmail — notify a vendor that an RFQ has been closed
+// rank: 1-based position of the vendor's bid (null if they didn't bid)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendRFQClosedEmail({ to, vendorName, rfqTitle, rfqReference, rank, totalBids, dashboardLink }) {
+  const year = new Date().getFullYear();
+  const rankText = rank != null
+    ? `Your bid was ranked <strong>#${rank}</strong> out of ${totalBids} bid${totalBids !== 1 ? 's' : ''} received.`
+    : 'You were invited to this RFQ but did not submit a bid.';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>RFQ Closed</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Closed</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
+          The following RFQ has now been closed and is no longer accepting bids.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ Details</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+          </td></tr>
+        </table>
+        <p style="font-size:14px;color:#6b6660;line-height:1.6;">${rankText}</p>
+        <p style="font-size:14px;color:#6b6660;line-height:1.6;">The buyer will review all bids and announce the award shortly. We appreciate your participation.</p>
+        ${dashboardLink ? `<a href="${dashboardLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;margin-top:8px;">View in Dashboard</a>` : ''}
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `RFQ Closed — ${rfqTitle}`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // sendContractAwardedEmail — notify the winning vendor of their win
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendContractAwardedEmail({ to, vendorName, rfqTitle, rfqReference, contractReference, dashboardLink }) {
