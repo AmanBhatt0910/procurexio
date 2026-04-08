@@ -86,24 +86,26 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { items = [], notes, currency } = body;
 
-    // Calculate new total from items (tax-inclusive per line)
+    // Calculate new total from items (no tax — tax display removed from bid form)
     const newTotalAmount = items.reduce((sum, item) => {
-      const up      = parseFloat(item.unit_price) || 0;
-      const qty     = parseFloat(item.quantity)   || 1;
-      const taxRate = parseFloat(item.tax_rate)   || 0;
-      return sum + up * qty * (1 + taxRate / 100);
+      const up  = parseFloat(item.unit_price) || 0;
+      const qty = parseFloat(item.quantity)   || 1;
+      return sum + up * qty;
     }, 0);
 
     if (newTotalAmount <= 0) {
       return NextResponse.json({ error: 'Bid total must be greater than zero' }, { status: 422 });
     }
 
-    // Validate minimum ₹100 change
+    // Validate minimum ₹100 reduction — new bid must be strictly lower by at least ₹100
     const oldTotal = parseFloat(bid.total_amount);
-    const diff = Math.abs(newTotalAmount - oldTotal);
-    if (diff < 100) {
+    if (newTotalAmount > oldTotal - 100) {
       return NextResponse.json(
-        { error: `Minimum change must be ₹100. Current bid: ₹${oldTotal.toFixed(2)}, required minimum change: ₹100.00` },
+        {
+          error: `New bid must be at least ₹100 lower than your current bid`,
+          currentAmount: oldTotal,
+          requiredMaximum: parseFloat((oldTotal - 100).toFixed(2)),
+        },
         { status: 422 }
       );
     }
@@ -114,15 +116,14 @@ export async function PUT(request, { params }) {
 
       // Upsert bid items
       for (const item of items) {
-        const { rfq_item_id, unit_price, quantity, notes: iNotes, tax_rate } = item;
-        const up      = parseFloat(unit_price) || 0;
-        const qty     = parseFloat(quantity)   || 1;
-        const taxRate = parseFloat(tax_rate)   || 0;
+        const { rfq_item_id, unit_price, quantity, notes: iNotes } = item;
+        const up  = parseFloat(unit_price) || 0;
+        const qty = parseFloat(quantity)   || 1;
         await conn.query(
           `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes, tax_rate)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = VALUES(tax_rate)`,
-          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null, taxRate]
+           VALUES (?, ?, ?, ?, ?, ?, 0)
+           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = 0`,
+          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null]
         );
       }
 

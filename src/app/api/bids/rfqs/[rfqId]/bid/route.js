@@ -130,16 +130,15 @@ export async function PUT(request, { params }) {
       // Upsert bid_items
       let totalAmount = 0;
       for (const item of items) {
-        const { rfq_item_id, unit_price, quantity, notes: iNotes, tax_rate } = item;
-        const up      = parseFloat(unit_price) || 0;
-        const qty     = parseFloat(quantity)   || 1;
-        const taxRate = parseFloat(tax_rate)   || 0;
+        const { rfq_item_id, unit_price, quantity, notes: iNotes } = item;
+        const up  = parseFloat(unit_price) || 0;
+        const qty = parseFloat(quantity)   || 1;
         totalAmount += up * qty;
         await conn.query(
           `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes, tax_rate)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = VALUES(tax_rate)`,
-          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null, taxRate]
+           VALUES (?, ?, ?, ?, ?, ?, 0)
+           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = 0`,
+          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null]
         );
       }
 

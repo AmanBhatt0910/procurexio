@@ -3,8 +3,6 @@
 'use client';
 import { useReducer, useEffect } from 'react';
 
-const TAX_RATES = [0, 5, 12, 18, 28];
-
 function rowsReducer(state, action) {
   switch (action.type) {
     case 'RESET':
@@ -28,7 +26,6 @@ function computeRows(rfqItems, initialItems) {
       unit:         item.unit,
       target_price: item.target_price,
       unit_price:   existing ? existing.unit_price : '',
-      tax_rate:     existing ? (parseFloat(existing.tax_rate) ?? 0) : 0,
       notes:        existing ? existing.notes : '',
     };
   });
@@ -54,7 +51,6 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
           rfq_item_id: r.rfq_item_id,
           unit_price:  parseFloat(r.unit_price) || 0,
           quantity:    parseFloat(r.quantity) || 0,
-          tax_rate:    parseFloat(r.tax_rate) || 0,
           notes:       r.notes || '',
         }))
       );
@@ -66,15 +62,6 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
     const qty = parseFloat(r.quantity)   || 0;
     return sum + up * qty;
   }, 0);
-
-  const totalTax = rows.reduce((sum, r) => {
-    const up      = parseFloat(r.unit_price) || 0;
-    const qty     = parseFloat(r.quantity)   || 0;
-    const taxRate = parseFloat(r.tax_rate)   || 0;
-    return sum + up * qty * (taxRate / 100);
-  }, 0);
-
-  const grandTotal = subtotal + totalTax;
 
   return (
     <>
@@ -130,20 +117,6 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
           font-size: .88rem; color: var(--ink-soft, #6b6660);
           font-family: 'DM Sans', sans-serif;
         }
-        .tax-select {
-          padding: 6px 8px; border: 1px solid var(--border, #e4e0db);
-          border-radius: 6px; font-size: .82rem; font-family: 'DM Sans', sans-serif;
-          color: var(--ink, #0f0e0d); background: #fff; cursor: pointer;
-          outline: none; width: 100%;
-        }
-        .tax-select:focus { border-color: var(--accent, #c8501a); }
-        .tax-select:disabled { background: #f5f4f2; cursor: not-allowed; }
-        .tax-badge {
-          display: inline-flex; align-items: center;
-          padding: 2px 8px; border-radius: 4px;
-          background: #eff6ff; color: #1d4ed8;
-          font-size: .75rem; font-weight: 500; white-space: nowrap;
-        }
       `}</style>
 
       <div style={{ overflowX: 'auto', border: '1px solid var(--border, #e4e0db)', borderRadius: 'var(--radius, 10px)', background: '#fff' }}>
@@ -156,7 +129,6 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
               <th style={{ width: '60px' }}>Unit</th>
               <th style={{ width: '120px' }}>Target Price</th>
               <th style={{ width: '140px' }}>Your Unit Price</th>
-              <th style={{ width: '90px' }}>Tax %</th>
               <th style={{ width: '120px' }} className="right">Line Total</th>
               {!readOnly && <th style={{ width: '160px' }}>Notes</th>}
             </tr>
@@ -165,10 +137,7 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
             {rows.map((row, idx) => {
               const up         = parseFloat(row.unit_price) || 0;
               const qty        = parseFloat(row.quantity)   || 0;
-              const taxRate    = parseFloat(row.tax_rate)   || 0;
-              const lineNet    = up * qty;
-              const lineTax    = lineNet * (taxRate / 100);
-              const lineTotal  = lineNet + lineTax;
+              const lineTotal  = up * qty;
               const hasTarget  = row.target_price != null && row.target_price > 0;
               const diff = hasTarget && row.unit_price !== ''
                 ? parseFloat(row.unit_price) - parseFloat(row.target_price)
@@ -219,30 +188,10 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
                       </div>
                     )}
                   </td>
-                  <td>
-                    {readOnly ? (
-                      <span className="tax-badge">{taxRate}%</span>
-                    ) : (
-                      <select
-                        className="tax-select"
-                        value={taxRate}
-                        onChange={e => update(idx, 'tax_rate', Number(e.target.value))}
-                      >
-                        {TAX_RATES.map(r => (
-                          <option key={r} value={r}>{r === 0 ? '0% (None)' : `${r}%`}</option>
-                        ))}
-                      </select>
-                    )}
-                  </td>
                   <td className="price-cell" style={{ fontWeight: 500 }}>
                     {lineTotal > 0
                       ? lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : '—'}
-                    {lineTax > 0 && (
-                      <div style={{ fontSize: '.72rem', color: '#1d4ed8', marginTop: 2 }}>
-                        +{lineTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tax
-                      </div>
-                    )}
                   </td>
                   {!readOnly && (
                     <td>
@@ -259,33 +208,12 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
                 </tr>
               );
             })}
-            {/* Subtotal row */}
-            <tr className="subtotal-row">
-              <td colSpan={readOnly ? 6 : 6} />
-              <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>SUBTOTAL</td>
-              <td className="price-cell" style={{ fontSize: '.95rem', color: 'var(--ink-soft)' }}>
-                {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              {!readOnly && <td />}
-            </tr>
-            {totalTax > 0 && (
-              <tr className="subtotal-row">
-                <td colSpan={readOnly ? 6 : 6} />
-                <td style={{ textAlign: 'right' }}>
-                  <span className="tax-badge">TOTAL TAX</span>
-                </td>
-                <td className="price-cell" style={{ fontSize: '.95rem', color: '#1d4ed8' }}>
-                  {totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                {!readOnly && <td />}
-              </tr>
-            )}
-            {/* Grand Total row */}
+            {/* Subtotal / Total row */}
             <tr className="total-row">
-              <td colSpan={readOnly ? 6 : 6} />
-              <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>TOTAL BID</td>
+              <td colSpan={5} />
+              <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>BID TOTAL</td>
               <td className="price-cell" style={{ fontSize: '1rem', color: 'var(--ink)' }}>
-                {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               {!readOnly && <td />}
             </tr>
