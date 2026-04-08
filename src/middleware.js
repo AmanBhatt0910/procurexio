@@ -259,6 +259,15 @@ function applySecurityHeaders(response) {
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.includes('.') ||
+    pathname.includes('google')
+  ) {
+    return NextResponse.next();
+  }
+
   // ── 1. Rate limiting (applies to all /api/* requests, including public auth routes)
   if (pathname.startsWith('/api/')) {
     const limited = await applyRateLimit(request);
@@ -355,5 +364,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next|favicon.ico|.*\\..*).*)'],
 };
