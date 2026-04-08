@@ -356,12 +356,11 @@ export default function VendorBidWorkspacePage() {
   async function handleSave() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      // Calculate new subtotal from bidItems (before GST)
+      // Calculate new subtotal from bidItems (tax_rate is for reference only, not added to total)
       const newTotal = bidItems.reduce((sum, item) => {
-        const up      = parseFloat(item.unit_price) || 0;
-        const qty     = parseFloat(item.quantity)   || 1;
-        const taxRate = parseFloat(item.tax_rate)   || 0;
-        return sum + up * qty * (1 + taxRate / 100);
+        const up  = parseFloat(item.unit_price) || 0;
+        const qty = parseFloat(item.quantity)   || 1;
+        return sum + up * qty;
       }, 0);
 
       // Enforce ₹100 minimum change when editing a previously submitted bid
@@ -927,7 +926,7 @@ export default function VendorBidWorkspacePage() {
                       <label>Notes / Cover Message (optional)</label>
                       <textarea
                         className="form-control"
-                        rows={2}
+                        rows={4}
                         placeholder="Any overall notes for the buyer…"
                         value={notes}
                         onChange={e => setNotes(e.target.value)}

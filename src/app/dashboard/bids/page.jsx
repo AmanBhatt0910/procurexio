@@ -14,6 +14,71 @@ function RedirectToDashboard() {
   return null;
 }
 
+// ── Countdown Timer Component ──────────────────────────────────────────────
+const MS_PER_DAY    = 86400000;
+const MS_PER_HOUR   = 3600000;
+const MS_PER_MINUTE = 60000;
+const MS_PER_SECOND = 1000;
+const padTimeValue = n => String(n).padStart(2, '0');
+
+function CountdownTimer({ deadline }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const calc = () => {
+      const diff = new Date(deadline) - new Date();
+      if (diff <= 0) { setTimeLeft({ expired: true }); return; }
+      setTimeLeft({
+        expired: false,
+        diff,
+        days:    Math.floor(diff / MS_PER_DAY),
+        hours:   Math.floor((diff % MS_PER_DAY)    / MS_PER_HOUR),
+        minutes: Math.floor((diff % MS_PER_HOUR)   / MS_PER_MINUTE),
+        seconds: Math.floor((diff % MS_PER_MINUTE) / MS_PER_SECOND),
+      });
+    };
+    calc();
+    const id = setInterval(calc, MS_PER_SECOND);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  if (!timeLeft) return <span style={{ color: 'var(--ink-faint)', fontSize: '.82rem' }}>—</span>;
+
+  if (timeLeft.expired) {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        background: '#fdf0eb', border: '1px solid #f5c9b6',
+        borderRadius: 6, padding: '3px 8px',
+        color: '#c8501a', fontWeight: 600, fontSize: '.78rem',
+      }}>
+        🔒 Closed
+      </span>
+    );
+  }
+
+  const isUrgent  = timeLeft.diff < MS_PER_DAY;
+  const isWarning = timeLeft.diff < 3 * MS_PER_DAY;
+  const bg  = isUrgent  ? '#fdf0eb' : isWarning ? '#fff8e8' : '#e8f5ee';
+  const brd = isUrgent  ? '#f5c9b6' : isWarning ? '#f5dfa0' : '#6ee7b7';
+  const clr = isUrgent  ? '#c8501a' : isWarning ? '#8a6500' : '#1a7a4a';
+  const icon = isUrgent ? '⚡' : isWarning ? '⏰' : '🟢';
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      background: bg, border: `1px solid ${brd}`,
+      borderRadius: 6, padding: '3px 8px', color: clr,
+      fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap',
+    }}>
+      {icon}{' '}
+      {timeLeft.days > 0 && `${timeLeft.days}d `}
+      {padTimeValue(timeLeft.hours)}h {padTimeValue(timeLeft.minutes)}m {padTimeValue(timeLeft.seconds)}s
+    </span>
+  );
+}
+
 const PAGE_LIMIT = 20;
 
 export default function VendorBidsPage() {
@@ -85,6 +150,11 @@ export default function VendorBidsPage() {
           </span>
         );
       },
+    },
+    {
+      key: 'deadline',
+      label: 'Time Remaining',
+      render: (val) => <CountdownTimer deadline={val} />,
     },
     {
       key: 'bid_status',
