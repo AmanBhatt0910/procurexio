@@ -103,7 +103,7 @@ function CountdownTimer({ deadline }) {
 function OutcomeBanner({ outcome, rfqClosed }) {
   if (!outcome && !rfqClosed) return null;
   // Only show the banner when the RFQ is closed or when there is a final outcome
-  if (outcome && (outcome.bidStatus === 'draft')) return null;
+  if (outcome && outcome.bidStatus === 'draft') return null;
   if (!rfqClosed && outcome && outcome.bidStatus === 'submitted') return null;
 
   function fmt(amount, currency) {

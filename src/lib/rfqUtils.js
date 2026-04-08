@@ -4,6 +4,9 @@
 import pool from '@/lib/db';
 import { sendRFQClosedEmail } from '@/lib/mailer';
 
+// Maximum number of user email addresses fetched per vendor when sending closure emails
+const MAX_VENDOR_USERS_PER_EMAIL = 5;
+
 /**
  * If the RFQ deadline has passed and the status is still 'published',
  * automatically transition it to 'closed' and notify vendors.
@@ -68,8 +71,7 @@ export async function sendRFQClosureEmails(rfqId) {
     const bid = bids[i];
     // Each vendor may have multiple users — fetch the primary user email
     const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT 5`,
-      [bid.vendor_id]
+      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ${MAX_VENDOR_USERS_PER_EMAIL}`,
     );
     if (!vendorUsers.length) continue;
 
@@ -102,7 +104,7 @@ export async function sendRFQClosureEmails(rfqId) {
     if (biddedVendorIds.has(invited.vendor_id)) continue; // already handled above
 
     const [vendorUsers] = await pool.query(
-      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT 5`,
+      `SELECT u.email FROM users u WHERE u.vendor_id = ? AND u.is_active = 1 LIMIT ${MAX_VENDOR_USERS_PER_EMAIL}`,
       [invited.vendor_id]
     );
     if (!vendorUsers.length) continue;
