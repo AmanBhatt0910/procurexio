@@ -98,6 +98,8 @@ function CountdownTimer({ deadline }) {
 export default function BidHeader({ rfq, rfqItems, isPastDeadline }) {
   if (!rfq) return null;
 
+  const isClosedStatus = rfq.status === 'closed' || rfq.status === 'cancelled';
+
   return (
     <div className="rfq-meta-card">
       <div style={{
@@ -109,7 +111,7 @@ export default function BidHeader({ rfq, rfqItems, isPastDeadline }) {
           <span className="section-label">RFQ Details</span>
           <RFQStatusBadge status={rfq.status} />
         </div>
-        {rfq.deadline && <CountdownTimer deadline={rfq.deadline} />}
+        {rfq.deadline && !isClosedStatus && <CountdownTimer deadline={rfq.deadline} />}
       </div>
 
       {rfq.description && (

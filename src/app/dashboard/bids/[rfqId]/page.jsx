@@ -8,6 +8,7 @@ import BidItemsForm from '@/components/bids/BidItemsForm';
 import BidHeader from '@/components/bids/BidHeader';
 import BidValidationMessages from '@/components/bids/BidValidationMessages';
 import BidSubmissionSection from '@/components/bids/BidSubmissionSection';
+import BidWorkflowSteps from '@/components/bids/BidWorkflowSteps';
 import Modal from '@/components/ui/Modal';
 
 const EMPTY_ALT_FORM = {
@@ -53,6 +54,9 @@ function RankCard({ rank, totalBids }) {
     </div>
   );
 }
+
+// Minimum bid reduction required when updating a submitted bid (in currency units)
+const MIN_BID_REDUCTION = 100;
 
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
@@ -158,6 +162,15 @@ export default function VendorBidWorkspacePage() {
   const canEdit       = bid && bid.status === 'draft'     && !isLocked;
   const canUpdate     = bid && bid.status === 'submitted' && !isLocked;
   const canWithdraw   = bid?.status === 'submitted' && !isLocked;
+
+  // Derive the current workflow step (1-based 1..4)
+  const workflowStep = (() => {
+    if (!bid) return 1;
+    if (bid.status === 'submitted' || bid.status === 'awarded' || bid.status === 'rejected') return 4;
+    const hasPrices = (bid.items || []).some(i => (parseFloat(i.unit_price) || 0) > 0);
+    if (hasPrices) return 3;
+    return 2;
+  })();
 
   // ── File Attachments ────────────────────────────────────────────────────
   async function handleFileUpload(e) {
@@ -541,6 +554,9 @@ export default function VendorBidWorkspacePage() {
               }
             />
 
+            {/* Workflow step indicator */}
+            <BidWorkflowSteps currentStep={workflowStep} isLocked={isLocked} />
+
             {/* RFQ Details + Countdown */}
             <BidHeader rfq={rfq} rfqItems={rfqItems} isPastDeadline={isPastDeadline} />
 
@@ -660,11 +676,11 @@ export default function VendorBidWorkspacePage() {
                       <div className="update-panel-sub">
                         {(() => {
                           const total    = parseFloat(bid.total_amount || 0);
-                          const maxBid   = total - 100;
+                          const maxBid   = total - MIN_BID_REDUCTION;
                           const fmtAmt   = (n) => `${currency} ${parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                           return (
                             <>
-                              Your new bid must be at least <strong>100 {currency} lower</strong> than your
+                              Your new bid must be at least <strong>{MIN_BID_REDUCTION} {currency} lower</strong> than your
                               current bid of {fmtAmt(total)}. Maximum allowed: {fmtAmt(maxBid)}.
                               Adjust your item prices below — live feedback shows whether your total qualifies.
                             </>
@@ -1027,47 +1043,111 @@ export default function VendorBidWorkspacePage() {
           open={confirmModal.open}
           onClose={() => setConfirmModal({ open: false, action: '' })}
           title={
-            confirmModal.action === 'submit'   ? 'Submit Bid'  :
-            confirmModal.action === 'update'   ? 'Update Bid'  :
-            'Withdraw Bid'
+            confirmModal.action === 'submit'   ? 'Confirm Bid Submission'  :
+            confirmModal.action === 'update'   ? 'Confirm Bid Update'      :
+            'Confirm Bid Withdrawal'
           }
-          width={460}
+          width={500}
         >
           {confirmModal.action === 'submit' ? (
             <>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: '#fdf0eb', border: '1px solid #f5c9b6',
+                borderRadius: 8, padding: '14px 16px', marginBottom: 16,
+              }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>📤</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '.92rem', color: 'var(--accent)', marginBottom: 2 }}>
+                    Ready to submit your bid?
+                  </div>
+                  <div style={{ fontSize: '.82rem', color: '#8a4010' }}>
+                    Once submitted, the buyer can see your prices.
+                    You can still withdraw it before the deadline.
+                  </div>
+                </div>
+              </div>
               <p className="confirm-text">
-                Are you sure you want to submit your bid? Once submitted, the buyer will be able to see your prices.
-                You can still withdraw it before the deadline.
+                Please review your item prices before confirming. The buyer will receive a notification and will be able to see your prices immediately.
               </p>
               <div className="confirm-actions">
-                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
-                <button className="btn btn-accent" disabled={saving} onClick={handleSubmit}>
-                  {saving ? 'Submitting…' : 'Yes, Submit Bid'}
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-accent"
+                  disabled={saving}
+                  onClick={handleSubmit}
+                  style={{ minWidth: 140, fontSize: '.92rem' }}
+                >
+                  {saving ? 'Submitting…' : '✓ Yes, Submit Bid'}
                 </button>
               </div>
             </>
           ) : confirmModal.action === 'update' ? (
             <>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: '#fff8e8', border: '1px solid #f5dfa0',
+                borderRadius: 8, padding: '14px 16px', marginBottom: 16,
+              }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✏️</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '.92rem', color: '#8a6500', marginBottom: 2 }}>
+                    Updating your submitted bid
+                  </div>
+                  <div style={{ fontSize: '.82rem', color: '#8a6500', opacity: .85 }}>
+                    Your new prices must be at least <strong>{MIN_BID_REDUCTION} {currency} lower</strong> than your current bid.
+                  </div>
+                </div>
+              </div>
               <p className="confirm-text">
-                Are you sure you want to update your submitted bid? Your new prices will replace your current
-                submission. The bid total must be at least <strong>100 {currency} lower</strong> than your current bid.
+                Your new prices will replace your current submission. The buyer will see the updated figures.
               </p>
               <div className="confirm-actions">
-                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
-                <button className="btn btn-accent" disabled={saving} onClick={handleUpdate}>
-                  {saving ? 'Updating…' : 'Yes, Update Bid'}
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-accent"
+                  disabled={saving}
+                  onClick={handleUpdate}
+                  style={{ minWidth: 140, fontSize: '.92rem' }}
+                >
+                  {saving ? 'Updating…' : '✓ Yes, Update Bid'}
                 </button>
               </div>
             </>
           ) : (
             <>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: '#fdf0eb', border: '1px solid #f5c9b6',
+                borderRadius: 8, padding: '14px 16px', marginBottom: 16,
+              }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '.92rem', color: 'var(--accent)', marginBottom: 2 }}>
+                    Withdraw your bid?
+                  </div>
+                  <div style={{ fontSize: '.82rem', color: '#8a4010' }}>
+                    Your submission will be removed. You can resubmit before the deadline.
+                  </div>
+                </div>
+              </div>
               <p className="confirm-text">
-                Are you sure you want to withdraw your bid? Your submission will be removed and you&apos;ll need to
-                resubmit if you change your mind.
+                Are you sure you want to withdraw? The buyer will no longer see your prices.
               </p>
               <div className="confirm-actions">
-                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
-                <button className="btn btn-danger" disabled={saving} onClick={handleWithdraw}>
+                <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-danger"
+                  disabled={saving}
+                  onClick={handleWithdraw}
+                  style={{ minWidth: 140, fontSize: '.92rem' }}
+                >
                   {saving ? 'Withdrawing…' : 'Yes, Withdraw'}
                 </button>
               </div>
