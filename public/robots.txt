@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /register
+Allow: /login
+Allow: /forgot-password
+Allow: /terms
+Allow: /privacy
+Allow: /contact
+
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /403
+Disallow: /reset-password
+
+Crawl-delay: 10
+
+Sitemap: https://procurexio.com/sitemap.xml

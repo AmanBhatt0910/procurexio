@@ -1,9 +1,21 @@
 // src/app/privacy/page.jsx
 import Link from 'next/link';
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://procurexio.com';
+
 export const metadata = {
   title: 'Privacy Policy — Procurexio',
-  description: 'Procurexio Privacy Policy — how we collect, use, and protect your data.',
+  description:
+    'Learn how Procurexio collects, uses, and protects your data. Our Privacy Policy covers GDPR compliance, multi-tenant data segregation, and your rights.',
+  alternates: {
+    canonical: `${baseUrl}/privacy`,
+  },
+  openGraph: {
+    title: 'Privacy Policy — Procurexio',
+    description:
+      'Learn how Procurexio collects, uses, and protects your data. Our Privacy Policy covers GDPR compliance, multi-tenant data segregation, and your rights.',
+    url: `${baseUrl}/privacy`,
+  },
 };
 
 export default function PrivacyPage() {
