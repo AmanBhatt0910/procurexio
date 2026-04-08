@@ -168,4 +168,10 @@ export const ACTION = {
   // Invitations
   INVITATION_CREATED:       'invitation_created',
   INVITATION_ACCEPTED:      'invitation_accepted',
+
+  // Google OAuth
+  GOOGLE_LOGIN:             'google_login',
+  GOOGLE_ACCOUNT_LINKED:    'google_account_linked',
+  GOOGLE_ACCOUNT_UNLINKED:  'google_account_unlinked',
+  GOOGLE_AUTO_LINKED:       'google_auto_linked',
 };
