@@ -658,10 +658,18 @@ export default function VendorBidWorkspacePage() {
                     <div className="update-panel">
                       <div className="update-panel-title">✏️ Updating Your Submitted Bid</div>
                       <div className="update-panel-sub">
-                        Your new bid must be at least <strong>100 {currency} lower</strong> than your current bid of{' '}
-                        {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
-                        Maximum allowed: {currency} {(parseFloat(bid.total_amount || 0) - 100).toFixed(2)}.
-                        Adjust your item prices below — live feedback shows whether your total qualifies.
+                        {(() => {
+                          const total    = parseFloat(bid.total_amount || 0);
+                          const maxBid   = total - 100;
+                          const fmtAmt   = (n) => `${currency} ${parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                          return (
+                            <>
+                              Your new bid must be at least <strong>100 {currency} lower</strong> than your
+                              current bid of {fmtAmt(total)}. Maximum allowed: {fmtAmt(maxBid)}.
+                              Adjust your item prices below — live feedback shows whether your total qualifies.
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}

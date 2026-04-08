@@ -33,6 +33,10 @@ export default function BidSubmissionSection({
 
   if (!canEdit && !canUpdate && !canWithdraw) return null;
 
+  // Helper: format a number as "CURRENCY X,XXX.XX"
+  const fmt = (n) =>
+    `${currency} ${parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   return (
     <div className="actions-bar">
       {/* ── Draft bid actions ── */}
@@ -67,9 +71,8 @@ export default function BidSubmissionSection({
           }}>
             <span>ℹ️</span>
             <span>
-              Your new bid must be at least{' '}
-              <strong>100 {currency} lower</strong> than the current total of{' '}
-              {currency} {submittedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
+              Your new bid must be at least <strong>100 {currency} lower</strong> than the current
+              total of {fmt(submittedTotal)}.
             </span>
           </div>
         </div>
@@ -88,14 +91,14 @@ export default function BidSubmissionSection({
             }}>
               {meetsMinimum ? (
                 <>
-                  ✅ Your revised total ({currency} {currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}) is{' '}
-                  {currency} {(submittedTotal - currentTotal).toFixed(2)} lower — ready to submit.
+                  ✅ Your revised total ({fmt(currentTotal)}) is{' '}
+                  {fmt(submittedTotal - currentTotal)} lower — ready to submit.
                 </>
               ) : (
                 <>
-                  ⚠ Current total ({currency} {currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — reduce by{' '}
-                  at least {currency} {shortfall.toFixed(2)} more to meet the minimum 100 {currency} reduction.
-                  Required maximum: {currency} {maxAllowed.toFixed(2)}.
+                  ⚠ Current total ({fmt(currentTotal)}) — reduce by at least{' '}
+                  {fmt(shortfall)} more to meet the minimum 100 {currency} reduction.
+                  Required maximum: {fmt(maxAllowed)}.
                 </>
               )}
             </div>
@@ -105,7 +108,7 @@ export default function BidSubmissionSection({
               className="btn btn-accent"
               disabled={saving || !hasPrices || !meetsMinimum}
               onClick={() => onOpenConfirmModal('update')}
-              title={!meetsMinimum ? `Must be at least 100 ${currency} lower than ${currency} ${submittedTotal.toFixed(2)}` : ''}
+              title={!meetsMinimum ? `Must be at least 100 ${currency} lower than ${fmt(submittedTotal)}` : ''}
             >
               {saving ? 'Saving…' : 'Save Update'}
             </button>
