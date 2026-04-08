@@ -26,6 +26,7 @@ function computeRows(rfqItems, initialItems) {
       unit:         item.unit,
       target_price: item.target_price,
       unit_price:   existing ? existing.unit_price : '',
+      tax_rate:     existing ? (parseFloat(existing.tax_rate) || 0) : 0,
       notes:        existing ? existing.notes : '',
     };
   });
@@ -51,6 +52,7 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
           rfq_item_id: r.rfq_item_id,
           unit_price:  parseFloat(r.unit_price) || 0,
           quantity:    parseFloat(r.quantity) || 0,
+          tax_rate:    parseFloat(r.tax_rate) || 0,
           notes:       r.notes || '',
         }))
       );
