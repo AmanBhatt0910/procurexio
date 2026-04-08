@@ -13,11 +13,11 @@ export default function Footer() {
       { label: 'About', href: '#' },
       { label: 'Blog', href: '#' },
       { label: 'Careers', href: '#' },
-      { label: 'Contact', href: '#' },
+      { label: 'Contact', href: '/contact' },
     ],
     Legal: [
-      { label: 'Privacy Policy', href: '#' },
-      { label: 'Terms of Service', href: '#' },
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Terms of Service', href: '/terms' },
       { label: 'Cookie Policy', href: '#' },
       { label: 'Security', href: '#' },
     ],
@@ -211,8 +211,8 @@ export default function Footer() {
               © {new Date().getFullYear()} <span>Procurexio</span>. All rights reserved.
             </p>
             <div className="footer-bottom-links">
-              <a href="#" className="footer-bottom-link">Privacy</a>
-              <a href="#" className="footer-bottom-link">Terms</a>
+              <Link href="/privacy" className="footer-bottom-link">Privacy</Link>
+              <Link href="/terms" className="footer-bottom-link">Terms</Link>
               <a href="#" className="footer-bottom-link">Cookies</a>
             </div>
           </div>

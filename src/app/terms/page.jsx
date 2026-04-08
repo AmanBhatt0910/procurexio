@@ -1,9 +1,21 @@
 // src/app/terms/page.jsx
 import Link from 'next/link';
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://procurexio.com';
+
 export const metadata = {
   title: 'Terms of Service — Procurexio',
-  description: 'Procurexio Terms of Service for the procurement SaaS platform.',
+  description:
+    'Read the Procurexio Terms of Service. Understand your rights, responsibilities, and how we govern the use of our multi-tenant procurement SaaS platform.',
+  alternates: {
+    canonical: `${baseUrl}/terms`,
+  },
+  openGraph: {
+    title: 'Terms of Service — Procurexio',
+    description:
+      'Read the Procurexio Terms of Service. Understand your rights, responsibilities, and how we govern the use of our multi-tenant procurement SaaS platform.',
+    url: `${baseUrl}/terms`,
+  },
 };
 
 export default function TermsPage() {
