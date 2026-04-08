@@ -926,7 +926,7 @@ export default function VendorBidWorkspacePage() {
                       <label>Notes / Cover Message (optional)</label>
                       <textarea
                         className="form-control"
-                        rows={2}
+                        rows={4}
                         placeholder="Any overall notes for the buyer…"
                         value={notes}
                         onChange={e => setNotes(e.target.value)}

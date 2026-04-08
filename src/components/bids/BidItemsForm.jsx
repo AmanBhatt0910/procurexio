@@ -246,11 +246,13 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
                   </td>
                   {!readOnly && (
                     <td>
-                      <input
+                      <textarea
                         className="bid-input"
-                        type="text" placeholder="Optional note…"
+                        rows={3}
+                        placeholder="Optional note…"
                         value={row.notes ?? ''}
                         onChange={e => update(idx, 'notes', e.target.value)}
+                        style={{ resize: 'vertical', minHeight: '60px' }}
                       />
                     </td>
                   )}
