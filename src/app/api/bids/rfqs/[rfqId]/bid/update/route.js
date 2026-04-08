@@ -98,12 +98,13 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Bid total must be greater than zero' }, { status: 422 });
     }
 
-    // Validate minimum ₹100 reduction — new bid must be at least ₹100 lower than current
+    // Validate minimum 100-unit reduction — new bid must be at least 100 lower than current
     const oldTotal = parseFloat(bid.total_amount);
     if (newTotalAmount >= oldTotal - 100) {
+      const cur = currency || rfq.currency || '';
       return NextResponse.json(
         {
-          error: `Your revised bid (₹${newTotalAmount.toFixed(2)}) must be at least ₹100.00 lower than your current bid (₹${oldTotal.toFixed(2)}). Maximum allowed: ₹${(oldTotal - 100).toFixed(2)}.`,
+          error: `Your revised bid (${cur} ${newTotalAmount.toFixed(2)}) must be at least 100 ${cur} lower than your current bid (${cur} ${oldTotal.toFixed(2)}). Maximum allowed: ${cur} ${(oldTotal - 100).toFixed(2)}.`,
         },
         { status: 422 }
       );

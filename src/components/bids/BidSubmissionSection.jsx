@@ -66,7 +66,7 @@ export default function BidSubmissionSection({
             <span>ℹ️</span>
             <span>
               Your new bid must be at least{' '}
-              <strong>₹100.00 lower</strong> than the current total of{' '}
+              <strong>100 {currency} lower</strong> than the current total of{' '}
               {currency} {submittedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
             </span>
           </div>
@@ -87,13 +87,13 @@ export default function BidSubmissionSection({
               {meetsMinimum ? (
                 <>
                   ✅ Your revised total ({currency} {currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}) is{' '}
-                  ₹{(submittedTotal - currentTotal).toFixed(2)} lower — ready to submit.
+                  {currency} {(submittedTotal - currentTotal).toFixed(2)} lower — ready to submit.
                 </>
               ) : (
                 <>
                   ⚠ Current total ({currency} {currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — reduce by{' '}
-                  at least ₹{shortfall > 0 ? shortfall.toFixed(2) : '100.00'} more to meet the ₹100 minimum.
-                  Required maximum: ₹{maxAllowed.toFixed(2)}.
+                  at least {currency} {shortfall > 0 ? shortfall.toFixed(2) : '100.00'} more to meet the minimum 100 {currency} reduction.
+                  Required maximum: {currency} {maxAllowed.toFixed(2)}.
                 </>
               )}
             </div>
@@ -103,7 +103,7 @@ export default function BidSubmissionSection({
               className="btn btn-accent"
               disabled={saving || !hasPrices || !meetsMinimum}
               onClick={() => onOpenConfirmModal('update')}
-              title={!meetsMinimum ? `Must be at least ₹100.00 lower than ₹${submittedTotal.toFixed(2)}` : ''}
+              title={!meetsMinimum ? `Must be at least 100 ${currency} lower than ${currency} ${submittedTotal.toFixed(2)}` : ''}
             >
               {saving ? 'Saving…' : 'Save Update'}
             </button>

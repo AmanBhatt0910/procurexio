@@ -527,7 +527,7 @@ export default function VendorBidWorkspacePage() {
             <div className="skeleton" style={{ height: 120, marginBottom: 24 }} />
             <div className="skeleton" style={{ height: 300 }} />
           </div>
-        ) : error && !data ? (
+        ) : !rfq && error ? (
           <div className="error-box">{error}</div>
         ) : rfq ? (
           <>
@@ -658,9 +658,9 @@ export default function VendorBidWorkspacePage() {
                     <div className="update-panel">
                       <div className="update-panel-title">✏️ Updating Your Submitted Bid</div>
                       <div className="update-panel-sub">
-                        Your new bid must be at least <strong>₹100.00 lower</strong> than your current bid of{' '}
+                        Your new bid must be at least <strong>100 {currency} lower</strong> than your current bid of{' '}
                         {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
-                        Maximum allowed: ₹{(parseFloat(bid.total_amount || 0) - 100).toFixed(2)}.
+                        Maximum allowed: {currency} {(parseFloat(bid.total_amount || 0) - 100).toFixed(2)}.
                         Adjust your item prices below — live feedback shows whether your total qualifies.
                       </div>
                     </div>
@@ -1042,7 +1042,7 @@ export default function VendorBidWorkspacePage() {
             <>
               <p className="confirm-text">
                 Are you sure you want to update your submitted bid? Your new prices will replace your current
-                submission. The bid total must be at least <strong>₹100.00 lower</strong> than your current bid.
+                submission. The bid total must be at least <strong>100 {currency} lower</strong> than your current bid.
               </p>
               <div className="confirm-actions">
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
