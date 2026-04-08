@@ -86,24 +86,25 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { items = [], notes, currency } = body;
 
-    // Calculate new total from items (tax-inclusive per line)
+    // Calculate new total from items — tax_rate is reference-only and does NOT affect total
+    // Formula: Total Amount = Σ (Item Quantity × Item Base Value)
     const newTotalAmount = items.reduce((sum, item) => {
-      const up      = parseFloat(item.unit_price) || 0;
-      const qty     = parseFloat(item.quantity)   || 1;
-      const taxRate = parseFloat(item.tax_rate)   || 0;
-      return sum + up * qty * (1 + taxRate / 100);
+      const up  = parseFloat(item.unit_price) || 0;
+      const qty = parseFloat(item.quantity)   || 1;
+      return sum + up * qty;
     }, 0);
 
     if (newTotalAmount <= 0) {
       return NextResponse.json({ error: 'Bid total must be greater than zero' }, { status: 422 });
     }
 
-    // Validate minimum ₹100 change
+    // Validate minimum ₹100 reduction — new bid must be at least ₹100 lower than current
     const oldTotal = parseFloat(bid.total_amount);
-    const diff = Math.abs(newTotalAmount - oldTotal);
-    if (diff < 100) {
+    if (newTotalAmount >= oldTotal - 100) {
       return NextResponse.json(
-        { error: `Minimum change must be ₹100. Current bid: ₹${oldTotal.toFixed(2)}, required minimum change: ₹100.00` },
+        {
+          error: `Your revised bid (₹${newTotalAmount.toFixed(2)}) must be at least ₹100.00 lower than your current bid (₹${oldTotal.toFixed(2)}). Maximum allowed: ₹${(oldTotal - 100).toFixed(2)}.`,
+        },
         { status: 422 }
       );
     }

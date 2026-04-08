@@ -5,217 +5,10 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import BidItemsForm from '@/components/bids/BidItemsForm';
-import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import BidHeader from '@/components/bids/BidHeader';
+import BidValidationMessages from '@/components/bids/BidValidationMessages';
+import BidSubmissionSection from '@/components/bids/BidSubmissionSection';
 import Modal from '@/components/ui/Modal';
-
-// ── Countdown Timer Component ──────────────────────────────────────────────
-function CountdownTimer({ deadline }) {
-  const [timeLeft, setTimeLeft] = useState(null);
-
-  useEffect(() => {
-    if (!deadline) return;
-    const calc = () => {
-      const diff = new Date(deadline) - new Date();
-      if (diff <= 0) { setTimeLeft({ expired: true }); return; }
-      setTimeLeft({
-        expired: false,
-        diff,
-        days:    Math.floor(diff / 86400000),
-        hours:   Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000)  / 60000),
-        seconds: Math.floor((diff % 60000)    / 1000),
-      });
-    };
-    calc();
-    const id = setInterval(calc, 1000);
-    return () => clearInterval(id);
-  }, [deadline]);
-
-  if (!timeLeft) return null;
-
-  if (timeLeft.expired) {
-    return (
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        background: '#fdf0eb', border: '1px solid #f5c9b6',
-        borderRadius: 8, padding: '6px 12px',
-        color: '#c8501a', fontWeight: 600, fontSize: '.82rem',
-      }}>
-        🔒 Bidding Closed
-      </div>
-    );
-  }
-
-  const isUrgent   = timeLeft.diff < 86400000;       // < 1 day
-  const isWarning  = timeLeft.diff < 3 * 86400000;   // < 3 days
-  const bg    = isUrgent  ? '#fdf0eb' : isWarning ? '#fff8e8' : '#e8f5ee';
-  const brd   = isUrgent  ? '#f5c9b6' : isWarning ? '#f5dfa0' : '#6ee7b7';
-  const clr   = isUrgent  ? '#c8501a' : isWarning ? '#8a6500' : '#1a7a4a';
-
-  const pad = n => String(n).padStart(2, '0');
-
-  return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 10,
-      background: bg, border: `1px solid ${brd}`,
-      borderRadius: 10, padding: '10px 16px', color: clr,
-    }}>
-      <span style={{ fontSize: '1.1rem' }}>{isUrgent ? '⚡' : isWarning ? '⏰' : '🟢'}</span>
-      <div>
-        <div style={{ fontSize: '.68rem', fontWeight: 700, letterSpacing: '.08em',
-          textTransform: 'uppercase', opacity: .8, marginBottom: 2 }}>
-          Time Remaining
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-          {timeLeft.days > 0 && (
-            <span>
-              <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-                {timeLeft.days}
-              </span>
-              <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>d</span>
-            </span>
-          )}
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.hours)}
-            </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>h</span>
-          </span>
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.minutes)}
-            </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>m</span>
-          </span>
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.seconds)}
-            </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>s</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// OutcomeBanner component (defined inside the file)
-function OutcomeBanner({ outcome, rfqClosed }) {
-  if (!outcome && !rfqClosed) return null;
-  // Only show the banner when the RFQ is closed or when there is a final outcome
-  if (outcome && outcome.bidStatus === 'draft') return null;
-  if (!rfqClosed && outcome && outcome.bidStatus === 'submitted') return null;
-
-  function fmt(amount, currency) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
-  }
-
-  // RFQ is closed but bid decision hasn't been made yet (still 'submitted') or vendor didn't bid
-  const pendingDecision = rfqClosed && (!outcome || outcome.bidStatus === 'submitted');
-  const awarded = outcome?.awarded;
-
-  if (pendingDecision) {
-    return (
-      <>
-        <style>{`
-          .outcome-banner {
-            border-radius: 10px;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-family: 'DM Sans', sans-serif;
-            animation: fadeUp .3s ease both;
-          }
-          @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-          .outcome-banner.awarded { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; }
-          .outcome-banner.rejected { background: var(--surface, #faf9f7); border: 1px solid var(--border, #e4e0db); color: var(--ink-soft, #6b6660); }
-          .outcome-banner.pending { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
-          .outcome-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-          .outcome-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: 2px; }
-          .outcome-sub { font-size: .85rem; opacity: .8; }
-          .outcome-amount { margin-left: auto; font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; flex-shrink: 0; }
-        `}</style>
-        <div className="outcome-banner pending">
-          <div className="outcome-icon">⏳</div>
-          <div>
-            <div className="outcome-title">RFQ Closed — Awaiting Award Decision</div>
-            <div className="outcome-sub">
-              {outcome?.bidStatus === 'submitted'
-                ? 'Your bid has been received. The buyer is reviewing all bids and will announce the award shortly.'
-                : 'This RFQ has been closed. The buyer is reviewing bids and will announce the award shortly.'}
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <style>{`
-        .outcome-banner {
-          border-radius: 10px;
-          padding: 20px 24px;
-          margin-bottom: 24px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          font-family: 'DM Sans', sans-serif;
-          animation: fadeUp .3s ease both;
-        }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .outcome-banner.awarded {
-          background: #d1fae5;
-          border: 1px solid #6ee7b7;
-          color: #065f46;
-        }
-        .outcome-banner.rejected {
-          background: var(--surface, #faf9f7);
-          border: 1px solid var(--border, #e4e0db);
-          color: var(--ink-soft, #6b6660);
-        }
-        .outcome-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-        .outcome-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 1rem;
-          font-weight: 700;
-          letter-spacing: -.02em;
-          margin-bottom: 2px;
-        }
-        .outcome-sub { font-size: .85rem; opacity: .8; }
-        .outcome-amount {
-          margin-left: auto;
-          font-family: 'Syne', sans-serif;
-          font-size: 1.4rem;
-          font-weight: 700;
-          letter-spacing: -.02em;
-          flex-shrink: 0;
-        }
-      `}</style>
-
-      <div className={`outcome-banner ${awarded ? 'awarded' : 'rejected'}`}>
-        <div className="outcome-icon">{awarded ? '🎉' : '📋'}</div>
-        <div>
-          <div className="outcome-title">
-            {awarded ? 'You won this contract!' : 'Contract awarded to another vendor'}
-          </div>
-          <div className="outcome-sub">
-            {awarded
-              ? `Contract ref: ${outcome.contractReference || '—'}`
-              : 'Thank you for participating. This RFQ has been closed.'}
-          </div>
-        </div>
-        {awarded && outcome.totalAmount && (
-          <div className="outcome-amount">
-            {fmt(outcome.totalAmount, outcome.currency)}
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
 
 const EMPTY_ALT_FORM = {
   rfq_item_id: '',
@@ -227,6 +20,39 @@ const EMPTY_ALT_FORM = {
   reason_for_alternative: '',
   notes: '',
 };
+
+// ── Standalone Ranking Card Component ──────────────────────────────────────
+function RankCard({ rank, totalBids }) {
+  if (!rank) return null;
+
+  const isL1 = rank === 'L1';
+  const isL2 = rank === 'L2';
+  const isL3 = rank === 'L3';
+  const tier = isL1 ? 'l1' : isL2 ? 'l2' : isL3 ? 'l3' : 'other';
+
+  const rankDesc = isL1
+    ? 'You have the lowest bid — best position! 🎉'
+    : isL2
+    ? 'Second lowest bid — strong position!'
+    : isL3
+    ? 'Third lowest bid — in the top 3!'
+    : `Your position among ${totalBids} submitted bid${totalBids !== 1 ? 's' : ''}`;
+
+  return (
+    <div className={`rank-card rank-card--${tier}`}>
+      <div>
+        <div className={`rank-label rank-label--${tier}`}>Your Current Rank</div>
+        <div className={`rank-badge-large rank-badge-large--${tier}`}>{rank}</div>
+      </div>
+      <div>
+        <div className="rank-desc">{rankDesc}</div>
+        {totalBids > 0 && (
+          <div className="rank-total">{totalBids} bid{totalBids !== 1 ? 's' : ''} submitted in total</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
@@ -245,22 +71,21 @@ export default function VendorBidWorkspacePage() {
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
   const [companyCurrency, setCompanyCurrency] = useState('USD');
 
-  // Outcome state (added per patch)
-  const [outcome, setOutcome] = useState(null);
-  const [bidRank, setBidRank] = useState(null);
+  const [outcome, setOutcome]   = useState(null);
+  const [bidRank, setBidRank]   = useState(null);
   const [updateMode, setUpdateMode] = useState(false);
 
   // File attachment state
-  const [attachments, setAttachments] = useState([]);
+  const [attachments, setAttachments]     = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  const [uploadError, setUploadError]     = useState('');
 
   // Alternative items state
   const [altItems, setAltItems] = useState([]);
   const [altModal, setAltModal] = useState(false);
-  const [altForm, setAltForm] = useState(EMPTY_ALT_FORM);
+  const [altForm, setAltForm]   = useState(EMPTY_ALT_FORM);
   const [altSaving, setAltSaving] = useState(false);
-  const [altError, setAltError] = useState('');
+  const [altError, setAltError]   = useState('');
 
   const refreshRank = useCallback(async () => {
     try {
@@ -274,18 +99,15 @@ export default function VendorBidWorkspacePage() {
 
   const fetchData = useCallback(async (overrideCurrency) => {
     try {
-      const res = await fetch(`/api/bids/rfqs/${rfqId}`);
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to load');
       setData(json.data);
       if (json.data.bid) {
         setNotes(json.data.bid.notes || '');
-        // Use saved bid currency, then company currency, then USD
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
-        // Load read-only creation fields
-        setPaymentTerms(json.data.bid.payment_terms != null ? String(json.data.bid.payment_terms) : '');
+        setPaymentTerms(json.data.bid.payment_terms  != null ? String(json.data.bid.payment_terms)  : '');
         setFreightCharge(json.data.bid.freight_charges != null ? String(json.data.bid.freight_charges) : '');
-        // Load attachments if bid exists
         try {
           const attRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`);
           if (attRes.ok) {
@@ -293,7 +115,6 @@ export default function VendorBidWorkspacePage() {
             setAttachments(attJson.data || []);
           }
         } catch { /* ignore */ }
-        // Load alternative items if bid exists
         try {
           const altRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives`);
           if (altRes.ok) {
@@ -302,7 +123,6 @@ export default function VendorBidWorkspacePage() {
           }
         } catch { /* ignore */ }
       } else {
-        // No bid yet — pre-select company currency
         setCurrency(overrideCurrency || 'USD');
       }
     } catch (e) {
@@ -313,7 +133,6 @@ export default function VendorBidWorkspacePage() {
   }, [rfqId]);
 
   useEffect(() => {
-    // Fetch company settings first, then load RFQ data with the correct currency default
     Promise.all([
       fetch('/api/company/settings').then(r => r.ok ? r.json() : null),
       fetch(`/api/bids/rfqs/${rfqId}/outcome`).then(r => r.ok ? r.json() : null),
@@ -323,26 +142,24 @@ export default function VendorBidWorkspacePage() {
       setCompanyCurrency(resolved);
       if (outcomeJson?.data) setOutcome(outcomeJson.data);
       if (rankJson?.data) setBidRank(rankJson.data);
-      // Now fetch RFQ data, passing the resolved currency so the fallback is correct
       fetchData(resolved);
     }).catch(() => {
       fetchData('USD');
     });
   }, [rfqId, fetchData]);
 
-  const rfq = data?.rfq;
-  const bid = data?.bid;
+  const rfq      = data?.rfq;
+  const bid      = data?.bid;
   const rfqItems = data?.items || [];
 
-  const isClosed = rfq?.status === 'closed' || rfq?.status === 'cancelled';
+  const isClosed      = rfq?.status === 'closed' || rfq?.status === 'cancelled';
   const isPastDeadline = rfq?.deadline && new Date() > new Date(rfq.deadline);
-  const isLocked  = isClosed || isPastDeadline;
-  const canEdit   = bid && bid.status === 'draft'      && !isLocked;
-  const canUpdate = bid && bid.status === 'submitted'  && !isLocked;
-  const canSubmit = canEdit && bidItems.length > 0;
-  const canWithdraw = bid?.status === 'submitted' && !isLocked;
-  const showForm = bid && (bid.status === 'draft' || bid.status === 'submitted');
+  const isLocked      = isClosed || isPastDeadline;
+  const canEdit       = bid && bid.status === 'draft'     && !isLocked;
+  const canUpdate     = bid && bid.status === 'submitted' && !isLocked;
+  const canWithdraw   = bid?.status === 'submitted' && !isLocked;
 
+  // ── File Attachments ────────────────────────────────────────────────────
   async function handleFileUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -351,10 +168,7 @@ export default function VendorBidWorkspacePage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`, {
-        method: 'POST',
-        body: formData,
-      });
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/attachments`, { method: 'POST', body: formData });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Upload failed');
       setAttachments(prev => [...prev, json.data]);
@@ -373,16 +187,17 @@ export default function VendorBidWorkspacePage() {
     } catch { /* ignore */ }
   }
 
+  // ── Bid Actions ─────────────────────────────────────────────────────────
   async function handleCreateBid() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currency,
-          payment_terms:  paymentTerms   !== '' ? paymentTerms   : null,
-          freight_charge: freightCharge  !== '' ? freightCharge  : null,
+          payment_terms:  paymentTerms  !== '' ? paymentTerms  : null,
+          freight_charge: freightCharge !== '' ? freightCharge : null,
         }),
       });
       const json = await res.json();
@@ -399,24 +214,7 @@ export default function VendorBidWorkspacePage() {
   async function handleSave() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      // Calculate new subtotal from bidItems (tax_rate is for reference only, not added to total)
-      const newTotal = bidItems.reduce((sum, item) => {
-        const up  = parseFloat(item.unit_price) || 0;
-        const qty = parseFloat(item.quantity)   || 1;
-        return sum + up * qty;
-      }, 0);
-
-      // Enforce ₹100 minimum change when editing a previously submitted bid
-      if (bid?.status === 'submitted' && bid?.total_amount != null) {
-        const prevTotal = parseFloat(bid.total_amount);
-        if (newTotal > 0 && newTotal > prevTotal - 100) {
-          setError(`Your revised bid (₹${newTotal.toFixed(2)}) must be at least ₹100 lower than your current bid (₹${prevTotal.toFixed(2)}). Minimum new bid: ₹${(prevTotal - 100).toFixed(2)}.`);
-          setSaving(false);
-          return;
-        }
-      }
-
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes, currency, items: bidItems }),
@@ -435,14 +233,12 @@ export default function VendorBidWorkspacePage() {
   async function handleSubmit() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      // Save first
       await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes, currency, items: bidItems }),
       });
-      // Then submit
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid submitted successfully!');
@@ -459,7 +255,7 @@ export default function VendorBidWorkspacePage() {
   async function handleUpdate() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes, currency, items: bidItems }),
@@ -485,7 +281,7 @@ export default function VendorBidWorkspacePage() {
   async function handleWithdraw() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/withdraw`, { method: 'POST' });
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/withdraw`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setSuccess('Bid withdrawn.');
@@ -498,10 +294,11 @@ export default function VendorBidWorkspacePage() {
     }
   }
 
+  // ── Alternative Items ────────────────────────────────────────────────────
   async function handleAddAlt() {
     setAltSaving(true); setAltError('');
     try {
-      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives`, {
+      const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -509,8 +306,8 @@ export default function VendorBidWorkspacePage() {
           alt_name:               altForm.alt_name,
           alt_description:        altForm.alt_description,
           alt_specifications:     altForm.alt_specifications,
-          alt_unit_price:         altForm.alt_unit_price !== '' ? altForm.alt_unit_price : null,
-          alt_quantity:           altForm.alt_quantity !== '' ? altForm.alt_quantity : null,
+          alt_unit_price:         altForm.alt_unit_price  !== '' ? altForm.alt_unit_price  : null,
+          alt_quantity:           altForm.alt_quantity    !== '' ? altForm.alt_quantity    : null,
           reason_for_alternative: altForm.reason_for_alternative,
           notes:                  altForm.notes,
         }),
@@ -622,12 +419,6 @@ export default function VendorBidWorkspacePage() {
           padding: 12px 16px; color: #8a6500; font-size: .86rem; margin-bottom: 16px;
           display: flex; align-items: center; gap: 8px;
         }
-        .start-box {
-          text-align: center; padding: 40px 24px;
-          border: 2px dashed var(--border); border-radius: var(--radius);
-        }
-        .start-box h3 { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
-        .start-box p { color: var(--ink-soft); font-size: .9rem; margin: 0 0 20px; }
         .confirm-text { font-family: 'DM Sans', sans-serif; color: var(--ink); font-size: .92rem; line-height: 1.6; }
         .confirm-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
         .skeleton { background: linear-gradient(90deg, #f0ede9 25%, #faf9f7 50%, #f0ede9 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 6px; }
@@ -644,8 +435,7 @@ export default function VendorBidWorkspacePage() {
         .rank-card--other { background: var(--white); border: 1px solid var(--border); }
         .rank-badge-large {
           font-family: 'Syne', sans-serif; font-weight: 800;
-          font-size: 2rem; letter-spacing: -.04em; line-height: 1;
-          flex-shrink: 0;
+          font-size: 2rem; letter-spacing: -.04em; line-height: 1; flex-shrink: 0;
         }
         .rank-badge-large--l1 { color: #1a7a4a; }
         .rank-badge-large--l2 { color: #2563eb; }
@@ -722,9 +512,7 @@ export default function VendorBidWorkspacePage() {
         .alt-item-details { flex: 1; min-width: 0; }
         .alt-item-name { font-weight: 600; font-size: .9rem; color: var(--ink); }
         .alt-item-meta { font-size: .78rem; color: var(--ink-soft); margin-top: 3px; }
-        .alt-form-grid {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-        }
+        .alt-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         @media (max-width: 640px) {
           .rfq-item-row { grid-template-columns: 28px 1fr; }
           .alt-form-grid { grid-template-columns: 1fr; }
@@ -739,7 +527,7 @@ export default function VendorBidWorkspacePage() {
             <div className="skeleton" style={{ height: 120, marginBottom: 24 }} />
             <div className="skeleton" style={{ height: 300 }} />
           </div>
-        ) : error ? (
+        ) : error && !data ? (
           <div className="error-box">{error}</div>
         ) : rfq ? (
           <>
@@ -753,42 +541,8 @@ export default function VendorBidWorkspacePage() {
               }
             />
 
-            {/* RFQ Details */}
-            <div className="rfq-meta-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="section-label">RFQ Details</span>
-                  <RFQStatusBadge status={rfq.status} />
-                </div>
-                {rfq.deadline && (
-                  <CountdownTimer deadline={rfq.deadline} />
-                )}
-              </div>
-              {rfq.description && (
-                <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 12px' }}>{rfq.description}</p>
-              )}
-              <div className="rfq-meta-grid">
-                <div className="meta-item">
-                  <label>Deadline</label>
-                  <span style={{ color: isPastDeadline ? 'var(--accent)' : 'var(--ink)' }}>
-                    {rfq.deadline
-                      ? new Date(rfq.deadline).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-                      : '—'}
-                    {isPastDeadline && ' (Closed)'}
-                  </span>
-                </div>
-                {rfq.budget && (
-                  <div className="meta-item">
-                    <label>Budget</label>
-                    <span>{rfq.currency} {parseFloat(rfq.budget).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                )}
-                <div className="meta-item">
-                  <label>Line Items</label>
-                  <span>{rfqItems.length}</span>
-                </div>
-              </div>
-            </div>
+            {/* RFQ Details + Countdown */}
+            <BidHeader rfq={rfq} rfqItems={rfqItems} isPastDeadline={isPastDeadline} />
 
             {/* RFQ Items List */}
             {rfqItems.length > 0 && (
@@ -808,9 +562,7 @@ export default function VendorBidWorkspacePage() {
                       <div className="rfq-item-num">{idx + 1}</div>
                       <div>
                         <div className="rfq-item-name">{item.description}</div>
-                        {item.unit && (
-                          <div className="rfq-item-meta">Unit: {item.unit}</div>
-                        )}
+                        {item.unit && <div className="rfq-item-meta">Unit: {item.unit}</div>}
                       </div>
                       <div className="rfq-item-qty-badge">
                         <span style={{ color: 'var(--ink-faint)', fontSize: '.72rem' }}>Qty</span>
@@ -829,79 +581,68 @@ export default function VendorBidWorkspacePage() {
               </div>
             )}
 
-            {/* Alerts */}
-            {error && <div className="error-box">{error}</div>}
-            {success && <div className="success-box">{success}</div>}
-            {isClosed && (
-              <div className="warning-banner">🔒 This RFQ is closed. Bid submission and editing are no longer allowed.</div>
-            )}
-            {!isClosed && isPastDeadline && (
-              <div className="warning-banner">⚠ The deadline for this RFQ has passed. Bid editing is locked.</div>
-            )}
-
-            {/* Outcome Banner (added per patch) */}
-            <OutcomeBanner outcome={outcome} rfqClosed={isClosed} />
+            {/* Validation messages, warnings, and outcome banner */}
+            <BidValidationMessages
+              error={error}
+              success={success}
+              isClosed={isClosed}
+              isPastDeadline={isPastDeadline}
+              outcome={outcome}
+              rfqClosed={isClosed}
+            />
 
             {/* Bid section */}
             {!bid ? (
               <div className="bid-card">
-                <div style={{ marginBottom: 20 }}>
-                  <span className="section-label" style={{ display: 'block', marginBottom: 8 }}>Start Your Bid</span>
-                  <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 20px' }}>
-                    Fill in the details below to create your bid for this RFQ. These fields can only be set once.
-                  </p>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Currency</label>
-                      <select
-                        className="form-control"
-                        value={currency}
-                        onChange={e => setCurrency(e.target.value)}
-                        disabled={isPastDeadline}
-                      >
-                        {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
-                          .map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Payment Terms (days)</label>
-                      <input
-                        className="form-control"
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="e.g. 30 for Net 30"
-                        value={paymentTerms}
-                        onChange={e => setPaymentTerms(e.target.value)}
-                        disabled={isPastDeadline}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Freight Charge per Unit</label>
-                      <input
-                        className="form-control"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={freightCharge}
-                        onChange={e => setFreightCharge(e.target.value)}
-                        disabled={isPastDeadline}
-                      />
-                    </div>
+                <span className="section-label" style={{ display: 'block', marginBottom: 8 }}>Start Your Bid</span>
+                <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 20px' }}>
+                  Fill in the details below to create your bid for this RFQ. These fields can only be set once.
+                </p>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Currency</label>
+                    <select
+                      className="form-control"
+                      value={currency}
+                      onChange={e => setCurrency(e.target.value)}
+                      disabled={isPastDeadline}
+                    >
+                      {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
+                        .map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-                  <button
-                    className="btn btn-accent"
-                    disabled={isPastDeadline || saving}
-                    onClick={handleCreateBid}
-                  >
-                    {saving ? 'Creating…' : 'Create Bid'}
-                  </button>
+                  <div className="form-group">
+                    <label>Payment Terms (days)</label>
+                    <input
+                      className="form-control"
+                      type="number" min="0" step="1" placeholder="e.g. 30 for Net 30"
+                      value={paymentTerms}
+                      onChange={e => setPaymentTerms(e.target.value)}
+                      disabled={isPastDeadline}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Freight Charge per Unit</label>
+                    <input
+                      className="form-control"
+                      type="number" min="0" step="0.01" placeholder="0.00"
+                      value={freightCharge}
+                      onChange={e => setFreightCharge(e.target.value)}
+                      disabled={isPastDeadline}
+                    />
+                  </div>
                 </div>
+                <button
+                  className="btn btn-accent"
+                  disabled={isPastDeadline || saving}
+                  onClick={handleCreateBid}
+                >
+                  {saving ? 'Creating…' : 'Create Bid'}
+                </button>
               </div>
             ) : (
               <>
-                {/* ── Ranking Card (shown when bid is submitted) ── */}
+                {/* Ranking card */}
                 {bid.status === 'submitted' && bidRank && (
                   <RankCard rank={bidRank.rank} totalBids={bidRank.totalBids} currency={currency} />
                 )}
@@ -912,26 +653,29 @@ export default function VendorBidWorkspacePage() {
                     <BidStatusBadge status={bid.status} />
                   </div>
 
-                  {/* Update-mode notice */}
+                  {/* Update mode notice */}
                   {updateMode && (
                     <div className="update-panel">
                       <div className="update-panel-title">✏️ Updating Your Submitted Bid</div>
                       <div className="update-panel-sub">
-                        Your new bid must be at least 100 lower than your current bid of{' '}
+                        Your new bid must be at least <strong>₹100.00 lower</strong> than your current bid of{' '}
                         {currency} {parseFloat(bid.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}.
-                        Adjust your item prices below, then click &ldquo;Save Update&rdquo;.
+                        Maximum allowed: ₹{(parseFloat(bid.total_amount || 0) - 100).toFixed(2)}.
+                        Adjust your item prices below — live feedback shows whether your total qualifies.
                       </div>
                     </div>
                   )}
 
-                  {/* Read-only creation fields (payment terms, freight charge) */}
+                  {/* Read-only creation fields */}
                   {(paymentTerms !== '' || freightCharge !== '') && (
                     <div style={{
                       background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20,
                     }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 600, letterSpacing: '.08em',
-                        textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 12 }}>
+                      <div style={{
+                        fontSize: '.72rem', fontWeight: 600, letterSpacing: '.08em',
+                        textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 12,
+                      }}>
                         Bid Terms (set at creation — read only)
                       </div>
                       <div className="form-row" style={{ margin: 0, gap: 12 }}>
@@ -992,13 +736,17 @@ export default function VendorBidWorkspacePage() {
                   {/* File Attachments */}
                   <div style={{ marginBottom: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span style={{ fontSize: '.8rem', fontWeight: 600, letterSpacing: '.07em',
-                        textTransform: 'uppercase', color: 'var(--ink-faint)' }}>
+                      <span style={{
+                        fontSize: '.8rem', fontWeight: 600, letterSpacing: '.07em',
+                        textTransform: 'uppercase', color: 'var(--ink-faint)',
+                      }}>
                         Attachments ({attachments.length})
                       </span>
                       {!isLocked && (
-                        <label style={{ cursor: 'pointer', fontSize: '.8rem', fontWeight: 600,
-                          color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <label style={{
+                          cursor: 'pointer', fontSize: '.8rem', fontWeight: 600,
+                          color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
                           <input
                             type="file"
                             style={{ display: 'none' }}
@@ -1021,12 +769,16 @@ export default function VendorBidWorkspacePage() {
                       </p>
                     ) : (
                       attachments.map(att => (
-                        <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-                          marginBottom: 6, background: 'var(--surface)' }}>
+                        <div key={att.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 12px', border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius)', marginBottom: 6, background: 'var(--surface)',
+                        }}>
                           <span>📎</span>
-                          <span style={{ flex: 1, fontSize: '.84rem', color: 'var(--ink)',
-                            fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            flex: 1, fontSize: '.84rem', color: 'var(--ink)',
+                            fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
                             {att.original_name}
                           </span>
                           <span style={{ fontSize: '.76rem', color: 'var(--ink-soft)' }}>
@@ -1037,8 +789,10 @@ export default function VendorBidWorkspacePage() {
                           {!isLocked && (
                             <button
                               onClick={() => handleDeleteAttachment(att.id)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer',
-                                color: 'var(--ink-faint)', fontSize: '.82rem', padding: '2px 4px' }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: 'var(--ink-faint)', fontSize: '.82rem', padding: '2px 4px',
+                              }}
                             >
                               ✕
                             </button>
@@ -1048,79 +802,36 @@ export default function VendorBidWorkspacePage() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  {(canEdit || canUpdate || canWithdraw) && (
-                    <div className="actions-bar">
-                      {canEdit && (
-                        <>
-                          <button className="btn btn-outline" disabled={saving} onClick={handleSave}>
-                            {saving ? 'Saving…' : 'Save Draft'}
-                          </button>
-                          <button
-                            className="btn btn-accent"
-                            disabled={saving || bidItems.length === 0}
-                            onClick={() => setConfirmModal({ open: true, action: 'submit' })}
-                          >
-                            Submit Bid
-                          </button>
-                        </>
-                      )}
-                      {canUpdate && !updateMode && (
-                        <button
-                          className="btn btn-outline"
-                          disabled={saving}
-                          onClick={() => { setUpdateMode(true); setError(''); setSuccess(''); }}
-                        >
-                          ✏️ Update Bid
-                        </button>
-                      )}
-                      {canUpdate && updateMode && (
-                        <>
-                          <button
-                            className="btn btn-accent"
-                            disabled={saving || bidItems.length === 0}
-                            onClick={() => setConfirmModal({ open: true, action: 'update' })}
-                          >
-                            {saving ? 'Saving…' : 'Save Update'}
-                          </button>
-                          <button
-                            className="btn btn-outline"
-                            disabled={saving}
-                            onClick={() => { setUpdateMode(false); setError(''); setSuccess(''); }}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      {canWithdraw && (
-                        <button
-                          className="btn btn-danger"
-                          disabled={saving}
-                          onClick={() => setConfirmModal({ open: true, action: 'withdraw' })}
-                        >
-                          Withdraw Bid
-                        </button>
-                      )}
-                      {bid.submitted_at && (
-                        <span style={{ marginLeft: 'auto', color: 'var(--ink-soft)', fontSize: '.8rem' }}>
-                          Submitted {new Date(bid.submitted_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {/* Action buttons with ₹100 real-time validation */}
+                  <BidSubmissionSection
+                    bid={bid}
+                    canEdit={canEdit}
+                    canUpdate={canUpdate}
+                    canWithdraw={canWithdraw}
+                    updateMode={updateMode}
+                    saving={saving}
+                    bidItems={bidItems}
+                    currency={currency}
+                    onSave={handleSave}
+                    onEnterUpdateMode={() => { setUpdateMode(true); setError(''); setSuccess(''); }}
+                    onCancelUpdateMode={() => { setUpdateMode(false); setError(''); setSuccess(''); }}
+                    onOpenConfirmModal={action => setConfirmModal({ open: true, action })}
+                  />
                 </div>
               </>
             )}
 
-            {/* ── Alternative Items Section ── */}
+            {/* Alternative Items Section */}
             {bid && (
               <div className="alt-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div>
                     <span className="section-label">Alternative Items</span>
-                    <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--ink-faint)',
+                    <span style={{
+                      marginLeft: 8, fontSize: '.72rem', color: 'var(--ink-faint)',
                       background: 'var(--surface)', border: '1px solid var(--border)',
-                      borderRadius: 4, padding: '1px 7px' }}>
+                      borderRadius: 4, padding: '1px 7px',
+                    }}>
                       {altItems.length}
                     </span>
                   </div>
@@ -1144,8 +855,10 @@ export default function VendorBidWorkspacePage() {
                 </p>
 
                 {altItems.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '24px 16px',
-                    border: '2px dashed var(--border)', borderRadius: 8 }}>
+                  <div style={{
+                    textAlign: 'center', padding: '24px 16px',
+                    border: '2px dashed var(--border)', borderRadius: 8,
+                  }}>
                     <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>🔄</div>
                     <div style={{ fontSize: '.86rem', color: 'var(--ink-soft)' }}>
                       No alternative items suggested yet.
@@ -1162,7 +875,7 @@ export default function VendorBidWorkspacePage() {
                           <div className="alt-item-name">{alt.alt_name}</div>
                           <div className="alt-item-meta">
                             {origItem && <span>For: <strong>{origItem.description}</strong> · </span>}
-                            {alt.alt_quantity && <span>Qty: {alt.alt_quantity} · </span>}
+                            {alt.alt_quantity  && <span>Qty: {alt.alt_quantity} · </span>}
                             {alt.alt_unit_price && <span>Price: {parseFloat(alt.alt_unit_price).toLocaleString('en-US', { minimumFractionDigits: 2 })} · </span>}
                             {alt.alt_description && <span>{alt.alt_description}</span>}
                           </div>
@@ -1172,8 +885,10 @@ export default function VendorBidWorkspacePage() {
                             </div>
                           )}
                           {alt.reason_for_alternative && (
-                            <div style={{ fontSize: '.78rem', color: 'var(--ink-soft)', marginTop: 4,
-                              background: '#eff6ff', borderRadius: 4, padding: '3px 8px', display: 'inline-block' }}>
+                            <div style={{
+                              fontSize: '.78rem', color: 'var(--ink-soft)', marginTop: 4,
+                              background: '#eff6ff', borderRadius: 4, padding: '3px 8px', display: 'inline-block',
+                            }}>
                               💡 {alt.reason_for_alternative}
                             </div>
                           )}
@@ -1181,9 +896,10 @@ export default function VendorBidWorkspacePage() {
                         {!isLocked && (
                           <button
                             onClick={() => handleDeleteAlt(alt.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer',
-                              color: 'var(--ink-faint)', fontSize: '.82rem', padding: '4px 6px',
-                              flexShrink: 0 }}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: 'var(--ink-faint)', fontSize: '.82rem', padding: '4px 6px', flexShrink: 0,
+                            }}
                             title="Remove alternative"
                           >
                             ✕
@@ -1209,9 +925,7 @@ export default function VendorBidWorkspacePage() {
             <p style={{ color: 'var(--ink-soft)', fontSize: '.86rem', margin: '0 0 16px' }}>
               Select the RFQ item you are offering an alternative for, then provide details about your item.
             </p>
-            {altError && (
-              <div className="error-box" style={{ marginBottom: 12 }}>{altError}</div>
-            )}
+            {altError && <div className="error-box" style={{ marginBottom: 12 }}>{altError}</div>}
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
                 Original RFQ Item *
@@ -1235,8 +949,7 @@ export default function VendorBidWorkspacePage() {
                 </label>
                 <input
                   className="form-control"
-                  type="text"
-                  placeholder="e.g. Brand X Model Y"
+                  type="text" placeholder="e.g. Brand X Model Y"
                   value={altForm.alt_name}
                   onChange={e => setAltForm(f => ({ ...f, alt_name: e.target.value }))}
                 />
@@ -1247,10 +960,7 @@ export default function VendorBidWorkspacePage() {
                 </label>
                 <input
                   className="form-control"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
+                  type="number" min="0" step="0.01" placeholder="0.00"
                   value={altForm.alt_unit_price}
                   onChange={e => setAltForm(f => ({ ...f, alt_unit_price: e.target.value }))}
                 />
@@ -1262,8 +972,7 @@ export default function VendorBidWorkspacePage() {
               </label>
               <input
                 className="form-control"
-                type="text"
-                placeholder="Brief description of the alternative item"
+                type="text" placeholder="Brief description of the alternative item"
                 value={altForm.alt_description}
                 onChange={e => setAltForm(f => ({ ...f, alt_description: e.target.value }))}
               />
@@ -1274,8 +983,7 @@ export default function VendorBidWorkspacePage() {
               </label>
               <textarea
                 className="form-control"
-                rows={2}
-                placeholder="Technical specs, model number, dimensions, etc."
+                rows={2} placeholder="Technical specs, model number, dimensions, etc."
                 value={altForm.alt_specifications}
                 onChange={e => setAltForm(f => ({ ...f, alt_specifications: e.target.value }))}
                 style={{ resize: 'vertical' }}
@@ -1287,8 +995,7 @@ export default function VendorBidWorkspacePage() {
               </label>
               <textarea
                 className="form-control"
-                rows={2}
-                placeholder="Explain why your item meets the requirement or is better suited…"
+                rows={2} placeholder="Explain why your item meets the requirement or is better suited…"
                 value={altForm.reason_for_alternative}
                 onChange={e => setAltForm(f => ({ ...f, reason_for_alternative: e.target.value }))}
                 style={{ resize: 'vertical' }}
@@ -1334,8 +1041,8 @@ export default function VendorBidWorkspacePage() {
           ) : confirmModal.action === 'update' ? (
             <>
               <p className="confirm-text">
-                Are you sure you want to update your submitted bid? Your new prices will replace your current submission.
-                A minimum change of ₹100 is required.
+                Are you sure you want to update your submitted bid? Your new prices will replace your current
+                submission. The bid total must be at least <strong>₹100.00 lower</strong> than your current bid.
               </p>
               <div className="confirm-actions">
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
@@ -1347,7 +1054,8 @@ export default function VendorBidWorkspacePage() {
           ) : (
             <>
               <p className="confirm-text">
-                Are you sure you want to withdraw your bid? Your submission will be removed and you&apos;ll need to resubmit if you change your mind.
+                Are you sure you want to withdraw your bid? Your submission will be removed and you&apos;ll need to
+                resubmit if you change your mind.
               </p>
               <div className="confirm-actions">
                 <button className="btn btn-outline" onClick={() => setConfirmModal({ open: false, action: '' })}>Cancel</button>
@@ -1360,38 +1068,5 @@ export default function VendorBidWorkspacePage() {
         </Modal>
       </DashboardLayout>
     </>
-  );
-}
-
-// ── Standalone Ranking Card Component ──────────────────────────────────────
-function RankCard({ rank, totalBids }) {
-  if (!rank) return null;
-
-  const isL1 = rank === 'L1';
-  const isL2 = rank === 'L2';
-  const isL3 = rank === 'L3';
-  const tier = isL1 ? 'l1' : isL2 ? 'l2' : isL3 ? 'l3' : 'other';
-
-  const rankDesc = isL1
-    ? 'You have the lowest bid — best position! 🎉'
-    : isL2
-    ? 'Second lowest bid — strong position!'
-    : isL3
-    ? 'Third lowest bid — in the top 3!'
-    : `Your position among ${totalBids} submitted bid${totalBids !== 1 ? 's' : ''}`;
-
-  return (
-    <div className={`rank-card rank-card--${tier}`}>
-      <div>
-        <div className={`rank-label rank-label--${tier}`}>Your Current Rank</div>
-        <div className={`rank-badge-large rank-badge-large--${tier}`}>{rank}</div>
-      </div>
-      <div>
-        <div className="rank-desc">{rankDesc}</div>
-        {totalBids > 0 && (
-          <div className="rank-total">{totalBids} bid{totalBids !== 1 ? 's' : ''} submitted in total</div>
-        )}
-      </div>
-    </div>
   );
 }

@@ -74,7 +74,8 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
     return sum + up * qty * (taxRate / 100);
   }, 0);
 
-  const grandTotal = subtotal + totalTax;
+  // Bid total = subtotal only; tax_rate is reference data and does NOT affect total
+  const bidTotal = subtotal;
 
   return (
     <>
@@ -156,7 +157,7 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
               <th style={{ width: '60px' }}>Unit</th>
               <th style={{ width: '120px' }}>Target Price</th>
               <th style={{ width: '140px' }}>Your Unit Price</th>
-              <th style={{ width: '90px' }}>Tax %</th>
+              <th style={{ width: '90px' }} title="Tax rate is collected for reference only and does not affect the bid total">Tax % ⓘ</th>
               <th style={{ width: '120px' }} className="right">Line Total</th>
               {!readOnly && <th style={{ width: '160px' }}>Notes</th>}
             </tr>
@@ -168,7 +169,8 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
               const taxRate    = parseFloat(row.tax_rate)   || 0;
               const lineNet    = up * qty;
               const lineTax    = lineNet * (taxRate / 100);
-              const lineTotal  = lineNet + lineTax;
+              // Line total = net only; tax is reference only
+              const lineTotal  = lineNet;
               const hasTarget  = row.target_price != null && row.target_price > 0;
               const diff = hasTarget && row.unit_price !== ''
                 ? parseFloat(row.unit_price) - parseFloat(row.target_price)
@@ -239,8 +241,8 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
                       ? lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : '—'}
                     {lineTax > 0 && (
-                      <div style={{ fontSize: '.72rem', color: '#1d4ed8', marginTop: 2 }}>
-                        +{lineTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tax
+                      <div style={{ fontSize: '.72rem', color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>
+                        +{lineTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tax (ref)
                       </div>
                     )}
                   </td>
@@ -272,23 +274,40 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], onChang
               <tr className="subtotal-row">
                 <td colSpan={readOnly ? 6 : 6} />
                 <td style={{ textAlign: 'right' }}>
-                  <span className="tax-badge">TOTAL TAX</span>
+                  <span className="tax-badge">TAX (REFERENCE)</span>
                 </td>
-                <td className="price-cell" style={{ fontSize: '.95rem', color: '#1d4ed8' }}>
+                <td className="price-cell" style={{ fontSize: '.95rem', color: '#6b7280', fontStyle: 'italic' }}>
                   {totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 {!readOnly && <td />}
               </tr>
             )}
-            {/* Grand Total row */}
+            {/* Bid Total row — tax excluded; total = Σ (quantity × unit_price) */}
             <tr className="total-row">
               <td colSpan={readOnly ? 6 : 6} />
               <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>TOTAL BID</td>
               <td className="price-cell" style={{ fontSize: '1rem', color: 'var(--ink)' }}>
-                {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {bidTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               {!readOnly && <td />}
             </tr>
+            {totalTax > 0 && (
+              <tr>
+                <td
+                  colSpan={readOnly ? 8 : 9}
+                  style={{
+                    padding: '6px 12px 10px',
+                    fontSize: '.72rem',
+                    color: 'var(--ink-faint, #b8b3ae)',
+                    fontStyle: 'italic',
+                    textAlign: 'right',
+                    borderBottom: 'none',
+                  }}
+                >
+                  * Tax rates are collected for reference only and do not affect the bid total.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
