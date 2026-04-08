@@ -15,6 +15,9 @@ function RedirectToDashboard() {
 }
 
 // ── Countdown Timer Component ──────────────────────────────────────────────
+const MS_PER_DAY = 86400000;
+const pad = n => String(n).padStart(2, '0');
+
 function CountdownTimer({ deadline }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
@@ -52,14 +55,12 @@ function CountdownTimer({ deadline }) {
     );
   }
 
-  const isUrgent  = timeLeft.diff < 86400000;
-  const isWarning = timeLeft.diff < 3 * 86400000;
+  const isUrgent  = timeLeft.diff < MS_PER_DAY;
+  const isWarning = timeLeft.diff < 3 * MS_PER_DAY;
   const bg  = isUrgent  ? '#fdf0eb' : isWarning ? '#fff8e8' : '#e8f5ee';
   const brd = isUrgent  ? '#f5c9b6' : isWarning ? '#f5dfa0' : '#6ee7b7';
   const clr = isUrgent  ? '#c8501a' : isWarning ? '#8a6500' : '#1a7a4a';
   const icon = isUrgent ? '⚡' : isWarning ? '⏰' : '🟢';
-
-  const pad = n => String(n).padStart(2, '0');
 
   return (
     <span style={{

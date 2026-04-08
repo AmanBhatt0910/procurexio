@@ -8,6 +8,12 @@ import { useAuth } from '@/hooks/useAuth';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 
+const autoCalcBadgeStyle = {
+  marginLeft: 6, fontSize: '.72rem', fontWeight: 400,
+  color: '#1a7a4a', background: '#e8f5ee', border: '1px solid #6ee7b7',
+  borderRadius: 4, padding: '1px 6px',
+};
+
 function LineItemsEditor({ items, onChange }) {
   const addRow = () =>
     onChange([...items, { _key: Date.now(), description: '', quantity: 1, unit: '', target_price: '' }]);
@@ -110,27 +116,22 @@ export default function NewRFQPage() {
     currency:    'USD',
   });
   const [items, setItems]   = useState([]);
-  const [budgetAutoFilled, setBudgetAutoFilled] = useState(false);
+  // budgetOverride: null means "use auto-calculated value"; a string means manual entry
+  const [budgetOverride, setBudgetOverride] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState('');
 
-  // Auto-calculate budget whenever items change
-  useEffect(() => {
-    const calculated = items.reduce((sum, item) => {
-      const qty   = parseFloat(item.quantity)    || 0;
-      const price = parseFloat(item.target_price) || 0;
-      return sum + qty * price;
-    }, 0);
-    if (calculated > 0) {
-      setForm(f => ({ ...f, budget: calculated.toFixed(2) }));
-      setBudgetAutoFilled(true);
-    } else if (budgetAutoFilled) {
-      // Only clear if it was previously auto-filled (not manually entered)
-      setForm(f => ({ ...f, budget: '' }));
-      setBudgetAutoFilled(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+  // Compute budget from items during render (no useEffect needed)
+  const calculatedBudget = items.reduce((sum, item) => {
+    const qty   = parseFloat(item.quantity)    || 0;
+    const price = parseFloat(item.target_price) || 0;
+    return sum + qty * price;
+  }, 0);
+
+  const budgetAutoFilled = budgetOverride === null && calculatedBudget > 0;
+  const displayBudget   = budgetOverride !== null
+    ? budgetOverride
+    : calculatedBudget > 0 ? calculatedBudget.toFixed(2) : '';
 
   // Auto-fill currency from company settings
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function NewRFQPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          budget:   form.budget   || null,
+          budget:   displayBudget || null,
           deadline: form.deadline || null,
           items:    items.filter(i => i.description.trim()),
         }),
@@ -252,9 +253,7 @@ export default function NewRFQPage() {
               <label className="field-label">
                 Budget
                 {budgetAutoFilled && (
-                  <span style={{ marginLeft: 6, fontSize: '.72rem', fontWeight: 400,
-                    color: '#1a7a4a', background: '#e8f5ee', border: '1px solid #6ee7b7',
-                    borderRadius: 4, padding: '1px 6px' }}>
+                  <span style={autoCalcBadgeStyle}>
                     Auto-calculated
                   </span>
                 )}
@@ -262,11 +261,8 @@ export default function NewRFQPage() {
               <input
                 type="number"
                 className="form-input"
-                value={form.budget}
-                onChange={e => {
-                  setBudgetAutoFilled(false);
-                  setForm(f => ({ ...f, budget: e.target.value }));
-                }}
+                value={displayBudget}
+                onChange={e => setBudgetOverride(e.target.value)}
                 placeholder="0.00"
                 min="0"
               />
