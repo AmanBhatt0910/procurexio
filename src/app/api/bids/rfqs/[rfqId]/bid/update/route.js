@@ -86,11 +86,12 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { items = [], notes, currency } = body;
 
-    // Calculate new total from items
+    // Calculate new total from items (tax-inclusive per line)
     const newTotalAmount = items.reduce((sum, item) => {
-      const up  = parseFloat(item.unit_price)  || 0;
-      const qty = parseFloat(item.quantity)     || 1;
-      return sum + up * qty;
+      const up      = parseFloat(item.unit_price) || 0;
+      const qty     = parseFloat(item.quantity)   || 1;
+      const taxRate = parseFloat(item.tax_rate)   || 0;
+      return sum + up * qty * (1 + taxRate / 100);
     }, 0);
 
     if (newTotalAmount <= 0) {
@@ -113,14 +114,15 @@ export async function PUT(request, { params }) {
 
       // Upsert bid items
       for (const item of items) {
-        const { rfq_item_id, unit_price, quantity, notes: iNotes } = item;
-        const up  = parseFloat(unit_price) || 0;
-        const qty = parseFloat(quantity)   || 1;
+        const { rfq_item_id, unit_price, quantity, notes: iNotes, tax_rate } = item;
+        const up      = parseFloat(unit_price) || 0;
+        const qty     = parseFloat(quantity)   || 1;
+        const taxRate = parseFloat(tax_rate)   || 0;
         await conn.query(
-          `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes)`,
-          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null]
+          `INSERT INTO bid_items (bid_id, rfq_item_id, company_id, unit_price, quantity, notes, tax_rate)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE unit_price = VALUES(unit_price), quantity = VALUES(quantity), notes = VALUES(notes), tax_rate = VALUES(tax_rate)`,
+          [bid.id, rfq_item_id, companyId, up, qty, iNotes || null, taxRate]
         );
       }
 

@@ -3,6 +3,8 @@
 'use client';
 import { useReducer, useEffect } from 'react';
 
+const TAX_RATES = [0, 5, 12, 18, 28];
+
 function rowsReducer(state, action) {
   switch (action.type) {
     case 'RESET':
@@ -22,17 +24,17 @@ function computeRows(rfqItems, initialItems) {
     return {
       rfq_item_id:  item.id,
       description:  item.description,
-      quantity:     item.quantity,
+      quantity:     item.quantity,   // always locked to RFQ requirement
       unit:         item.unit,
       target_price: item.target_price,
       unit_price:   existing ? existing.unit_price : '',
-      bid_quantity: existing ? existing.quantity : item.quantity,
+      tax_rate:     existing ? (parseFloat(existing.tax_rate) ?? 0) : 0,
       notes:        existing ? existing.notes : '',
     };
   });
 }
 
-export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0, onChange, readOnly = false }) {
+export default function BidItemsForm({ rfqItems = [], initialItems = [], onChange, readOnly = false }) {
   const [rows, dispatch] = useReducer(rowsReducer, null, () =>
     computeRows(rfqItems, initialItems)
   );
@@ -51,7 +53,8 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
         updatedRows.map(r => ({
           rfq_item_id: r.rfq_item_id,
           unit_price:  parseFloat(r.unit_price) || 0,
-          quantity:    parseFloat(r.bid_quantity) || 0,
+          quantity:    parseFloat(r.quantity) || 0,
+          tax_rate:    parseFloat(r.tax_rate) || 0,
           notes:       r.notes || '',
         }))
       );
@@ -60,12 +63,18 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
 
   const subtotal = rows.reduce((sum, r) => {
     const up  = parseFloat(r.unit_price) || 0;
-    const qty = parseFloat(r.bid_quantity) || 0;
+    const qty = parseFloat(r.quantity)   || 0;
     return sum + up * qty;
   }, 0);
 
-  const gstAmount  = subtotal * (gst / 100);
-  const totalBid   = subtotal;
+  const totalTax = rows.reduce((sum, r) => {
+    const up      = parseFloat(r.unit_price) || 0;
+    const qty     = parseFloat(r.quantity)   || 0;
+    const taxRate = parseFloat(r.tax_rate)   || 0;
+    return sum + up * qty * (taxRate / 100);
+  }, 0);
+
+  const grandTotal = subtotal + totalTax;
 
   return (
     <>
@@ -114,7 +123,22 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
         .price-cell { text-align: right; font-variant-numeric: tabular-nums; }
         .diff-low { color: #1a7a4a; font-size: .75rem; }
         .diff-high { color: var(--accent, #c8501a); font-size: .75rem; }
-        .gst-badge {
+        .qty-locked {
+          display: inline-flex; align-items: center; gap: 4px;
+          background: var(--surface, #faf9f7); border: 1px solid var(--border, #e4e0db);
+          border-radius: 6px; padding: 6px 10px;
+          font-size: .88rem; color: var(--ink-soft, #6b6660);
+          font-family: 'DM Sans', sans-serif;
+        }
+        .tax-select {
+          padding: 6px 8px; border: 1px solid var(--border, #e4e0db);
+          border-radius: 6px; font-size: .82rem; font-family: 'DM Sans', sans-serif;
+          color: var(--ink, #0f0e0d); background: #fff; cursor: pointer;
+          outline: none; width: 100%;
+        }
+        .tax-select:focus { border-color: var(--accent, #c8501a); }
+        .tax-select:disabled { background: #f5f4f2; cursor: not-allowed; }
+        .tax-badge {
           display: inline-flex; align-items: center;
           padding: 2px 8px; border-radius: 4px;
           background: #eff6ff; color: #1d4ed8;
@@ -128,18 +152,24 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
             <tr>
               <th style={{ width: '32px' }}>#</th>
               <th>Item Description</th>
-              <th style={{ width: '90px' }}>Qty</th>
-              <th style={{ width: '80px' }}>Unit</th>
-              <th style={{ width: '130px' }}>Target Price</th>
+              <th style={{ width: '80px' }}>Req. Qty</th>
+              <th style={{ width: '60px' }}>Unit</th>
+              <th style={{ width: '120px' }}>Target Price</th>
               <th style={{ width: '140px' }}>Your Unit Price</th>
-              <th style={{ width: '130px' }} className="right">Line Total</th>
-              {!readOnly && <th style={{ width: '180px' }}>Notes</th>}
+              <th style={{ width: '90px' }}>Tax %</th>
+              <th style={{ width: '120px' }} className="right">Line Total</th>
+              {!readOnly && <th style={{ width: '160px' }}>Notes</th>}
             </tr>
           </thead>
           <tbody>
             {rows.map((row, idx) => {
-              const lineTotal = (parseFloat(row.unit_price) || 0) * (parseFloat(row.bid_quantity) || 0);
-              const hasTarget = row.target_price != null && row.target_price > 0;
+              const up         = parseFloat(row.unit_price) || 0;
+              const qty        = parseFloat(row.quantity)   || 0;
+              const taxRate    = parseFloat(row.tax_rate)   || 0;
+              const lineNet    = up * qty;
+              const lineTax    = lineNet * (taxRate / 100);
+              const lineTotal  = lineNet + lineTax;
+              const hasTarget  = row.target_price != null && row.target_price > 0;
               const diff = hasTarget && row.unit_price !== ''
                 ? parseFloat(row.unit_price) - parseFloat(row.target_price)
                 : null;
@@ -150,17 +180,11 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
                   <td>
                     <span style={{ fontWeight: 500 }}>{row.description}</span>
                   </td>
+                  {/* Quantity — always read-only (locked to RFQ requirement) */}
                   <td>
-                    {readOnly ? (
-                      <span>{row.bid_quantity}</span>
-                    ) : (
-                      <input
-                        className="bid-input"
-                        type="number" min="0" step="0.01"
-                        value={row.bid_quantity ?? ''}
-                        onChange={e => update(idx, 'bid_quantity', e.target.value)}
-                      />
-                    )}
+                    <span className="qty-locked" title="Quantity required by the RFQ — cannot be changed">
+                      {parseFloat(row.quantity).toLocaleString()}
+                    </span>
                   </td>
                   <td style={{ color: 'var(--ink-soft, #6b6660)', fontSize: '.83rem' }}>
                     {row.unit || '—'}
@@ -195,10 +219,30 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
                       </div>
                     )}
                   </td>
+                  <td>
+                    {readOnly ? (
+                      <span className="tax-badge">{taxRate}%</span>
+                    ) : (
+                      <select
+                        className="tax-select"
+                        value={taxRate}
+                        onChange={e => update(idx, 'tax_rate', Number(e.target.value))}
+                      >
+                        {TAX_RATES.map(r => (
+                          <option key={r} value={r}>{r === 0 ? '0% (None)' : `${r}%`}</option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
                   <td className="price-cell" style={{ fontWeight: 500 }}>
                     {lineTotal > 0
                       ? lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       : '—'}
+                    {lineTax > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#1d4ed8', marginTop: 2 }}>
+                        +{lineTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tax
+                      </div>
+                    )}
                   </td>
                   {!readOnly && (
                     <td>
@@ -215,31 +259,31 @@ export default function BidItemsForm({ rfqItems = [], initialItems = [], gst = 0
             })}
             {/* Subtotal row */}
             <tr className="subtotal-row">
-              <td colSpan={readOnly ? 5 : 5} />
+              <td colSpan={readOnly ? 6 : 6} />
               <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>SUBTOTAL</td>
               <td className="price-cell" style={{ fontSize: '.95rem', color: 'var(--ink-soft)' }}>
                 {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               {!readOnly && <td />}
             </tr>
-            {gst > 0 && (
+            {totalTax > 0 && (
               <tr className="subtotal-row">
-                <td colSpan={readOnly ? 5 : 5} />
+                <td colSpan={readOnly ? 6 : 6} />
                 <td style={{ textAlign: 'right' }}>
-                  <span className="gst-badge">GST {gst}% (informational)</span>
+                  <span className="tax-badge">TOTAL TAX</span>
                 </td>
                 <td className="price-cell" style={{ fontSize: '.95rem', color: '#1d4ed8' }}>
-                  {gstAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {totalTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 {!readOnly && <td />}
               </tr>
             )}
-            {/* Total row */}
+            {/* Grand Total row */}
             <tr className="total-row">
-              <td colSpan={readOnly ? 5 : 5} />
+              <td colSpan={readOnly ? 6 : 6} />
               <td style={{ color: 'var(--ink-soft)', fontSize: '.8rem', textAlign: 'right' }}>TOTAL BID</td>
               <td className="price-cell" style={{ fontSize: '1rem', color: 'var(--ink)' }}>
-                {totalBid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               {!readOnly && <td />}
             </tr>

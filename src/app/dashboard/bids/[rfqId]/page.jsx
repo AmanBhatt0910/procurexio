@@ -8,6 +8,97 @@ import BidItemsForm from '@/components/bids/BidItemsForm';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import Modal from '@/components/ui/Modal';
 
+// ── Countdown Timer Component ──────────────────────────────────────────────
+function CountdownTimer({ deadline }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!deadline) return;
+    const calc = () => {
+      const diff = new Date(deadline) - new Date();
+      if (diff <= 0) { setTimeLeft({ expired: true }); return; }
+      setTimeLeft({
+        expired: false,
+        diff,
+        days:    Math.floor(diff / 86400000),
+        hours:   Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000)  / 60000),
+        seconds: Math.floor((diff % 60000)    / 1000),
+      });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  if (!timeLeft) return null;
+
+  if (timeLeft.expired) {
+    return (
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        background: '#fdf0eb', border: '1px solid #f5c9b6',
+        borderRadius: 8, padding: '6px 12px',
+        color: '#c8501a', fontWeight: 600, fontSize: '.82rem',
+      }}>
+        🔒 Bidding Closed
+      </div>
+    );
+  }
+
+  const isUrgent   = timeLeft.diff < 86400000;       // < 1 day
+  const isWarning  = timeLeft.diff < 3 * 86400000;   // < 3 days
+  const bg    = isUrgent  ? '#fdf0eb' : isWarning ? '#fff8e8' : '#e8f5ee';
+  const brd   = isUrgent  ? '#f5c9b6' : isWarning ? '#f5dfa0' : '#6ee7b7';
+  const clr   = isUrgent  ? '#c8501a' : isWarning ? '#8a6500' : '#1a7a4a';
+
+  const pad = n => String(n).padStart(2, '0');
+
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 10,
+      background: bg, border: `1px solid ${brd}`,
+      borderRadius: 10, padding: '10px 16px', color: clr,
+    }}>
+      <span style={{ fontSize: '1.1rem' }}>{isUrgent ? '⚡' : isWarning ? '⏰' : '🟢'}</span>
+      <div>
+        <div style={{ fontSize: '.68rem', fontWeight: 700, letterSpacing: '.08em',
+          textTransform: 'uppercase', opacity: .8, marginBottom: 2 }}>
+          Time Remaining
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+          {timeLeft.days > 0 && (
+            <span>
+              <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
+                {timeLeft.days}
+              </span>
+              <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>d</span>
+            </span>
+          )}
+          <span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
+              {pad(timeLeft.hours)}
+            </span>
+            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>h</span>
+          </span>
+          <span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
+              {pad(timeLeft.minutes)}
+            </span>
+            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>m</span>
+          </span>
+          <span>
+            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
+              {pad(timeLeft.seconds)}
+            </span>
+            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>s</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // OutcomeBanner component (defined inside the file)
 function OutcomeBanner({ outcome }) {
   if (!outcome || outcome.bidStatus === 'submitted' || outcome.bidStatus === 'draft') return null;
@@ -83,6 +174,17 @@ function OutcomeBanner({ outcome }) {
   );
 }
 
+const EMPTY_ALT_FORM = {
+  rfq_item_id: '',
+  alt_name: '',
+  alt_description: '',
+  alt_specifications: '',
+  alt_unit_price: '',
+  alt_quantity: '',
+  reason_for_alternative: '',
+  notes: '',
+};
+
 export default function VendorBidWorkspacePage() {
   const { rfqId } = useParams();
   const router    = useRouter();
@@ -95,8 +197,6 @@ export default function VendorBidWorkspacePage() {
   const [bidItems, setBidItems]   = useState([]);
   const [notes, setNotes]         = useState('');
   const [currency, setCurrency]   = useState('USD');
-  const [gst, setGst]             = useState(0);
-  const [rate, setRate]           = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [freightCharge, setFreightCharge] = useState('');
   const [confirmModal, setConfirmModal] = useState({ open: false, action: '' });
@@ -111,6 +211,13 @@ export default function VendorBidWorkspacePage() {
   const [attachments, setAttachments] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  // Alternative items state
+  const [altItems, setAltItems] = useState([]);
+  const [altModal, setAltModal] = useState(false);
+  const [altForm, setAltForm] = useState(EMPTY_ALT_FORM);
+  const [altSaving, setAltSaving] = useState(false);
+  const [altError, setAltError] = useState('');
 
   const refreshRank = useCallback(async () => {
     try {
@@ -132,10 +239,7 @@ export default function VendorBidWorkspacePage() {
         setNotes(json.data.bid.notes || '');
         // Use saved bid currency, then company currency, then USD
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
-        // Load saved GST rate
-        setGst(Number(json.data.bid.gst) || 0);
         // Load read-only creation fields
-        setRate(json.data.bid.rate != null ? String(json.data.bid.rate) : '');
         setPaymentTerms(json.data.bid.payment_terms != null ? String(json.data.bid.payment_terms) : '');
         setFreightCharge(json.data.bid.freight_charges != null ? String(json.data.bid.freight_charges) : '');
         // Load attachments if bid exists
@@ -144,6 +248,14 @@ export default function VendorBidWorkspacePage() {
           if (attRes.ok) {
             const attJson = await attRes.json();
             setAttachments(attJson.data || []);
+          }
+        } catch { /* ignore */ }
+        // Load alternative items if bid exists
+        try {
+          const altRes = await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives`);
+          if (altRes.ok) {
+            const altJson = await altRes.json();
+            setAltItems(altJson.data || []);
           }
         } catch { /* ignore */ }
       } else {
@@ -226,8 +338,6 @@ export default function VendorBidWorkspacePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currency,
-          gst,
-          rate:           rate           !== '' ? rate           : null,
           payment_terms:  paymentTerms   !== '' ? paymentTerms   : null,
           freight_charge: freightCharge  !== '' ? freightCharge  : null,
         }),
@@ -247,12 +357,12 @@ export default function VendorBidWorkspacePage() {
     setSaving(true); setError(''); setSuccess('');
     try {
       // Calculate new subtotal from bidItems (before GST)
-      const newSubtotal = bidItems.reduce((sum, item) => {
-        const up  = parseFloat(item.unit_price) || 0;
-        const qty = parseFloat(item.quantity)   || 1;
-        return sum + (up * qty);
+      const newTotal = bidItems.reduce((sum, item) => {
+        const up      = parseFloat(item.unit_price) || 0;
+        const qty     = parseFloat(item.quantity)   || 1;
+        const taxRate = parseFloat(item.tax_rate)   || 0;
+        return sum + up * qty * (1 + taxRate / 100);
       }, 0);
-      const newTotal = newSubtotal;
 
       // Enforce ₹100 minimum change when editing a previously submitted bid
       if (bid?.status === 'submitted' && bid?.total_amount != null) {
@@ -267,7 +377,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -287,7 +397,7 @@ export default function VendorBidWorkspacePage() {
       await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       // Then submit
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
@@ -310,7 +420,7 @@ export default function VendorBidWorkspacePage() {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes, currency, gst, items: bidItems }),
+        body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -344,6 +454,42 @@ export default function VendorBidWorkspacePage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleAddAlt() {
+    setAltSaving(true); setAltError('');
+    try {
+      const res = await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rfq_item_id:            Number(altForm.rfq_item_id),
+          alt_name:               altForm.alt_name,
+          alt_description:        altForm.alt_description,
+          alt_specifications:     altForm.alt_specifications,
+          alt_unit_price:         altForm.alt_unit_price !== '' ? altForm.alt_unit_price : null,
+          alt_quantity:           altForm.alt_quantity !== '' ? altForm.alt_quantity : null,
+          reason_for_alternative: altForm.reason_for_alternative,
+          notes:                  altForm.notes,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setAltItems(prev => [...prev, json.data]);
+      setAltModal(false);
+    } catch (e) {
+      setAltError(e.message);
+    } finally {
+      setAltSaving(false);
+    }
+  }
+
+  async function handleDeleteAlt(altId) {
+    if (!confirm('Remove this alternative item suggestion?')) return;
+    try {
+      await fetch(`/api/bids/rfqs/${rfqId}/bid/alternatives?altId=${altId}`, { method: 'DELETE' });
+      setAltItems(prev => prev.filter(a => a.id !== altId));
+    } catch { /* ignore */ }
   }
 
   return (
@@ -483,6 +629,64 @@ export default function VendorBidWorkspacePage() {
           color: #8a6500; margin-bottom: 4px;
         }
         .update-panel-sub { font-size: .82rem; color: #8a6500; opacity: .8; }
+        /* RFQ items list */
+        .rfq-items-card {
+          background: var(--white); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 20px 24px;
+          margin-bottom: 24px; box-shadow: var(--shadow);
+        }
+        .rfq-item-row {
+          display: grid;
+          grid-template-columns: 32px 1fr auto auto;
+          gap: 12px; align-items: start;
+          padding: 12px 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .rfq-item-row:last-child { border-bottom: none; }
+        .rfq-item-num {
+          width: 26px; height: 26px; border-radius: 50%;
+          background: var(--surface); border: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: center;
+          font-size: .75rem; font-weight: 600; color: var(--ink-soft);
+          flex-shrink: 0; margin-top: 2px;
+        }
+        .rfq-item-name { font-weight: 500; font-size: .9rem; color: var(--ink); margin-bottom: 2px; }
+        .rfq-item-meta { font-size: .78rem; color: var(--ink-soft); }
+        .rfq-item-qty-badge {
+          display: inline-flex; align-items: center; gap: 4px;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 6px; padding: 4px 10px;
+          font-size: .78rem; font-weight: 500; color: var(--ink-soft);
+          white-space: nowrap; flex-shrink: 0;
+        }
+        .rfq-item-price-badge {
+          display: inline-flex; align-items: center;
+          background: #fdf0eb; border-radius: 6px; padding: 4px 10px;
+          font-size: .78rem; font-weight: 500; color: var(--accent);
+          white-space: nowrap; flex-shrink: 0;
+        }
+        /* Alt items */
+        .alt-card {
+          background: var(--white); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 20px 24px;
+          margin-bottom: 24px; box-shadow: var(--shadow);
+        }
+        .alt-item-row {
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 8px; padding: 14px 16px; margin-bottom: 10px;
+          display: flex; align-items: flex-start; gap: 12px;
+        }
+        .alt-item-row:last-child { margin-bottom: 0; }
+        .alt-item-details { flex: 1; min-width: 0; }
+        .alt-item-name { font-weight: 600; font-size: .9rem; color: var(--ink); }
+        .alt-item-meta { font-size: .78rem; color: var(--ink-soft); margin-top: 3px; }
+        .alt-form-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        }
+        @media (max-width: 640px) {
+          .rfq-item-row { grid-template-columns: 28px 1fr; }
+          .alt-form-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <DashboardLayout>
@@ -509,9 +713,14 @@ export default function VendorBidWorkspacePage() {
 
             {/* RFQ Details */}
             <div className="rfq-meta-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span className="section-label">RFQ Details</span>
-                <RFQStatusBadge status={rfq.status} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="section-label">RFQ Details</span>
+                  <RFQStatusBadge status={rfq.status} />
+                </div>
+                {rfq.deadline && (
+                  <CountdownTimer deadline={rfq.deadline} />
+                )}
               </div>
               {rfq.description && (
                 <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 12px' }}>{rfq.description}</p>
@@ -538,6 +747,45 @@ export default function VendorBidWorkspacePage() {
                 </div>
               </div>
             </div>
+
+            {/* RFQ Items List */}
+            {rfqItems.length > 0 && (
+              <div className="rfq-items-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span className="section-label">Items in this RFQ</span>
+                  <span style={{ fontSize: '.78rem', color: 'var(--ink-faint)' }}>
+                    {rfqItems.length} item{rfqItems.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <p style={{ color: 'var(--ink-soft)', fontSize: '.82rem', margin: '0 0 12px' }}>
+                  Review all required items before placing your bid. Enter your unit prices in the bid form below.
+                </p>
+                <div>
+                  {rfqItems.map((item, idx) => (
+                    <div key={item.id} className="rfq-item-row">
+                      <div className="rfq-item-num">{idx + 1}</div>
+                      <div>
+                        <div className="rfq-item-name">{item.description}</div>
+                        {item.unit && (
+                          <div className="rfq-item-meta">Unit: {item.unit}</div>
+                        )}
+                      </div>
+                      <div className="rfq-item-qty-badge">
+                        <span style={{ color: 'var(--ink-faint)', fontSize: '.72rem' }}>Qty</span>
+                        {parseFloat(item.quantity).toLocaleString()}
+                      </div>
+                      {item.target_price != null && parseFloat(item.target_price) > 0 ? (
+                        <div className="rfq-item-price-badge">
+                          Target: {parseFloat(item.target_price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                      ) : (
+                        <div style={{ width: 80 }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Alerts */}
             {error && <div className="error-box">{error}</div>}
@@ -572,34 +820,6 @@ export default function VendorBidWorkspacePage() {
                         {Array.from(new Set([companyCurrency, 'USD','EUR','GBP','INR','AED','SGD','CAD','AUD']))
                           .map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
-                    </div>
-                    <div className="form-group">
-                      <label>GST Rate</label>
-                      <select
-                        className="form-control"
-                        value={gst}
-                        onChange={e => setGst(Number(e.target.value))}
-                        disabled={isPastDeadline}
-                      >
-                        <option value={0}>0% (No GST)</option>
-                        <option value={7}>7% GST</option>
-                        <option value={18}>18% GST</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Bid Rate / Factor <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}>(optional)</span></label>
-                      <input
-                        className="form-control"
-                        type="number"
-                        min="0"
-                        step="0.0001"
-                        placeholder="e.g. 1.05"
-                        value={rate}
-                        onChange={e => setRate(e.target.value)}
-                        disabled={isPastDeadline}
-                      />
                     </div>
                     <div className="form-group">
                       <label>Payment Terms (days)</label>
@@ -662,8 +882,8 @@ export default function VendorBidWorkspacePage() {
                     </div>
                   )}
 
-                  {/* Read-only creation fields (rate, payment terms, freight charge) */}
-                  {(rate !== '' || paymentTerms !== '' || freightCharge !== '') && (
+                  {/* Read-only creation fields (payment terms, freight charge) */}
+                  {(paymentTerms !== '' || freightCharge !== '') && (
                     <div style={{
                       background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20,
@@ -673,12 +893,6 @@ export default function VendorBidWorkspacePage() {
                         Bid Terms (set at creation — read only)
                       </div>
                       <div className="form-row" style={{ margin: 0, gap: 12 }}>
-                        {rate !== '' && (
-                          <div className="form-group" style={{ minWidth: 0 }}>
-                            <label>Bid Rate / Factor</label>
-                            <input className="form-control" value={rate} readOnly disabled />
-                          </div>
-                        )}
                         {paymentTerms !== '' && (
                           <div className="form-group" style={{ minWidth: 0 }}>
                             <label>Payment Terms (days)</label>
@@ -709,19 +923,6 @@ export default function VendorBidWorkspacePage() {
                           .map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>GST Rate</label>
-                      <select
-                        className="form-control"
-                        value={gst}
-                        onChange={e => setGst(Number(e.target.value))}
-                        disabled={!canEdit && !updateMode}
-                      >
-                        <option value={0}>0% (No GST)</option>
-                        <option value={7}>7% GST</option>
-                        <option value={18}>18% GST</option>
-                      </select>
-                    </div>
                     <div className="form-group" style={{ flex: 3 }}>
                       <label>Notes / Cover Message (optional)</label>
                       <textarea
@@ -741,7 +942,6 @@ export default function VendorBidWorkspacePage() {
                     <BidItemsForm
                       rfqItems={rfqItems}
                       initialItems={bid.items || []}
-                      gst={gst}
                       onChange={setBidItems}
                       readOnly={!canEdit && !updateMode}
                     />
@@ -869,8 +1069,201 @@ export default function VendorBidWorkspacePage() {
                 </div>
               </>
             )}
+
+            {/* ── Alternative Items Section ── */}
+            {bid && (
+              <div className="alt-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div>
+                    <span className="section-label">Alternative Items</span>
+                    <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--ink-faint)',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 4, padding: '1px 7px' }}>
+                      {altItems.length}
+                    </span>
+                  </div>
+                  {!isLocked && (
+                    <button
+                      className="btn btn-outline"
+                      style={{ fontSize: '.8rem', padding: '6px 14px' }}
+                      onClick={() => {
+                        setAltModal(true);
+                        setAltError('');
+                        setAltForm({ ...EMPTY_ALT_FORM, rfq_item_id: rfqItems[0]?.id || '' });
+                      }}
+                    >
+                      + Suggest Alternative
+                    </button>
+                  )}
+                </div>
+                <p style={{ color: 'var(--ink-soft)', fontSize: '.82rem', margin: '0 0 14px' }}>
+                  If you have a similar or equivalent item that can fulfil a requirement, suggest it here.
+                  The buyer will review your alternatives alongside your main bid.
+                </p>
+
+                {altItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px 16px',
+                    border: '2px dashed var(--border)', borderRadius: 8 }}>
+                    <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>🔄</div>
+                    <div style={{ fontSize: '.86rem', color: 'var(--ink-soft)' }}>
+                      No alternative items suggested yet.
+                      {!isLocked && ' Use the button above to suggest a similar item.'}
+                    </div>
+                  </div>
+                ) : (
+                  altItems.map(alt => {
+                    const origItem = rfqItems.find(i => i.id === alt.rfq_item_id);
+                    return (
+                      <div key={alt.id} className="alt-item-row">
+                        <div style={{ fontSize: '1.2rem', marginTop: 2 }}>🔄</div>
+                        <div className="alt-item-details">
+                          <div className="alt-item-name">{alt.alt_name}</div>
+                          <div className="alt-item-meta">
+                            {origItem && <span>For: <strong>{origItem.description}</strong> · </span>}
+                            {alt.alt_quantity && <span>Qty: {alt.alt_quantity} · </span>}
+                            {alt.alt_unit_price && <span>Price: {parseFloat(alt.alt_unit_price).toLocaleString('en-US', { minimumFractionDigits: 2 })} · </span>}
+                            {alt.alt_description && <span>{alt.alt_description}</span>}
+                          </div>
+                          {alt.alt_specifications && (
+                            <div style={{ fontSize: '.76rem', color: 'var(--ink-faint)', marginTop: 2 }}>
+                              Specs: {alt.alt_specifications}
+                            </div>
+                          )}
+                          {alt.reason_for_alternative && (
+                            <div style={{ fontSize: '.78rem', color: 'var(--ink-soft)', marginTop: 4,
+                              background: '#eff6ff', borderRadius: 4, padding: '3px 8px', display: 'inline-block' }}>
+                              💡 {alt.reason_for_alternative}
+                            </div>
+                          )}
+                        </div>
+                        {!isLocked && (
+                          <button
+                            onClick={() => handleDeleteAlt(alt.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer',
+                              color: 'var(--ink-faint)', fontSize: '.82rem', padding: '4px 6px',
+                              flexShrink: 0 }}
+                            title="Remove alternative"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </>
         ) : null}
+
+        {/* Alternative Item Modal */}
+        <Modal
+          open={altModal}
+          onClose={() => setAltModal(false)}
+          title="Suggest an Alternative Item"
+          width={560}
+        >
+          <div>
+            <p style={{ color: 'var(--ink-soft)', fontSize: '.86rem', margin: '0 0 16px' }}>
+              Select the RFQ item you are offering an alternative for, then provide details about your item.
+            </p>
+            {altError && (
+              <div className="error-box" style={{ marginBottom: 12 }}>{altError}</div>
+            )}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                Original RFQ Item *
+              </label>
+              <select
+                className="form-control"
+                value={altForm.rfq_item_id}
+                onChange={e => setAltForm(f => ({ ...f, rfq_item_id: e.target.value }))}
+              >
+                {rfqItems.map((item, idx) => (
+                  <option key={item.id} value={item.id}>
+                    {idx + 1}. {item.description} (Qty: {item.quantity} {item.unit || ''})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="alt-form-grid" style={{ marginBottom: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                  Alternative Item Name *
+                </label>
+                <input
+                  className="form-control"
+                  type="text"
+                  placeholder="e.g. Brand X Model Y"
+                  value={altForm.alt_name}
+                  onChange={e => setAltForm(f => ({ ...f, alt_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                  Unit Price (optional)
+                </label>
+                <input
+                  className="form-control"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={altForm.alt_unit_price}
+                  onChange={e => setAltForm(f => ({ ...f, alt_unit_price: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                Description
+              </label>
+              <input
+                className="form-control"
+                type="text"
+                placeholder="Brief description of the alternative item"
+                value={altForm.alt_description}
+                onChange={e => setAltForm(f => ({ ...f, alt_description: e.target.value }))}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                Specifications
+              </label>
+              <textarea
+                className="form-control"
+                rows={2}
+                placeholder="Technical specs, model number, dimensions, etc."
+                value={altForm.alt_specifications}
+                onChange={e => setAltForm(f => ({ ...f, alt_specifications: e.target.value }))}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: '.79rem', fontWeight: 500, marginBottom: 4 }}>
+                Why is this a suitable alternative?
+              </label>
+              <textarea
+                className="form-control"
+                rows={2}
+                placeholder="Explain why your item meets the requirement or is better suited…"
+                value={altForm.reason_for_alternative}
+                onChange={e => setAltForm(f => ({ ...f, reason_for_alternative: e.target.value }))}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => setAltModal(false)}>Cancel</button>
+              <button
+                className="btn btn-accent"
+                disabled={altSaving || !altForm.alt_name?.trim() || !altForm.rfq_item_id}
+                onClick={handleAddAlt}
+              >
+                {altSaving ? 'Adding…' : 'Add Alternative'}
+              </button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Confirm modal */}
         <Modal

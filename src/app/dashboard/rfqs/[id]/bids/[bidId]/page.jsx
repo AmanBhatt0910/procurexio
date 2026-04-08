@@ -192,21 +192,31 @@ export default function BidDetailPage() {
                       <th className="num">Qty</th>
                       <th>Unit</th>
                       <th className="num">Unit Price</th>
+                      <th className="num">Tax %</th>
                       <th className="num">Total Price</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {bid.items.map((item, i) => (
-                      <tr key={i}>
-                        <td>{item.description}</td>
-                        <td className="num">{parseFloat(item.quantity).toLocaleString()}</td>
-                        <td>{item.unit || '—'}</td>
-                        <td className="num">{fmtAmount(item.unit_price, bid.currency)}</td>
-                        <td className="num">{fmtAmount(item.total_price, bid.currency)}</td>
-                      </tr>
-                    ))}
+                    {bid.items.map((item, i) => {
+                      const lineNet   = parseFloat(item.unit_price || 0) * parseFloat(item.quantity || 0);
+                      const taxRate   = parseFloat(item.tax_rate || 0);
+                      const lineTax   = lineNet * (taxRate / 100);
+                      const lineTotal = lineNet + lineTax;
+                      return (
+                        <tr key={i}>
+                          <td>{item.description}</td>
+                          <td className="num">{parseFloat(item.quantity).toLocaleString()}</td>
+                          <td>{item.unit || '—'}</td>
+                          <td className="num">{fmtAmount(item.unit_price, bid.currency)}</td>
+                          <td className="num" style={{ color: taxRate > 0 ? '#1d4ed8' : 'var(--ink-faint)' }}>
+                            {taxRate > 0 ? `${taxRate}%` : '—'}
+                          </td>
+                          <td className="num">{fmtAmount(lineTotal, bid.currency)}</td>
+                        </tr>
+                      );
+                    })}
                     <tr className="total-row">
-                      <td colSpan={4} style={{ textAlign: 'right' }}>Total</td>
+                      <td colSpan={5} style={{ textAlign: 'right' }}>Total</td>
                       <td className="num">{fmtAmount(bid.total_amount, bid.currency)}</td>
                     </tr>
                   </tbody>
