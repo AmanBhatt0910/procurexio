@@ -109,8 +109,13 @@ function LoginForm() {
   function handleGoogleLogin() {
     setError('');
     setGoogleLoading(true);
-    // Full-page navigation so the browser sends cookies along
-    window.location.href = '/api/auth/google/login';
+    // Full-page navigation so the browser sends cookies along.
+    // Forward the redirect destination so the OAuth callback can honour it.
+    const safeDest = redirect.startsWith('/') ? redirect : '/dashboard';
+    const loginUrl = safeDest !== '/dashboard'
+      ? `/api/auth/google/login?redirect=${encodeURIComponent(safeDest)}`
+      : '/api/auth/google/login';
+    window.location.href = loginUrl;
   }
 
   // While we're checking whether the user is already authenticated, render

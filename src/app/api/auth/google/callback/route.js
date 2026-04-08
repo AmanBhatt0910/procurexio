@@ -124,6 +124,10 @@ export async function GET(request) {
   }
 
   const action      = stateData.action === 'link' ? 'link' : 'login';
+  // Extract the intended post-login destination forwarded from the login page
+  const intendedRedirect = typeof stateData.redirect === 'string' && stateData.redirect.startsWith('/')
+    ? stateData.redirect
+    : null;
   const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI;
 
   if (!redirectUri || !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -345,7 +349,11 @@ export async function GET(request) {
 
     // ── Set cookie and redirect to dashboard ────────────────────────────────
     const authCookie = buildAuthCookie(token, { isSecure });
-    const dest       = canonicalRole === 'super_admin' ? '/dashboard/admin' : '/dashboard';
+    // Respect the intended destination forwarded through the OAuth state.
+    // super_admin always goes to /dashboard/admin; otherwise honour redirect or default.
+    const dest = canonicalRole === 'super_admin'
+      ? '/dashboard/admin'
+      : (intendedRedirect || '/dashboard');
 
     const response = NextResponse.redirect(new URL(dest, request.url));
     response.headers.set('Set-Cookie', authCookie);

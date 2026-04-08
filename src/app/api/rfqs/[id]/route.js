@@ -2,7 +2,7 @@
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
-import { autoCloseIfExpired } from '@/lib/rfqUtils';
+import { autoCloseIfExpired, sendRFQClosureEmails } from '@/lib/rfqUtils';
 import { logAction, ACTION } from '@/lib/audit';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
@@ -168,6 +168,13 @@ export async function PUT(request, { params }) {
           });
         }
       } catch (_) { /* notification errors must not fail the request */ }
+    }
+
+    // When an RFQ is closed, email all invited vendors and those who bid
+    if (updates.status === 'closed') {
+      try {
+        await sendRFQClosureEmails(id);
+      } catch (_) { /* email errors must not fail the request */ }
     }
 
     // Log the update action
