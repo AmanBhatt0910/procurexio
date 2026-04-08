@@ -605,7 +605,13 @@ export default function VendorBidWorkspacePage() {
                           <button
                             className="btn btn-accent"
                             disabled={saving || bidItems.length === 0 || !isValidUpdate}
-                            title={!isValidUpdate ? 'Your new bid must be at least \u20b9100 lower than your current bid' : ''}
+                            title={
+                              bidItems.length === 0
+                                ? 'Enter unit prices for at least one item before saving'
+                                : !isValidUpdate
+                                ? 'Your new bid must be at least \u20b9100 lower than your current bid'
+                                : ''
+                            }
                             onClick={() => setConfirmModal({ open: true, action: 'update' })}
                           >
                             {saving ? 'Saving\u2026' : 'Save Update'}

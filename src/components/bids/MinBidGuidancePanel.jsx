@@ -85,6 +85,7 @@ export default function MinBidGuidancePanel({ currentTotal, newTotal, currency, 
           <div style={{
             fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.05rem', color: statusColor,
           }}>
+            {/* difference = newTotal - cur; negative means reduction (▼), positive means increase (▲) */}
             {hasInput ? `${difference < 0 ? '▼' : '▲'} ${Math.abs(difference).toFixed(2)}` : '—'}
           </div>
         </div>
