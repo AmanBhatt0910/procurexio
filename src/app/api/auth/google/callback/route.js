@@ -81,8 +81,7 @@ function buildClearStateCookie(isSecure) {
  * All error/rejection paths use this so the CSRF token is consumed immediately.
  */
 function redirectAndClearState(request, path, clearStateCookie) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-  const res = NextResponse.redirect(new URL(path, baseUrl));
+  const res = NextResponse.redirect(new URL(path, request.url));
   res.headers.append('Set-Cookie', clearStateCookie);
   return res;
 }
@@ -206,8 +205,9 @@ export async function GET(request) {
         status:       'success',
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
-      const res = NextResponse.redirect(new URL('/dashboard?linked=google', baseUrl));
+      const res = NextResponse.redirect(
+        new URL('/dashboard?linked=google', request.url)
+      );
       res.headers.append('Set-Cookie', clearStateCookie);
       return res;
     }
