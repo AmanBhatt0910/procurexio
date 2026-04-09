@@ -223,6 +223,13 @@ export default function RFQDetailPage({ params }) {
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
   const isExtendDeadlineInputValid =
     !!extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime());
+  const extendDeadlineHelpText = extendingDeadline
+    ? 'Saving deadline...'
+    : !extendDeadlineInput
+      ? 'Enter a deadline to enable saving.'
+      : !isExtendDeadlineInputValid
+        ? 'Enter a valid date and time.'
+        : 'Ready to save.';
   // RFQ fields are only editable in draft state; once published, only status transitions are allowed
   const isEditable  = rfq && rfq.status === 'draft' && canWrite;
 
@@ -345,10 +352,14 @@ export default function RFQDetailPage({ params }) {
             padding: 16,
             marginBottom: 16,
           }}>
-            <div style={{ fontSize: '.78rem', fontWeight: 600, color: 'var(--ink-faint)', marginBottom: 10, letterSpacing: '.05em', textTransform: 'uppercase' }}>
+            <label
+              htmlFor="extend-deadline-input"
+              style={{ display: 'block', fontSize: '.78rem', fontWeight: 600, color: 'var(--ink-faint)', marginBottom: 10, letterSpacing: '.05em', textTransform: 'uppercase' }}
+            >
               New Deadline
-            </div>
+            </label>
             <input
+              id="extend-deadline-input"
               type="datetime-local"
               value={extendDeadlineInput}
               onChange={(e) => setExtendDeadlineInput(e.target.value)}
@@ -365,6 +376,9 @@ export default function RFQDetailPage({ params }) {
                 fontFamily: 'inherit',
               }}
             />
+            <div id="extend-deadline-help" style={{ marginBottom: 12, fontSize: '.76rem', color: 'var(--ink-faint)' }}>
+              {extendDeadlineHelpText}
+            </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 onClick={handleCancelExtendDeadline}
@@ -387,6 +401,7 @@ export default function RFQDetailPage({ params }) {
               <button
                 onClick={handleExtendDeadline}
                 disabled={extendingDeadline || !isExtendDeadlineInputValid}
+                aria-describedby="extend-deadline-help"
                 style={{
                   padding: '7px 14px',
                   borderRadius: 'var(--radius)',
