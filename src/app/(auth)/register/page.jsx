@@ -566,7 +566,7 @@ export default function RegisterPage() {
         .terms-text { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; }
         .terms-text a { color: var(--ink); text-decoration: underline; }
         .terms-text a:hover { color: var(--accent); }
-        .terms-error { margin-top: 0; font-size: .77rem; }
+        .terms-error { margin-top: 0; }
 
         .form-footer { margin-top: 28px; text-align: center; font-size: .85rem; color: var(--ink-soft); }
         .form-footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
