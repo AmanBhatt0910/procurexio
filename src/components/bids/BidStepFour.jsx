@@ -61,6 +61,13 @@ export default function BidStepFour({
   onOpenConfirmModal,
   onBack,
 }) {
+  const liveTotal = bidItems.reduce((sum, item) => {
+    const unitPrice = parseFloat(item.unit_price) || 0;
+    const qty = parseFloat(item.quantity) || 0;
+    return sum + (unitPrice * qty);
+  }, 0);
+  const summaryTotal = liveTotal > 0 ? liveTotal : (parseFloat(bid.total_amount) || 0);
+
   return (
     <div className="bid-card">
       <div className="bid-card-header">
@@ -84,7 +91,7 @@ export default function BidStepFour({
       </p>
 
       {/* Summary */}
-      {bid.total_amount != null && (
+      {(bid.total_amount != null || liveTotal > 0) && (
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 20,
@@ -97,7 +104,7 @@ export default function BidStepFour({
           </div>
           <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ink)' }}>
             {bid.currency || currency}{' '}
-            {parseFloat(bid.total_amount).toLocaleString('en-US', {
+            {summaryTotal.toLocaleString('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}

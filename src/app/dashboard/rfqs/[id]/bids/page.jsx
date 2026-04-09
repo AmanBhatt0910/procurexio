@@ -6,10 +6,13 @@ import PageHeader from '@/components/ui/PageHeader';
 import BidComparisonTable from '@/components/bids/BidComparisonTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
 export default function RFQBidsPage() {
   const { id: rfqId } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
@@ -91,6 +94,8 @@ export default function RFQBidsPage() {
   const bids    = data?.bids  || [];
   const submitted = bids.filter(b => b.status === 'submitted');
   const totalBids = bids.length;
+  const canAward = [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.SUPER_ADMIN].includes(user?.role);
+  const canOpenAwardPage = [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN].includes(user?.role);
 
   const fmtAmount = (val, cur) =>
     val != null ? `${cur || ''} ${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—';
@@ -208,6 +213,19 @@ export default function RFQBidsPage() {
                   >
                     {exporting ? 'Exporting…' : '⬇ Export PDF'}
                   </button>
+                  {canOpenAwardPage && submitted.length > 0 && ['published', 'closed'].includes(rfq.status) && (
+                    <button
+                      className="btn"
+                      onClick={() => router.push(`/dashboard/rfqs/${rfqId}/award`)}
+                      style={{
+                        background: 'var(--accent)',
+                        borderColor: 'var(--accent)',
+                        color: '#fff',
+                      }}
+                    >
+                      {canAward ? '🏆 Award / Declare Result' : '🏆 View Award / Result'}
+                    </button>
+                  )}
                 </div>
               }
             />

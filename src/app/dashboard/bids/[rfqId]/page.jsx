@@ -47,6 +47,21 @@ export default function VendorBidWorkspacePage() {
   // Step navigation (1-4); synced from workflowStep after data loads
   const [substep, setSubstep] = useState(1);
 
+  const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || value === '') return 0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const normalizeBidItems = (items = []) =>
+    items.map((item) => ({
+      rfq_item_id: item.rfq_item_id,
+      unit_price: toFiniteNumber(item.unit_price),
+      quantity: toFiniteNumber(item.quantity),
+      tax_rate: toFiniteNumber(item.tax_rate),
+      notes: item.notes || '',
+    }));
+
   const refreshRank = useCallback(async () => {
     try {
       const res = await fetch(`/api/bids/rfqs/${rfqId}/rank`);
@@ -64,6 +79,7 @@ export default function VendorBidWorkspacePage() {
       if (!res.ok) throw new Error(json.error || 'Failed to load');
       setData(json.data);
       if (json.data.bid) {
+        setBidItems(normalizeBidItems(json.data.bid.items || []));
         setNotes(json.data.bid.notes || '');
         setCurrency(json.data.bid.currency || overrideCurrency || 'USD');
         setPaymentTerms(json.data.bid.payment_terms   != null ? String(json.data.bid.payment_terms)   : '');
@@ -83,6 +99,7 @@ export default function VendorBidWorkspacePage() {
           }
         } catch { /* ignore */ }
       } else {
+        setBidItems([]);
         setCurrency(overrideCurrency || 'USD');
       }
     } catch (e) {
@@ -229,11 +246,13 @@ export default function VendorBidWorkspacePage() {
   async function handleSubmit() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
+      const saveRes = await fetch(`/api/bids/rfqs/${rfqId}/bid`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes, currency, items: bidItems }),
       });
+      const saveJson = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveJson.error || 'Failed to save bid before submission. Please verify bid details and try again.');
       const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -515,7 +534,7 @@ export default function VendorBidWorkspacePage() {
                 saving={saving}
                 isLocked={isLocked}
                 onSave={handleSave}
-                onEnterUpdateMode={() => { setUpdateMode(true); setError(''); setSuccess(''); }}
+                onEnterUpdateMode={() => { setUpdateMode(true); setSubstep(2); setError(''); setSuccess(''); }}
                 onCancelUpdateMode={() => { setUpdateMode(false); setError(''); setSuccess(''); }}
                 onBack={() => setSubstep(1)}
                 onNext={() => setSubstep(3)}
@@ -554,7 +573,7 @@ export default function VendorBidWorkspacePage() {
                 saving={saving}
                 bidItems={bidItems}
                 onSave={handleSave}
-                onEnterUpdateMode={() => { setUpdateMode(true); setError(''); setSuccess(''); }}
+                onEnterUpdateMode={() => { setUpdateMode(true); setSubstep(2); setError(''); setSuccess(''); }}
                 onCancelUpdateMode={() => { setUpdateMode(false); setError(''); setSuccess(''); }}
                 onOpenConfirmModal={action => setConfirmModal({ open: true, action })}
                 onBack={() => setSubstep(3)}

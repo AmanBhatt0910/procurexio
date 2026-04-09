@@ -8,6 +8,7 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import RFQItemsTable from '@/components/rfq/RFQItemsTable';
 import VendorInvitePanel from '@/components/rfq/VendorInvitePanel';
 import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 
@@ -45,8 +46,10 @@ export default function RFQDetailPage({ params }) {
   const { user } = useAuth();
   const router   = useRouter();
 
-  const canWrite = user && ['company_admin', 'manager'].includes(user.role);
-  const canViewBids = user && ['company_admin', 'manager', 'employee'].includes(user.role);
+  const canWrite = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER].includes(user.role);
+  const canViewBids = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE].includes(user.role);
+  const canAward = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.SUPER_ADMIN].includes(user.role);
+  const canOpenAwardPage = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN].includes(user.role);
 
   const [rfq, setRfq]           = useState(null);
   const [items, setItems]       = useState([]);
@@ -248,7 +251,7 @@ export default function RFQDetailPage({ params }) {
 
         {/* View Bids — visible to admin, manager, employee */}
         {canViewBids && (
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={() => router.push(`/dashboard/rfqs/${id}/bids`)}
               style={{
@@ -266,6 +269,20 @@ export default function RFQDetailPage({ params }) {
               </svg>
               View Bids
             </button>
+
+            {canOpenAwardPage && ['published', 'closed'].includes(rfq.status) && (
+              <button
+                onClick={() => router.push(`/dashboard/rfqs/${id}/award`)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 18px', background: 'var(--ink)', color: '#fff',
+                  border: 'none', borderRadius: 'var(--radius)', fontSize: '.84rem',
+                  fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {canAward ? '🏆 Award / Declare Result' : '🏆 View Award / Result'}
+              </button>
+            )}
           </div>
         )}
 

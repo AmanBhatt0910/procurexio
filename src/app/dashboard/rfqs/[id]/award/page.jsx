@@ -9,6 +9,7 @@ import ContractCard from '@/components/award/ContractCard';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RoleGuard from '@/components/auth/RoleGuard';
 import {useAuth} from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
 function fmt(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
@@ -132,7 +133,7 @@ export default function AwardContractPage({ params }) {
     : Infinity;
 
   return (
-    <RoleGuard allowed={['company_admin', 'manager', 'employee', 'super_admin']}>
+    <RoleGuard roles={[ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN]}>
       <DashboardLayout>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
