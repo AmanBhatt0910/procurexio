@@ -19,10 +19,11 @@ export async function PUT(request, { params }) {
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
   const parsedDeadline = new Date(body?.deadline);
+  const now = new Date();
   if (!body?.deadline || Number.isNaN(parsedDeadline.getTime())) {
     return Response.json({ error: 'A valid deadline is required' }, { status: 422 });
   }
-  if (parsedDeadline <= new Date()) {
+  if (parsedDeadline <= now) {
     return Response.json({ error: 'New deadline must be in the future' }, { status: 422 });
   }
 
@@ -44,7 +45,7 @@ export async function PUT(request, { params }) {
     }
 
     if (rfq.deadline && parsedDeadline <= new Date(rfq.deadline)) {
-      return Response.json({ error: 'New deadline must be later than the current deadline (not equal or earlier)' }, { status: 422 });
+      return Response.json({ error: 'New deadline must be later than the current deadline' }, { status: 422 });
     }
 
     await query(
@@ -56,7 +57,10 @@ export async function PUT(request, { params }) {
 
     try {
       await sendRFQDeadlineExtendedEmails(id, rfq.deadline, parsedDeadline);
-    } catch (_) { /* email errors must not fail request */ }
+    } catch (emailErr) {
+      console.error(`PUT /api/rfqs/${id}/deadline email error:`, emailErr);
+      /* email errors must not fail request */
+    }
 
     await logAction(request, {
       userId: parseInt(request.headers.get('x-user-id'), 10) || null,

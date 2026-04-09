@@ -44,7 +44,6 @@ async function getVendorRecipientsForRfq(rfqId) {
     emailMap.set(vendor.vendor_id, emails);
   }
   for (const row of userRows) {
-    if (!emailMap.has(row.vendor_id)) emailMap.set(row.vendor_id, new Set());
     emailMap.get(row.vendor_id).add(row.email);
   }
 

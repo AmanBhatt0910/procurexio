@@ -134,7 +134,11 @@ export default function RFQDetailPage({ params }) {
   };
 
   const handleExtendDeadline = async () => {
-    const current = rfq?.deadline ? new Date(rfq.deadline).toISOString().slice(0, 16) : '';
+    const current = rfq?.deadline ? (() => {
+      const d = new Date(rfq.deadline);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })() : '';
     const input = window.prompt('Enter the new RFQ deadline (YYYY-MM-DDTHH:mm)', current);
     if (!input) return;
 
