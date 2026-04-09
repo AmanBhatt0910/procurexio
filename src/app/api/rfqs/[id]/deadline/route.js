@@ -28,11 +28,12 @@ export async function PUT(request, { params }) {
 
   const parsedDeadline = new Date(body?.deadline);
   const now = new Date();
+  const minValidDeadline = new Date(now.getTime() + 60 * 1000);
   if (!body?.deadline || Number.isNaN(parsedDeadline.getTime())) {
     return Response.json({ error: 'A valid deadline is required' }, { status: 422 });
   }
-  if (parsedDeadline <= now) {
-    return Response.json({ error: 'New deadline must be in the future' }, { status: 422 });
+  if (parsedDeadline <= minValidDeadline) {
+    return Response.json({ error: 'New deadline must be at least 1 minute in the future' }, { status: 422 });
   }
 
   try {

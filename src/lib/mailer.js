@@ -745,7 +745,7 @@ export async function sendRFQDeadlineReminderEmail({
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Deadline Reminder</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
           Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
-          This is a reminder that the RFQ deadline is in approximately <strong style="color:#0f0e0d;">${hoursBefore} hours</strong>.
+          This is a reminder that the RFQ deadline is in <strong style="color:#0f0e0d;">${hoursBefore} hours or less</strong>.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
           <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">

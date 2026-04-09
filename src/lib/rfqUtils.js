@@ -11,6 +11,8 @@ import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline'
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
+const effectiveDeadlineSql = (column = 'deadline') =>
+  `(CASE WHEN TIME(${column}) = '00:00:00' THEN DATE_ADD(DATE(${column}), INTERVAL 1 DAY) ELSE ${column} END)`;
 
 function isInReminderWindow(msUntilDeadline, hoursBefore) {
   const HOUR = 60 * 60 * 1000;
@@ -69,12 +71,7 @@ export async function autoCloseIfExpired(rfqId, companyId) {
         WHERE id = ? AND company_id = ?
           AND status = 'published'
           AND deadline IS NOT NULL
-          AND (
-            CASE
-              WHEN TIME(deadline) = '00:00:00' THEN DATE_ADD(DATE(deadline), INTERVAL 1 DAY)
-              ELSE deadline
-            END
-          ) < NOW()`,
+          AND ${effectiveDeadlineSql('deadline')} < NOW()`,
       [rfqId, companyId]
     );
 
@@ -203,7 +200,7 @@ export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = nu
   const filters = [
     `r.status = 'published'`,
     'r.deadline IS NOT NULL',
-    `(CASE WHEN TIME(r.deadline) = '00:00:00' THEN DATE_ADD(DATE(r.deadline), INTERVAL 1 DAY) ELSE r.deadline END) > NOW()`,
+    `${effectiveDeadlineSql('r.deadline')} > NOW()`,
   ];
   const values = [];
   if (companyId) { filters.push('r.company_id = ?'); values.push(companyId); }

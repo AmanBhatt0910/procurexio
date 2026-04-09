@@ -424,10 +424,10 @@ export default function RFQDetailPage({ params }) {
               <div className="meta-grid">
                 <div>
                   <div className="meta-item-label">Deadline</div>
-                    <div className="meta-item-value" style={{
-                      color: isDeadlinePassed(rfq.deadline) && rfq.status === 'published'
-                        ? 'var(--accent)' : 'var(--ink)'
-                    }}>
+                  <div className="meta-item-value" style={{
+                    color: isDeadlinePassed(rfq.deadline) && rfq.status === 'published'
+                      ? 'var(--accent)' : 'var(--ink)'
+                  }}>
                     {formatDate(rfq.deadline)}
                   </div>
                 </div>
