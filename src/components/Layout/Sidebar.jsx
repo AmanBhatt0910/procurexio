@@ -1,7 +1,7 @@
 'use client';
 // src/components/Layout/Sidebar.jsx
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
@@ -254,6 +254,15 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
   const [collapsed, setCollapsed] = useState(false);
   const { unreadCount } = useNotifications();
 
+  // Keep a CSS custom property in sync with sidebar width so DashboardLayout
+  // can adjust the main content margin without lifting state.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sidebar-w',
+      collapsed ? '64px' : '224px'
+    );
+  }, [collapsed]);
+
   const userRole     = user?.role;
   // Super admin gets its own dedicated platform nav; other roles use the company nav
   const filteredItems = useMemo(
@@ -273,14 +282,19 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
       <style>{`
         .sidebar {
           width: ${collapsed ? '64px' : '224px'};
-          min-height: 100vh;
+          height: 100vh;
+          height: 100dvh;
           background: var(--ink);
           display: flex;
           flex-direction: column;
           transition: width .22s cubic-bezier(.4,0,.2,1), transform .25s cubic-bezier(.4,0,.2,1);
           flex-shrink: 0;
-          position: relative;
-          overflow: hidden;
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 40;
+          overflow-x: hidden;
+          overflow-y: auto;
         }
         @media (max-width: 768px) {
           .sidebar {
