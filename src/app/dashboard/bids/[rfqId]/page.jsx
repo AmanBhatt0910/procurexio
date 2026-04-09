@@ -252,7 +252,7 @@ export default function VendorBidWorkspacePage() {
         body: JSON.stringify({ notes, currency, items: bidItems }),
       });
       const saveJson = await saveRes.json();
-      if (!saveRes.ok) throw new Error(saveJson.error || 'Failed to save bid before submission. Please try again.');
+      if (!saveRes.ok) throw new Error(saveJson.error || 'Failed to save bid before submission. Please verify bid details and try again.');
       const res  = await fetch(`/api/bids/rfqs/${rfqId}/bid/submit`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);

@@ -260,7 +260,6 @@ export default function NewRFQPage() {
                 placeholder="0.00"
                 min="0"
                 readOnly
-                tabIndex={-1}
                 aria-label="Budget (auto-calculated from line items, read-only)"
                 style={{ background: 'var(--surface)', color: 'var(--ink-soft)', cursor: 'not-allowed' }}
               />

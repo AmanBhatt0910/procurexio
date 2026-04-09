@@ -87,7 +87,7 @@ export async function GET(request) {
             ELSE 2
           END ASC,
           -- For published RFQs, prioritize nearest deadline first.
-          CASE WHEN r.status = 'published' THEN r.deadline END ASC,
+          CASE WHEN r.status = 'published' THEN COALESCE(r.deadline, '9999-12-31 23:59:59') END ASC,
           -- For closed RFQs, show most recently updated/closed first.
           CASE WHEN r.status = 'closed' THEN COALESCE(r.updated_at, r.created_at) END DESC,
           b.submitted_at DESC,
