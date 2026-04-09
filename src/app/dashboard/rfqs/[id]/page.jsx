@@ -48,6 +48,7 @@ export default function RFQDetailPage({ params }) {
   const canWrite = user && ['company_admin', 'manager'].includes(user.role);
   const canViewBids = user && ['company_admin', 'manager', 'employee'].includes(user.role);
   const canAward = user && ['company_admin', 'manager', 'super_admin'].includes(user.role);
+  const canOpenAwardPage = user && ['company_admin', 'manager', 'employee', 'super_admin'].includes(user.role);
 
   const [rfq, setRfq]           = useState(null);
   const [items, setItems]       = useState([]);
@@ -268,7 +269,7 @@ export default function RFQDetailPage({ params }) {
               View Bids
             </button>
 
-            {canAward && ['published', 'closed'].includes(rfq.status) && (
+            {canOpenAwardPage && ['published', 'closed'].includes(rfq.status) && (
               <button
                 onClick={() => router.push(`/dashboard/rfqs/${id}/award`)}
                 style={{
@@ -278,7 +279,7 @@ export default function RFQDetailPage({ params }) {
                   fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                🏆 Award / Declare Result
+                {canAward ? '🏆 Award / Declare Result' : '🏆 View Award / Result'}
               </button>
             )}
           </div>

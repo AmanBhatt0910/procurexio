@@ -94,6 +94,7 @@ export default function RFQBidsPage() {
   const submitted = bids.filter(b => b.status === 'submitted');
   const totalBids = bids.length;
   const canAward = ['company_admin', 'manager', 'super_admin'].includes(user?.role);
+  const canOpenAwardPage = ['company_admin', 'manager', 'employee', 'super_admin'].includes(user?.role);
 
   const fmtAmount = (val, cur) =>
     val != null ? `${cur || ''} ${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—';
@@ -211,7 +212,7 @@ export default function RFQBidsPage() {
                   >
                     {exporting ? 'Exporting…' : '⬇ Export PDF'}
                   </button>
-                  {canAward && submitted.length > 0 && ['published', 'closed'].includes(rfq.status) && (
+                  {canOpenAwardPage && submitted.length > 0 && ['published', 'closed'].includes(rfq.status) && (
                     <button
                       className="btn"
                       onClick={() => router.push(`/dashboard/rfqs/${rfqId}/award`)}
@@ -221,7 +222,7 @@ export default function RFQBidsPage() {
                         color: '#fff',
                       }}
                     >
-                      🏆 Award / Declare Result
+                      {canAward ? '🏆 Award / Declare Result' : '🏆 View Award / Result'}
                     </button>
                   )}
                 </div>
