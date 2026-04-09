@@ -12,6 +12,7 @@ import { ROLES } from '@/lib/rbac';
 import { isDeadlinePassed } from '@/lib/deadline';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
+const ONE_MINUTE_MS = 60 * 1000;
 
 // Status machine
 const VALID_TRANSITIONS = {
@@ -67,6 +68,9 @@ export default function RFQDetailPage({ params }) {
   // Status transition
   const [transitioning, setTransitioning] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
+  const [showExtendDeadlineBox, setShowExtendDeadlineBox] = useState(false);
+  const [extendDeadlineInput, setExtendDeadlineInput] = useState('');
+  const [extendDeadlineMin, setExtendDeadlineMin] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -134,14 +138,37 @@ export default function RFQDetailPage({ params }) {
     setTransitioning(false);
   };
 
-  const handleExtendDeadline = async () => {
+  const handleOpenExtendDeadline = () => {
     const current = rfq?.deadline ? (() => {
       const d = new Date(rfq.deadline);
       const pad = (n) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
-    const input = window.prompt('Enter the new RFQ deadline (YYYY-MM-DDTHH:mm)', current);
-    if (!input) return;
+    const min = (() => {
+      const d = new Date(Date.now() + ONE_MINUTE_MS);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
+    setExtendDeadlineMin(min);
+    setExtendDeadlineInput(current);
+    setShowExtendDeadlineBox(true);
+  };
+
+  const handleExtendDeadline = async () => {
+    if (!extendDeadlineInput) return;
+    const selected = new Date(extendDeadlineInput);
+    const minAllowedMs = Math.max(
+      extendDeadlineMin ? new Date(extendDeadlineMin).getTime() : 0,
+      Date.now() + ONE_MINUTE_MS
+    );
+    if (Number.isNaN(selected.getTime())) {
+      setError('Please enter a valid deadline date and time');
+      return;
+    }
+    if (selected.getTime() < minAllowedMs) {
+      setError('New deadline must be at least 1 minute in the future');
+      return;
+    }
 
     setExtendingDeadline(true);
     setError('');
@@ -149,7 +176,7 @@ export default function RFQDetailPage({ params }) {
       const res = await fetch(`/api/rfqs/${id}/deadline`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deadline: input }),
+        body: JSON.stringify({ deadline: extendDeadlineInput }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -158,10 +185,18 @@ export default function RFQDetailPage({ params }) {
         return;
       }
       setRfq(json.data.rfq);
+      setShowExtendDeadlineBox(false);
+      setExtendDeadlineInput('');
     } catch {
       setError('Network error');
     }
     setExtendingDeadline(false);
+  };
+
+  const handleCancelExtendDeadline = () => {
+    setShowExtendDeadlineBox(false);
+    setExtendDeadlineInput('');
+    setError('');
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -186,6 +221,16 @@ export default function RFQDetailPage({ params }) {
   // ──────────────────────────────────────────────────────────────────────────
 
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
+  const isExtendDeadlineInputValid =
+    !!extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime());
+  let extendDeadlineHelpText = 'Ready to save.';
+  if (extendingDeadline) {
+    extendDeadlineHelpText = 'Saving deadline...';
+  } else if (!extendDeadlineInput) {
+    extendDeadlineHelpText = 'Enter a deadline to enable saving.';
+  } else if (!isExtendDeadlineInputValid) {
+    extendDeadlineHelpText = 'Enter a valid date and time.';
+  }
   // RFQ fields are only editable in draft state; once published, only status transitions are allowed
   const isEditable  = rfq && rfq.status === 'draft' && canWrite;
 
@@ -257,7 +302,7 @@ export default function RFQDetailPage({ params }) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
             {rfq.status === 'published' && (
               <button
-                onClick={handleExtendDeadline}
+                onClick={handleOpenExtendDeadline}
                 disabled={extendingDeadline}
                 style={{
                   padding: '7px 16px',
@@ -272,7 +317,7 @@ export default function RFQDetailPage({ params }) {
                   opacity: extendingDeadline ? .6 : 1,
                 }}
               >
-                {extendingDeadline ? 'Extending…' : 'Extend Deadline'}
+                Extend Deadline
               </button>
             )}
             {transitions.map(t => (
@@ -298,6 +343,82 @@ export default function RFQDetailPage({ params }) {
                 {t.label}
               </button>
             ))}
+          </div>
+        )}
+        {showExtendDeadlineBox && (
+          <div style={{
+            background: 'var(--white)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: 16,
+            marginBottom: 16,
+          }}>
+            <label
+              htmlFor="extend-deadline-input"
+              style={{ display: 'block', fontSize: '.78rem', fontWeight: 600, color: 'var(--ink-faint)', marginBottom: 10, letterSpacing: '.05em', textTransform: 'uppercase' }}
+            >
+              New Deadline
+            </label>
+            <input
+              id="extend-deadline-input"
+              type="datetime-local"
+              value={extendDeadlineInput}
+              onChange={(e) => setExtendDeadlineInput(e.target.value)}
+              min={extendDeadlineMin}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                fontSize: '.86rem',
+                color: 'var(--ink)',
+                background: 'var(--white)',
+                marginBottom: 12,
+                fontFamily: 'inherit',
+              }}
+            />
+            <div id="extend-deadline-help" style={{ marginBottom: 12, fontSize: '.76rem', color: 'var(--ink-faint)' }}>
+              {extendDeadlineHelpText}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleCancelExtendDeadline}
+                disabled={extendingDeadline}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--white)',
+                  color: 'var(--ink)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline ? .6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExtendDeadline}
+                disabled={extendingDeadline || !isExtendDeadlineInputValid}
+                aria-describedby="extend-deadline-help"
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--ink)',
+                  background: 'var(--ink)',
+                  color: 'var(--white)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline || !isExtendDeadlineInputValid ? .6 : 1,
+                }}
+              >
+                {extendingDeadline ? 'Extending…' : 'Save Deadline'}
+              </button>
+            </div>
           </div>
         )}
 
