@@ -89,6 +89,8 @@ export default function DashboardLayout({ children, pageTitle }) {
           display: flex;
           flex-direction: column;
           min-width: 0;
+          margin-left: var(--sidebar-w, 224px);
+          transition: margin-left .22s cubic-bezier(.4,0,.2,1);
         }
         .dashboard-content {
           flex: 1;
@@ -118,11 +120,15 @@ export default function DashboardLayout({ children, pageTitle }) {
         /* Sidebar skeleton shown before user role resolves */
         .sidebar-skeleton {
           width: 224px;
-          min-height: 100vh;
+          height: 100vh;
           background: var(--ink);
           flex-shrink: 0;
           display: flex;
           flex-direction: column;
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 40;
         }
 
         /* Responsive breakpoints */
@@ -132,6 +138,9 @@ export default function DashboardLayout({ children, pageTitle }) {
           }
           .sidebar-skeleton {
             display: none;
+          }
+          .dashboard-main {
+            margin-left: 0 !important;
           }
         }
         @media (max-width: 480px) {

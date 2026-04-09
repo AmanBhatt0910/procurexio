@@ -1,9 +1,14 @@
 'use client';
 // src/components/ui/Modal.jsx
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Modal({ open, onClose, title, children, width = 480 }) {
+  // Track client-side mount to avoid SSR/hydration mismatch with portals
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -12,9 +17,11 @@ export default function Modal({ open, onClose, title, children, width = 480 }) {
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  // Render into document.body so position:fixed is always relative to the
+  // viewport, regardless of any CSS transform on ancestor elements.
+  return createPortal(
     <>
       <style>{`
         .modal-backdrop {
@@ -104,6 +111,7 @@ export default function Modal({ open, onClose, title, children, width = 480 }) {
           <div className="modal-body">{children}</div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
