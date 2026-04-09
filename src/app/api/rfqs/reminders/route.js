@@ -23,7 +23,7 @@ export async function POST(request) {
 
   try {
     const summary = await sendDueRFQDeadlineReminders({
-      companyId: userAuthorized ? companyId : (body.companyId || null),
+      companyId: userAuthorized ? companyId : null,
       rfqId: body.rfqId || null,
     });
     return Response.json({ message: 'Reminder processing complete', data: summary });

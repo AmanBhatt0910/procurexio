@@ -10,9 +10,8 @@ import {
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
-const REMINDER_LOG_TABLE = 'rfq_deadline_reminder_logs';
 
-function isReminderDue(msUntilDeadline, hoursBefore) {
+function isInReminderWindow(msUntilDeadline, hoursBefore) {
   const HOUR = 60 * 60 * 1000;
   if (hoursBefore === 12) return msUntilDeadline <= 12 * HOUR && msUntilDeadline > 6 * HOUR;
   if (hoursBefore === 6)  return msUntilDeadline <= 6 * HOUR && msUntilDeadline > 0;
@@ -30,13 +29,12 @@ async function getVendorRecipientsForRfq(rfqId) {
 
   if (!invitedVendors.length) return [];
 
-  const vendorIds = invitedVendors.map(v => v.vendor_id);
-  const placeholders = vendorIds.map(() => '?').join(', ');
   const [userRows] = await pool.query(
-    `SELECT u.vendor_id, u.email
+    `SELECT DISTINCT u.vendor_id, u.email
        FROM users u
-      WHERE u.vendor_id IN (${placeholders}) AND u.is_active = 1`,
-    vendorIds
+       JOIN rfq_vendors rv ON rv.vendor_id = u.vendor_id
+      WHERE rv.rfq_id = ? AND u.is_active = 1`,
+    [rfqId]
   );
 
   const emailMap = new Map(); // vendor_id => Set<string>
@@ -221,10 +219,10 @@ export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = nu
       if (!recipient.emails.length) continue;
 
       for (const hoursBefore of [12, 6]) {
-        if (!isReminderDue(msUntilDeadline, hoursBefore)) continue;
+        if (!isInReminderWindow(msUntilDeadline, hoursBefore)) continue;
 
         const [ins] = await pool.query(
-          `INSERT IGNORE INTO ${REMINDER_LOG_TABLE}
+          `INSERT IGNORE INTO rfq_deadline_reminder_logs
              (rfq_id, vendor_id, hours_before, deadline_at)
            VALUES (?, ?, ?, ?)`,
           [rfq.id, recipient.vendorId, hoursBefore, deadlineDate]

@@ -44,7 +44,7 @@ export async function PUT(request, { params }) {
     }
 
     if (rfq.deadline && parsedDeadline <= new Date(rfq.deadline)) {
-      return Response.json({ error: 'New deadline must be later than the current deadline' }, { status: 422 });
+      return Response.json({ error: 'New deadline must be later than the current deadline (not equal or earlier)' }, { status: 422 });
     }
 
     await query(
