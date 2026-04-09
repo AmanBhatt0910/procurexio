@@ -1,16 +1,16 @@
 'use client';
 // src/components/ui/Modal.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function Modal({ open, onClose, title, children, width = 480 }) {
-  // Track client-side mount to avoid SSR/hydration mismatch with portals
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  // Client-only rendering flag without state updates inside effects
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   // Close on Escape
   useEffect(() => {
