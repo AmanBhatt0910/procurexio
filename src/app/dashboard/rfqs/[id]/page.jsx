@@ -1,6 +1,6 @@
 // src/app/dashboard/rfqs/[id]/page.jsx
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -72,6 +72,12 @@ export default function RFQDetailPage({ params }) {
   const [extendDeadlineInput, setExtendDeadlineInput] = useState('');
   const [extendDeadlineMin, setExtendDeadlineMin] = useState('');
 
+  const nowDateString = useMemo(() => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }, []);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -139,17 +145,10 @@ export default function RFQDetailPage({ params }) {
   };
 
   const handleOpenExtendDeadline = () => {
-    const current = rfq?.deadline ? (() => {
-      const d = new Date(rfq.deadline);
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })() : '';
-    const min = (() => {
-      const d = new Date(Date.now() + ONE_MINUTE_MS);
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    })();
-    setExtendDeadlineMin(min);
+    const current = rfq?.deadline
+      ? new Date(rfq.deadline).toISOString().slice(0, 10)
+      : '';
+    setExtendDeadlineMin(nowDateString);
     setExtendDeadlineInput(current);
     setShowExtendDeadlineBox(true);
   };
@@ -157,16 +156,13 @@ export default function RFQDetailPage({ params }) {
   const handleExtendDeadline = async () => {
     if (!extendDeadlineInput) return;
     const selected = new Date(extendDeadlineInput);
-    const minAllowedMs = Math.max(
-      extendDeadlineMin ? new Date(extendDeadlineMin).getTime() : 0,
-      Date.now() + ONE_MINUTE_MS
-    );
     if (Number.isNaN(selected.getTime())) {
-      setError('Please enter a valid deadline date and time');
+      setError('Please enter a valid date');
       return;
     }
-    if (selected.getTime() < minAllowedMs) {
-      setError('New deadline must be at least 1 minute in the future');
+    const todayStr = nowDateString;
+    if (extendDeadlineInput <= todayStr) {
+      setError('New deadline must be in the future');
       return;
     }
 
@@ -222,7 +218,9 @@ export default function RFQDetailPage({ params }) {
 
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
   const isExtendDeadlineInputValid =
-    !!extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime());
+  !!extendDeadlineInput &&
+  !Number.isNaN(new Date(extendDeadlineInput).getTime()) &&
+  extendDeadlineInput > nowDateString;
   let extendDeadlineHelpText = 'Ready to save.';
   if (extendingDeadline) {
     extendDeadlineHelpText = 'Saving deadline...';
@@ -345,82 +343,147 @@ export default function RFQDetailPage({ params }) {
             ))}
           </div>
         )}
-        {showExtendDeadlineBox && (
-          <div style={{
-            background: 'var(--white)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: 16,
-            marginBottom: 16,
-          }}>
-            <label
-              htmlFor="extend-deadline-input"
-              style={{ display: 'block', fontSize: '.78rem', fontWeight: 600, color: 'var(--ink-faint)', marginBottom: 10, letterSpacing: '.05em', textTransform: 'uppercase' }}
-            >
-              New Deadline
-            </label>
-            <input
-              id="extend-deadline-input"
-              type="datetime-local"
-              value={extendDeadlineInput}
-              onChange={(e) => setExtendDeadlineInput(e.target.value)}
-              min={extendDeadlineMin}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '.86rem',
-                color: 'var(--ink)',
-                background: 'var(--white)',
-                marginBottom: 12,
-                fontFamily: 'inherit',
-              }}
-            />
-            <div id="extend-deadline-help" style={{ marginBottom: 12, fontSize: '.76rem', color: 'var(--ink-faint)' }}>
-              {extendDeadlineHelpText}
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button
-                onClick={handleCancelExtendDeadline}
-                disabled={extendingDeadline}
-                style={{
-                  padding: '7px 14px',
+        {showExtendDeadlineBox && (() => {
+          const currentFormatted = rfq?.deadline ? formatDate(rfq.deadline) : '—';
+          let deltaText = '';
+          let deltaOk = false;
+
+          if (extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime())) {
+            if (rfq?.deadline) {
+              const currentDateStr = new Date(rfq.deadline).toISOString().slice(0, 10);
+              const diffMs = new Date(extendDeadlineInput).getTime() - new Date(currentDateStr).getTime();
+              if (diffMs > 0) {
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                deltaText = `${diffDays} day${diffDays !== 1 ? 's' : ''} later than current deadline`;
+                deltaOk = true;
+              } else {
+                deltaText = 'Must be later than the current deadline';
+                deltaOk = false;
+              }
+            } else {
+              deltaOk = extendDeadlineInput > nowDateString;
+              deltaText = deltaOk ? 'Valid — in the future' : 'Must be a future date';
+            }
+          }
+
+          return (
+            <div style={{
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              overflow: 'hidden',
+              marginBottom: 16,
+            }}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px',
+                background: 'var(--surface)',
+                borderBottom: '0.5px solid var(--border)',
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7,
+                  fontSize: '.83rem', fontWeight: 600, color: 'var(--ink)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/>
+                  </svg>
+                  Extend deadline
+                </span>
+                <button onClick={handleCancelExtendDeadline}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--ink-faint)', padding: 4, lineHeight: 1 }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M1 1l10 10M11 1L1 11"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '14px 16px', background: 'var(--white)' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 11px',
+                  background: 'var(--surface)',
                   borderRadius: 'var(--radius)',
-                  border: '1px solid var(--border)',
-                  background: 'var(--white)',
-                  color: 'var(--ink)',
-                  fontSize: '.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  opacity: extendingDeadline ? .6 : 1,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExtendDeadline}
-                disabled={extendingDeadline || !isExtendDeadlineInputValid}
-                aria-describedby="extend-deadline-help"
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 'var(--radius)',
-                  border: '1px solid var(--ink)',
-                  background: 'var(--ink)',
-                  color: 'var(--white)',
-                  fontSize: '.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  opacity: extendingDeadline || !isExtendDeadlineInputValid ? .6 : 1,
-                }}
-              >
-                {extendingDeadline ? 'Extending…' : 'Save Deadline'}
-              </button>
+                  marginBottom: 14,
+                  fontSize: '.8rem',
+                }}>
+                  <span style={{ color: 'var(--ink-faint)' }}>Current deadline</span>
+                  <span style={{ color: 'var(--border)' }}>—</span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{currentFormatted}</span>
+                </div>
+
+                <label htmlFor="extend-deadline-input"
+                  style={{ display: 'block', fontSize: '.79rem', fontWeight: 500,
+                    color: 'var(--ink-soft)', marginBottom: 6 }}>
+                  New deadline
+                </label>
+                <input
+                  id="extend-deadline-input"
+                  type="date"
+                  value={extendDeadlineInput}
+                  onChange={e => setExtendDeadlineInput(e.target.value)}
+                  min={nowDateString}
+                  style={{
+                    width: '100%', padding: '9px 12px',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    fontSize: '.86rem', color: 'var(--ink)',
+                    background: 'var(--white)', fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                {deltaText && (
+                  <div style={{ marginTop: 7, fontSize: '.78rem',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    color: deltaOk ? '#3b6d11' : '#a32d2d' }}>
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                      background: deltaOk ? '#639922' : '#E24B4A',
+                      display: 'inline-block',
+                    }} />
+                    {deltaText}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
+                padding: '10px 14px',
+                background: 'var(--surface)',
+                borderTop: '0.5px solid var(--border)',
+              }}>
+                <button onClick={handleCancelExtendDeadline} disabled={extendingDeadline}
+                  style={{ padding: '7px 14px', borderRadius: 'var(--radius)',
+                    border: '0.5px solid var(--border)', background: 'transparent',
+                    color: 'var(--ink)', fontSize: '.82rem', fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    opacity: extendingDeadline ? .5 : 1 }}>
+                  Discard
+                </button>
+                <button onClick={handleExtendDeadline}
+                  disabled={extendingDeadline || !isExtendDeadlineInputValid}
+                  style={{ padding: '7px 16px', borderRadius: 'var(--radius)',
+                    border: '0.5px solid var(--ink)', background: 'var(--ink)',
+                    color: 'var(--white)', fontSize: '.82rem', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    opacity: extendingDeadline || !isExtendDeadlineInputValid ? .45 : 1 }}>
+                  {extendingDeadline
+                    ? 'Saving…'
+                    : (<>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Save deadline
+                      </>)}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* View Bids — visible to admin, manager, employee */}
         {canViewBids && (
