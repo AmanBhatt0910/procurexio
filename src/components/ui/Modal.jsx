@@ -7,7 +7,10 @@ import { createPortal } from 'react-dom';
 export default function Modal({ open, onClose, title, children, width = 480 }) {
   // Track client-side mount to avoid SSR/hydration mismatch with portals
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Close on Escape
   useEffect(() => {

@@ -62,7 +62,7 @@ export default function VendorInvitePanel({ rfqId, rfqStatus, invitedVendors, ca
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [search]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

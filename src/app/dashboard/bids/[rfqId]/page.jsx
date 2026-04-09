@@ -48,20 +48,20 @@ export default function VendorBidWorkspacePage() {
   // Step navigation (1-4); synced from workflowStep after data loads
   const [substep, setSubstep] = useState(1);
 
-  const toFiniteNumber = (value) => {
+  const toFiniteNumber = useCallback((value) => {
     if (value === null || value === undefined || value === '') return 0;
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
-  };
+  }, []);
 
-  const normalizeBidItems = (items = []) =>
+  const normalizeBidItems = useCallback((items = []) =>
     items.map((item) => ({
       rfq_item_id: item.rfq_item_id,
       unit_price: toFiniteNumber(item.unit_price),
       quantity: toFiniteNumber(item.quantity),
       tax_rate: toFiniteNumber(item.tax_rate),
       notes: item.notes || '',
-    }));
+    })), [toFiniteNumber]);
 
   const refreshRank = useCallback(async () => {
     try {
@@ -108,7 +108,7 @@ export default function VendorBidWorkspacePage() {
     } finally {
       setLoading(false);
     }
-  }, [rfqId]);
+  }, [normalizeBidItems, rfqId]);
 
   useEffect(() => {
     Promise.all([

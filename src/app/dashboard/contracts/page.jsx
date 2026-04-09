@@ -1,6 +1,6 @@
 // src/app/dashboard/contracts/page.jsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -31,11 +31,7 @@ export default function ContractsPage() {
   const [meta, setMeta] = useState({ total: 0, pages: 1 });
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    fetchContracts();
-  }, [statusFilter, page]);
-
-  async function fetchContracts() {
+  const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 20 });
@@ -49,7 +45,11 @@ export default function ContractsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    fetchContracts();
+  }, [fetchContracts]);
 
   const columns = [
     {

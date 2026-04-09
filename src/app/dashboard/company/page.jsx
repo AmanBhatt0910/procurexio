@@ -223,7 +223,7 @@ export default function CompanyPage() {
       {/* Profile form */}
       <form onSubmit={saveProfile} className="form-card">
         <div className="form-card-title">Organization Profile</div>
-        <div className="form-card-sub">Update your company's name and contact email.</div>
+        <div className="form-card-sub">Update your company&apos;s name and contact email.</div>
 
         <div className="two-col-form">
           <div className="field">

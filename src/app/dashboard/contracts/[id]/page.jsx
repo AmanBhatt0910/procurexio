@@ -1,6 +1,6 @@
 // src/app/dashboard/contracts/[id]/page.jsx
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -29,11 +29,7 @@ export default function ContractDetailPage({ params }) {
 
   const isAdmin = user?.role === 'company_admin' || user?.role === 'super_admin';
 
-  useEffect(() => {
-    fetchContract();
-  }, [id]);
-
-  async function fetchContract() {
+  const fetchContract = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/contracts/${id}`);
@@ -43,7 +39,11 @@ export default function ContractDetailPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    fetchContract();
+  }, [fetchContract]);
 
   async function handleCancel() {
     if (!contract) return;
@@ -60,8 +60,8 @@ export default function ContractDetailPage({ params }) {
   }
 
   return (
-    <RoleGuard allowed={['company_admin', 'manager', 'employee', 'super_admin']}>
-      <DashboardLayout>
+    <DashboardLayout>
+      <RoleGuard roles={['company_admin', 'manager', 'employee', 'super_admin']}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap');
           :root {
@@ -194,7 +194,7 @@ export default function ContractDetailPage({ params }) {
             </>
           ) : null}
         </div>
-      </DashboardLayout>
-    </RoleGuard>
+      </RoleGuard>
+    </DashboardLayout>
   );
 }

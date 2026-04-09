@@ -166,7 +166,7 @@ export default function RFQsPage() {
         </button>
       ),
     },
-  ], [canWrite, router]);
+  ], [router]);
 
   const addBtn = !authLoading && canWrite ? (
     <button

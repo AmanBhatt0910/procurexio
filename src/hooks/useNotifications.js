@@ -36,9 +36,10 @@ export function useNotifications() {
 
   useEffect(() => {
     mounted.current = true;
-    refresh();
+    const initialRefreshTimer = setTimeout(refresh, 0);
     const interval = setInterval(refresh, NOTIFICATION_POLL_INTERVAL_MS);
     return () => {
+      clearTimeout(initialRefreshTimer);
       clearInterval(interval);
       mounted.current = false;
     };

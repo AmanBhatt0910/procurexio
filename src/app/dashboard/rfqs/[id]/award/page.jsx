@@ -1,6 +1,6 @@
 // src/app/dashboard/rfqs/[id]/award/page.jsx
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -35,11 +35,7 @@ export default function AwardContractPage({ params }) {
   const canAward = ['company_admin', 'manager', 'super_admin'].includes(user?.role);
   const readOnly = !canAward;
 
-  useEffect(() => {
-    fetchAll();
-  }, [id]);
-
-  async function fetchAll() {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [rfqRes, evalRes, contractRes] = await Promise.all([
@@ -63,7 +59,11 @@ export default function AwardContractPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   async function handleSaveEvaluation(bidId, { score, notes }) {
     const res = await fetch(`/api/rfqs/${id}/bids/${bidId}/evaluate`, {
