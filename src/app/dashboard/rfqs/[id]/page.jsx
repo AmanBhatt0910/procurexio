@@ -158,8 +158,12 @@ export default function RFQDetailPage({ params }) {
     if (!extendDeadlineInput) return;
     const selected = new Date(extendDeadlineInput);
     const minAllowed = new Date(Date.now() + ONE_MINUTE_MS);
-    if (Number.isNaN(selected.getTime()) || selected <= minAllowed) {
-      setError('New deadline must be more than 1 minute in the future');
+    if (Number.isNaN(selected.getTime())) {
+      setError('Please enter a valid deadline date and time');
+      return;
+    }
+    if (selected <= minAllowed) {
+      setError('New deadline must be greater than 1 minute from now');
       return;
     }
 
