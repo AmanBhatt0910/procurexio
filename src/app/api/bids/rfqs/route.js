@@ -80,12 +80,15 @@ export async function GET(request) {
           AND rv.status IN ('invited','viewed','submitted')
           AND r.status IN ('published','closed')
          ORDER BY
+          -- Group statuses for cleaner vendor dashboard sections: published first, then closed.
           CASE r.status
             WHEN 'published' THEN 0
             WHEN 'closed' THEN 1
             ELSE 2
           END ASC,
+          -- For published RFQs, prioritize nearest deadline first.
           CASE WHEN r.status = 'published' THEN r.deadline END ASC,
+          -- For closed RFQs, show most recently updated/closed first.
           CASE WHEN r.status = 'closed' THEN COALESCE(r.updated_at, r.created_at) END DESC,
           b.submitted_at DESC,
           r.created_at DESC
