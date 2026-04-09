@@ -235,6 +235,15 @@ ul, ol { list-style: none; }
   color: var(--accent);
 }
 
+.auth-page-loading-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  color: var(--ink-soft);
+  font-family: 'DM Sans', Arial, Helvetica, sans-serif;
+}
+
 @keyframes authFadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }

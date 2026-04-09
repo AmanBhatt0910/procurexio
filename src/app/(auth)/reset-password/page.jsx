@@ -334,7 +334,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={(
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', fontFamily: 'sans-serif', color: '#6b6660' }}>
+        <div className="auth-page-loading-fallback">
           Loading&hellip;
         </div>
       )}
