@@ -2,9 +2,9 @@ import React from 'react';
 
 export default function SocialProof() {
   const companies = [
-    'Meridian Group', 'TechBridge Corp', 'Elevate Solutions',
-    'Nexus Industries', 'Pinnacle Ventures', 'Cascade Partners',
-    'Orion Logistics', 'Summit Holdings',
+    'Greenfuel Energy Solutions Pvt. Ltd', 'Sugam', 'ES',
+    'NI', 'PV', 'CP',
+    'OL', 'SH',
   ];
 
   return (

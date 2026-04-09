@@ -186,7 +186,7 @@ export default function VendorBidsPage() {
       },
     },
     {
-      key: 'deadline',
+      key: 'time_remaining',
       label: 'Time Remaining',
       render: (val, row) => {
         const isClosedStatus = row?.rfq_status === 'closed' || row?.rfq_status === 'cancelled';

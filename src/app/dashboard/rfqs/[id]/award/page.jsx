@@ -448,7 +448,7 @@ export default function AwardContractPage({ params }) {
                                 type="radio"
                                 className="bid-select-radio"
                                 name="selectedBid"
-                                value={bid.bidId}
+                                value={String(bid.bidId)}
                                 checked={selectedBidId == bid.bidId}
                                 onChange={e => setSelectedBidId(e.target.value)}
                               />
