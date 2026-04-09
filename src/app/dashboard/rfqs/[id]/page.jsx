@@ -67,6 +67,9 @@ export default function RFQDetailPage({ params }) {
   // Status transition
   const [transitioning, setTransitioning] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
+  const [showExtendDeadlineBox, setShowExtendDeadlineBox] = useState(false);
+  const [extendDeadlineInput, setExtendDeadlineInput] = useState('');
+  const [extendDeadlineMin, setExtendDeadlineMin] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -134,22 +137,31 @@ export default function RFQDetailPage({ params }) {
     setTransitioning(false);
   };
 
-  const handleExtendDeadline = async () => {
+  const handleOpenExtendDeadline = () => {
     const current = rfq?.deadline ? (() => {
       const d = new Date(rfq.deadline);
       const pad = (n) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
-    const input = window.prompt('Enter the new RFQ deadline (YYYY-MM-DDTHH:mm)', current);
-    if (!input) return;
+    const min = (() => {
+      const d = new Date(Date.now() + 60 * 1000);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })();
+    setExtendDeadlineMin(min);
+    setExtendDeadlineInput(current);
+    setShowExtendDeadlineBox(true);
+  };
 
+  const handleExtendDeadline = async () => {
+    if (!extendDeadlineInput) return;
     setExtendingDeadline(true);
     setError('');
     try {
       const res = await fetch(`/api/rfqs/${id}/deadline`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deadline: input }),
+        body: JSON.stringify({ deadline: extendDeadlineInput }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -158,6 +170,7 @@ export default function RFQDetailPage({ params }) {
         return;
       }
       setRfq(json.data.rfq);
+      setShowExtendDeadlineBox(false);
     } catch {
       setError('Network error');
     }
@@ -257,7 +270,7 @@ export default function RFQDetailPage({ params }) {
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
             {rfq.status === 'published' && (
               <button
-                onClick={handleExtendDeadline}
+                onClick={handleOpenExtendDeadline}
                 disabled={extendingDeadline}
                 style={{
                   padding: '7px 16px',
@@ -272,7 +285,7 @@ export default function RFQDetailPage({ params }) {
                   opacity: extendingDeadline ? .6 : 1,
                 }}
               >
-                {extendingDeadline ? 'Extending…' : 'Extend Deadline'}
+                Extend Deadline
               </button>
             )}
             {transitions.map(t => (
@@ -298,6 +311,77 @@ export default function RFQDetailPage({ params }) {
                 {t.label}
               </button>
             ))}
+          </div>
+        )}
+        {showExtendDeadlineBox && rfq.status === 'published' && canWrite && (
+          <div style={{
+            background: 'var(--white)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: 16,
+            marginBottom: 16,
+          }}>
+            <div style={{ fontSize: '.78rem', fontWeight: 600, color: 'var(--ink-faint)', marginBottom: 10, letterSpacing: '.05em', textTransform: 'uppercase' }}>
+              New Deadline
+            </div>
+            <input
+              type="datetime-local"
+              value={extendDeadlineInput}
+              onChange={(e) => setExtendDeadlineInput(e.target.value)}
+              min={extendDeadlineMin}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                fontSize: '.86rem',
+                color: 'var(--ink)',
+                background: 'var(--white)',
+                marginBottom: 12,
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  setShowExtendDeadlineBox(false);
+                  setExtendDeadlineInput('');
+                }}
+                disabled={extendingDeadline}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--white)',
+                  color: 'var(--ink)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline ? .6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExtendDeadline}
+                disabled={extendingDeadline || !extendDeadlineInput}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--ink)',
+                  background: 'var(--ink)',
+                  color: 'var(--white)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline || !extendDeadlineInput ? .6 : 1,
+                }}
+              >
+                {extendingDeadline ? 'Extending…' : 'Save Deadline'}
+              </button>
+            </div>
           </div>
         )}
 
