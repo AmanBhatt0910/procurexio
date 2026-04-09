@@ -132,7 +132,7 @@ export default function AwardContractPage({ params }) {
     : Infinity;
 
   return (
-    <RoleGuard allowed={['company_admin', 'manager', 'employee', 'super_admin']}>
+    <RoleGuard roles={['company_admin', 'manager', 'employee', 'super_admin']}>
       <DashboardLayout>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');

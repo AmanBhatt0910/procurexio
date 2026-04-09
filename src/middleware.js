@@ -187,7 +187,7 @@ const PUBLIC_PREFIXES = [
 ];
 
 // Routes that are public with exact pathname matching
-const PUBLIC_EXACT = ['/'];
+const PUBLIC_EXACT = ['/', '/terms', '/privacy', '/contact'];
 
 function isPublic(pathname) {
   if (PUBLIC_EXACT.includes(pathname)) return true;

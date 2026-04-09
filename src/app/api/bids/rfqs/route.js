@@ -70,17 +70,26 @@ export async function GET(request) {
     const [rows] = await pool.query(
       `SELECT
          r.id, r.title, r.reference_number, r.status AS rfq_status,
-         r.deadline, r.currency,
+         r.deadline, r.currency, r.created_at, r.updated_at,
          rv.status AS invite_status,
          b.id AS bid_id, b.status AS bid_status, b.total_amount, b.submitted_at
-       FROM rfq_vendors rv
-       JOIN rfqs r ON r.id = rv.rfq_id
-       LEFT JOIN bids b ON b.rfq_id = r.id AND b.vendor_id = ?
+        FROM rfq_vendors rv
+        JOIN rfqs r ON r.id = rv.rfq_id
+        LEFT JOIN bids b ON b.rfq_id = r.id AND b.vendor_id = ?
        WHERE rv.vendor_id = ? AND rv.company_id = ?
          AND rv.status IN ('invited','viewed','submitted')
          AND r.status IN ('published','closed')
-       ORDER BY b.submitted_at DESC, r.created_at DESC
-       LIMIT ? OFFSET ?`,
+        ORDER BY
+          CASE r.status
+            WHEN 'published' THEN 0
+            WHEN 'closed' THEN 1
+            ELSE 2
+          END ASC,
+          CASE WHEN r.status = 'published' THEN r.deadline END ASC,
+          CASE WHEN r.status = 'closed' THEN COALESCE(r.updated_at, r.created_at) END DESC,
+          b.submitted_at DESC,
+          r.created_at DESC
+        LIMIT ? OFFSET ?`,
       [vendorId, vendorId, companyId, limit, offset]
     );
 

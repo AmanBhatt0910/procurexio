@@ -6,10 +6,12 @@ import PageHeader from '@/components/ui/PageHeader';
 import BidComparisonTable from '@/components/bids/BidComparisonTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function RFQBidsPage() {
   const { id: rfqId } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
@@ -91,6 +93,7 @@ export default function RFQBidsPage() {
   const bids    = data?.bids  || [];
   const submitted = bids.filter(b => b.status === 'submitted');
   const totalBids = bids.length;
+  const canAward = ['company_admin', 'manager', 'super_admin'].includes(user?.role);
 
   const fmtAmount = (val, cur) =>
     val != null ? `${cur || ''} ${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—';
@@ -208,6 +211,19 @@ export default function RFQBidsPage() {
                   >
                     {exporting ? 'Exporting…' : '⬇ Export PDF'}
                   </button>
+                  {canAward && submitted.length > 0 && ['published', 'closed'].includes(rfq.status) && (
+                    <button
+                      className="btn"
+                      onClick={() => router.push(`/dashboard/rfqs/${rfqId}/award`)}
+                      style={{
+                        background: 'var(--accent)',
+                        borderColor: 'var(--accent)',
+                        color: '#fff',
+                      }}
+                    >
+                      🏆 Award / Declare Result
+                    </button>
+                  )}
                 </div>
               }
             />

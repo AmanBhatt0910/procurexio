@@ -96,7 +96,7 @@ export default function BidStepTwo({
       <div style={{ marginBottom: 20 }}>
         <BidItemsForm
           rfqItems={rfqItems}
-          initialItems={bid.items || []}
+          initialItems={bidItems.length > 0 ? bidItems : (bid.items || [])}
           onChange={setBidItems}
           readOnly={!canEdit && !updateMode}
         />

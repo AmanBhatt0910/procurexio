@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -111,6 +111,41 @@ export default function VendorBidsPage() {
   }, []);
 
   useEffect(() => { fetchRfqs(page); }, [fetchRfqs, page]);
+
+  const sortedRfqs = useMemo(() => {
+    const normalizeTime = (v) => {
+      if (!v) return 0;
+      const t = new Date(v).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+
+    const list = [...rfqs];
+    list.sort((a, b) => {
+      const aStatus = a?.rfq_status === 'published' ? 0 : a?.rfq_status === 'closed' ? 1 : 2;
+      const bStatus = b?.rfq_status === 'published' ? 0 : b?.rfq_status === 'closed' ? 1 : 2;
+      if (aStatus !== bStatus) return aStatus - bStatus;
+
+      if (a?.rfq_status === 'published' && b?.rfq_status === 'published') {
+        return normalizeTime(a.deadline) - normalizeTime(b.deadline);
+      }
+
+      if (a?.rfq_status === 'closed' && b?.rfq_status === 'closed') {
+        return normalizeTime(b.updated_at || b.created_at) - normalizeTime(a.updated_at || a.created_at);
+      }
+
+      return normalizeTime(b.created_at) - normalizeTime(a.created_at);
+    });
+    return list;
+  }, [rfqs]);
+
+  const publishedRfqs = useMemo(
+    () => sortedRfqs.filter((r) => r?.rfq_status === 'published'),
+    [sortedRfqs]
+  );
+  const closedRfqs = useMemo(
+    () => sortedRfqs.filter((r) => r?.rfq_status === 'closed'),
+    [sortedRfqs]
+  );
 
   const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
 
@@ -227,6 +262,18 @@ export default function VendorBidsPage() {
             display: flex; align-items: center; gap: 8px;
             margin-top: 20px; justify-content: center;
           }
+          .section-wrap { margin-bottom: 20px; }
+          .section-title {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 10px; color: var(--ink-soft);
+            font-size: .78rem; letter-spacing: .07em;
+            text-transform: uppercase; font-weight: 600;
+          }
+          .section-count {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 999px; padding: 1px 8px;
+            font-size: .72rem; color: var(--ink-faint);
+          }
           .page-btn {
             height: 32px; min-width: 32px; padding: 0 10px;
             border: 1px solid var(--border); border-radius: 7px;
@@ -248,12 +295,31 @@ export default function VendorBidsPage() {
               You haven&apos;t been invited to any open RFQs yet. Check back later.
             </div>
           )}
-          <DataTable
-            columns={columns}
-            rows={rfqs}
-            loading={loading}
-            emptyMessage="No RFQ invitations found"
-          />
+          <div className="section-wrap">
+            <div className="section-title">
+              Published RFQs
+              <span className="section-count">{publishedRfqs.length}</span>
+            </div>
+            <DataTable
+              columns={columns}
+              rows={publishedRfqs}
+              loading={loading}
+              emptyMessage="No published RFQ invitations found"
+            />
+          </div>
+
+          <div className="section-wrap">
+            <div className="section-title">
+              Closed RFQs
+              <span className="section-count">{closedRfqs.length}</span>
+            </div>
+            <DataTable
+              columns={columns}
+              rows={closedRfqs}
+              loading={loading}
+              emptyMessage="No closed RFQs yet"
+            />
+          </div>
 
           {pagination.pages > 1 && (
             <div className="pagination">

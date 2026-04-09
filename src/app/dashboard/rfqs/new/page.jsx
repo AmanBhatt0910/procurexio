@@ -112,12 +112,9 @@ export default function NewRFQPage() {
     title:       '',
     description: '',
     deadline:    '',
-    budget:      '',
     currency:    'USD',
   });
   const [items, setItems]   = useState([]);
-  // budgetOverride: null means "use auto-calculated value"; a string means manual entry
-  const [budgetOverride, setBudgetOverride] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState('');
 
@@ -128,10 +125,8 @@ export default function NewRFQPage() {
     return sum + qty * price;
   }, 0);
 
-  const budgetAutoFilled = budgetOverride === null && calculatedBudget > 0;
-  const displayBudget   = budgetOverride !== null
-    ? budgetOverride
-    : calculatedBudget > 0 ? calculatedBudget.toFixed(2) : '';
+  const budgetAutoFilled = calculatedBudget > 0;
+  const displayBudget = calculatedBudget > 0 ? calculatedBudget.toFixed(2) : '';
 
   // Auto-fill currency from company settings
   useEffect(() => {
@@ -262,9 +257,9 @@ export default function NewRFQPage() {
                 type="number"
                 className="form-input"
                 value={displayBudget}
-                onChange={e => setBudgetOverride(e.target.value || null)}
                 placeholder="0.00"
                 min="0"
+                readOnly
               />
             </div>
             <div>
