@@ -196,6 +196,7 @@ export default function RFQDetailPage({ params }) {
   const handleCancelExtendDeadline = () => {
     setShowExtendDeadlineBox(false);
     setExtendDeadlineInput('');
+    setError('');
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
