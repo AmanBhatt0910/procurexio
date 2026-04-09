@@ -200,8 +200,7 @@ export default function BidDetailPage() {
                     {bid.items.map((item, i) => {
                       const lineNet   = parseFloat(item.unit_price || 0) * parseFloat(item.quantity || 0);
                       const taxRate   = parseFloat(item.tax_rate || 0);
-                      const lineTax   = lineNet * (taxRate / 100);
-                      const lineTotal = lineNet + lineTax;
+                      const lineTotal = lineNet;
                       return (
                         <tr key={i}>
                           <td>{item.description}</td>

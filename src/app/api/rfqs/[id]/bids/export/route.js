@@ -296,9 +296,8 @@ export async function GET(request, { params }) {
         const bi        = bidItemsMap[bid.bid_id]?.[item.id];
         const up        = bi ? bi.unit_price : 0;
         const qty       = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
-        const taxRate   = bi ? (bi.tax_rate ?? 0) : 0;
         const lineNet   = up * qty;
-        const lineTotal = lineNet * (1 + taxRate / 100);
+        const lineTotal = lineNet;
         const isLowest  = i === 0 && lineNet > 0;
 
         drawText(page, lineTotal > 0 ? fmt(lineTotal) : '-', {
@@ -317,7 +316,7 @@ export async function GET(request, { params }) {
     fillRect(page, margin, py(cursorY + totRowH), contentW, totRowH, C_TOTAL_BG);
     const totTextY = py(cursorY + totRowH - 7);
 
-    drawText(page, 'TOTAL (incl. tax)', {
+    drawText(page, 'TOTAL', {
       x: colDesc + 4, y: totTextY, size: 8,
       font: fontBold, color: C_INK, maxWidth: descW + 80 + 60 - 8,
     });
@@ -327,8 +326,7 @@ export async function GET(request, { params }) {
         const bi      = bidItemsMap[bid.bid_id]?.[item.id];
         const up      = bi ? bi.unit_price : 0;
         const qty     = bi ? bi.quantity   : parseFloat(item.quantity) || 0;
-        const taxRate = bi ? (bi.tax_rate ?? 0) : 0;
-        return sum + up * qty * (1 + taxRate / 100);
+        return sum + up * qty;
       }, 0);
 
       drawText(page, `${bid.currency || rfq.currency || ''} ${fmt(grandTotal)}`, {
