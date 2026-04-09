@@ -260,6 +260,8 @@ export default function NewRFQPage() {
                 placeholder="0.00"
                 min="0"
                 readOnly
+                aria-readonly="true"
+                style={{ background: 'var(--surface)', color: 'var(--ink-soft)', cursor: 'not-allowed' }}
               />
             </div>
             <div>

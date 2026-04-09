@@ -80,6 +80,11 @@ function CountdownTimer({ deadline }) {
 }
 
 const PAGE_LIMIT = 20;
+const normalizeTime = (v) => {
+  if (!v) return 0;
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? 0 : t;
+};
 
 export default function VendorBidsPage() {
   const [rfqs, setRfqs]           = useState([]);
@@ -113,12 +118,6 @@ export default function VendorBidsPage() {
   useEffect(() => { fetchRfqs(page); }, [fetchRfqs, page]);
 
   const sortedRfqs = useMemo(() => {
-    const normalizeTime = (v) => {
-      if (!v) return 0;
-      const t = new Date(v).getTime();
-      return Number.isNaN(t) ? 0 : t;
-    };
-
     const list = [...rfqs];
     list.sort((a, b) => {
       const aStatus = a?.rfq_status === 'published' ? 0 : a?.rfq_status === 'closed' ? 1 : 2;
