@@ -47,7 +47,7 @@ export async function GET(request) {
        FROM users u
        LEFT JOIN companies c ON c.id = u.company_id
        ${where}
-       ORDER BY u.created_at DESC
+       ORDER BY COALESCE(c.name, '~') ASC, FIELD(u.role, 'company_admin', 'manager', 'employee', 'vendor_user') ASC, u.created_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
       params
     );

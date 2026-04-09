@@ -137,6 +137,14 @@ export default function AdminUsersPage() {
           .page-btn:hover:not(:disabled) { background: var(--surface); }
           .page-btn:disabled { opacity: .4; cursor: not-allowed; }
 
+          .company-group-header td {
+            background: var(--surface); padding: 7px 16px;
+            font-family: 'Syne', sans-serif; font-size: .72rem; font-weight: 700;
+            letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft);
+            border-top: 2px solid var(--border); border-bottom: 1px solid var(--border);
+          }
+          .company-group-header:first-child td { border-top: none; }
+
           .empty-state {
             padding: 48px 24px; text-align: center;
             color: var(--ink-faint); font-size: .88rem;
@@ -194,32 +202,44 @@ export default function AdminUsersPage() {
                 ) : users.length === 0 ? (
                   <tr><td colSpan={4} className="empty-state">No users found.</td></tr>
                 ) : (
-                  users.map(u => (
-                    <tr key={u.id}>
-                      <td>
-                        <div className="user-cell">
-                          <div className="user-avatar">
-                            {u.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                  users.flatMap((u, idx) => {
+                    const isNewCompany = idx === 0 || !users[idx - 1] || users[idx - 1].company_id !== u.company_id;
+                    const rows = [];
+                    if (isNewCompany) {
+                      rows.push(
+                        <tr key={`ch-${u.company_id ?? idx}`} className="company-group-header">
+                          <td colSpan={4}>{u.company_name || 'No Company'}</td>
+                        </tr>
+                      );
+                    }
+                    rows.push(
+                      <tr key={u.id}>
+                        <td>
+                          <div className="user-cell">
+                            <div className="user-avatar">
+                              {u.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="user-name">{u.name}</div>
+                              <div className="user-email">{u.email}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="user-name">{u.name}</div>
-                            <div className="user-email">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td><Badge variant={u.role}>{ROLE_LABELS[u.role] ?? u.role}</Badge></td>
-                      <td>
-                        {u.company_name
-                          ? <span className="company-chip">{u.company_name}</span>
-                          : <span style={{ color: 'var(--ink-faint)' }}>—</span>}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', color: 'var(--ink-faint)', fontSize: '.78rem' }}>
-                        {u.created_at
-                          ? new Date(u.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td><Badge variant={u.role}>{ROLE_LABELS[u.role] ?? u.role}</Badge></td>
+                        <td>
+                          {u.company_name
+                            ? <span className="company-chip">{u.company_name}</span>
+                            : <span style={{ color: 'var(--ink-faint)' }}>—</span>}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap', color: 'var(--ink-faint)', fontSize: '.78rem' }}>
+                          {u.created_at
+                            ? new Date(u.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : '—'}
+                        </td>
+                      </tr>
+                    );
+                    return rows;
+                  })
                 )}
               </tbody>
             </table>

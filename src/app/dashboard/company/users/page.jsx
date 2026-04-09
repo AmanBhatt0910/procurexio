@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
-import DataTable from '@/components/ui/DataTable';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/useAuth';
@@ -128,72 +127,6 @@ export default function UsersPage() {
     return r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  const columns = [
-    {
-      key: 'name',
-      label: 'Name',
-      // ✅ DataTable calls render(row['name'], row) — we ignore val and use row
-      render: (_val, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.64rem',
-            color: 'var(--ink-soft)', flexShrink: 0,
-          }}>
-            {getInitials(row.name)}
-          </div>
-          <div>
-            <div style={{ fontWeight: 500, fontSize: '.87rem' }}>{row.name || '—'}</div>
-            <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{row.email}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'role',
-      label: 'Role',
-      width: 160,
-      // ✅ val IS the role string here (row['role']) — safe to use directly
-      render: (val) => <Badge variant={val}>{val}</Badge>,
-    },
-    {
-      key: 'created_at',
-      label: 'Joined',
-      width: 130,
-      // ✅ val IS the date string (row['created_at'])
-      render: (val) => (
-        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>
-          {formatDate(val)}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      label: '',
-      width: 80,
-      // ✅ need full row to check role and pass to openEdit — use (_val, row)
-      render: (_val, row) => (
-        row.role === ROLES.VENDOR_USER || !isAdmin ? null : (
-          <button
-            onClick={() => openEdit(row)}
-            style={{
-              background: 'none', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-              fontFamily: 'DM Sans, sans-serif', fontSize: '.78rem',
-              color: 'var(--ink-soft)', transition: 'background .12s, color .12s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--ink)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--ink-soft)'; }}
-          >
-            Edit
-          </button>
-        )
-      ),
-    },
-  ];
-
   const inviteBtn = isAdmin ? (
     <button
       onClick={() => setInviteOpen(true)}
@@ -239,6 +172,18 @@ export default function UsersPage() {
         .page-btn:hover:not(:disabled) { background: var(--surface); }
         .page-btn:disabled { opacity: .4; cursor: not-allowed; }
         .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .cu-table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+        .cu-table { width: 100%; border-collapse: collapse; font-family: 'DM Sans', sans-serif; font-size: .855rem; }
+        .cu-th { padding: 11px 16px; text-align: left; font-size: .71rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); background: var(--surface); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        .cu-td { padding: 13px 16px; color: var(--ink); border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .cu-tr:last-child .cu-td { border-bottom: none; }
+        .cu-tr:hover .cu-td { background: var(--surface); }
+        .cu-role-header td { background: var(--surface); padding: 7px 16px; font-family: 'Syne', sans-serif; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); border-top: 2px solid var(--border); border-bottom: 1px solid var(--border); }
+        .cu-role-header:first-child td { border-top: none; }
+        .cu-empty { padding: 48px 16px; text-align: center; color: var(--ink-faint); font-size: .875rem; }
+        .cu-loading { padding: 48px 16px; text-align: center; }
+        .cu-spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       <PageHeader
@@ -247,12 +192,84 @@ export default function UsersPage() {
         action={inviteBtn}
       />
 
-      <DataTable
-        columns={columns}
-        rows={users}
-        loading={loading}
-        emptyMessage="No team members yet. Invite your first colleague."
-      />
+      <div className="cu-table-wrap">
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="cu-table">
+            <thead>
+              <tr>
+                <th className="cu-th">Name</th>
+                <th className="cu-th" style={{ width: 160 }}>Role</th>
+                <th className="cu-th" style={{ width: 130 }}>Joined</th>
+                {isAdmin && <th className="cu-th" style={{ width: 80 }}></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={isAdmin ? 4 : 3} className="cu-loading"><div className="cu-spinner" /></td></tr>
+              ) : users.length === 0 ? (
+                <tr><td colSpan={isAdmin ? 4 : 3} className="cu-empty">No team members yet. Invite your first colleague.</td></tr>
+              ) : (
+                users.flatMap((u, idx) => {
+                  const isNewRole = idx === 0 || !users[idx - 1] || users[idx - 1].role !== u.role;
+                  const rows = [];
+                  if (isNewRole) {
+                    rows.push(
+                      <tr key={`rh-${u.role}-${idx}`} className="cu-role-header">
+                        <td colSpan={isAdmin ? 4 : 3}>{roleLabel(u.role)}</td>
+                      </tr>
+                    );
+                  }
+                  rows.push(
+                    <tr key={u.id} className="cu-tr">
+                      <td className="cu-td">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%',
+                            background: 'var(--surface)', border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '.64rem',
+                            color: 'var(--ink-soft)', flexShrink: 0,
+                          }}>
+                            {getInitials(u.name)}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: '.87rem' }}>{u.name || '—'}</div>
+                            <div style={{ fontSize: '.75rem', color: 'var(--ink-faint)' }}>{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="cu-td"><Badge variant={u.role}>{u.role}</Badge></td>
+                      <td className="cu-td">
+                        <span style={{ fontSize: '.82rem', color: 'var(--ink-soft)' }}>{formatDate(u.created_at)}</span>
+                      </td>
+                      {isAdmin && (
+                        <td className="cu-td">
+                          {u.role !== ROLES.VENDOR_USER && (
+                            <button
+                              onClick={() => openEdit(u)}
+                              style={{
+                                background: 'none', border: '1px solid var(--border)',
+                                borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                                fontFamily: 'DM Sans, sans-serif', fontSize: '.78rem',
+                                color: 'var(--ink-soft)', transition: 'background .12s, color .12s',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--ink)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--ink-soft)'; }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                  return rows;
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Pagination */}
       {!loading && meta.totalPages > 1 && (
