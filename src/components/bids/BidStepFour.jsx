@@ -62,9 +62,9 @@ export default function BidStepFour({
   onBack,
 }) {
   const liveTotal = bidItems.reduce((sum, item) => {
-    const up  = parseFloat(item.unit_price) || 0;
+    const unitPrice = parseFloat(item.unit_price) || 0;
     const qty = parseFloat(item.quantity) || 0;
-    return sum + (up * qty);
+    return sum + (unitPrice * qty);
   }, 0);
   const summaryTotal = liveTotal > 0 ? liveTotal : (parseFloat(bid.total_amount) || 0);
 
