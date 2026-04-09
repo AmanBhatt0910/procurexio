@@ -283,6 +283,7 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
         .sidebar {
           width: ${collapsed ? '64px' : '224px'};
           height: 100vh;
+          height: 100dvh;
           background: var(--ink);
           display: flex;
           flex-direction: column;

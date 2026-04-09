@@ -121,6 +121,7 @@ export default function DashboardLayout({ children, pageTitle }) {
         .sidebar-skeleton {
           width: 224px;
           height: 100vh;
+          height: 100dvh;
           background: var(--ink);
           flex-shrink: 0;
           display: flex;

@@ -82,7 +82,7 @@ export default function BidStepTwo({
           <label>Notes / Cover Message (optional)</label>
           <textarea
             className="form-control"
-            rows={3}
+            rows={4}
             placeholder="Any overall notes for the buyer…"
             value={notes}
             onChange={e => setNotes(e.target.value)}
