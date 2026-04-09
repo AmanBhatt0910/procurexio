@@ -44,16 +44,16 @@ export async function PUT(request, { params }) {
       );
     }
 
-    if (rfq.deadline && parsedDeadline <= new Date(rfq.deadline)) {
-      return Response.json({ error: 'New deadline must be later than the current deadline' }, { status: 422 });
-    }
-
-    await query(
+    const updateResult = await query(
       `UPDATE rfqs
           SET deadline = ?, updated_at = NOW()
-        WHERE id = ? AND company_id = ?`,
-      [parsedDeadline, id, companyId]
+        WHERE id = ? AND company_id = ?
+          AND (deadline IS NULL OR ? > deadline)`,
+      [parsedDeadline, id, companyId, parsedDeadline]
     );
+    if (!updateResult.affectedRows) {
+      return Response.json({ error: 'New deadline must be later than the current deadline' }, { status: 422 });
+    }
 
     try {
       await sendRFQDeadlineExtendedEmails(id, rfq.deadline, parsedDeadline);
