@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { validateCurrency } from '@/lib/validation';
 import { logAction, ACTION } from '@/lib/audit';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -39,7 +40,7 @@ export async function POST(request, { params }) {
     if (rfq.status === 'closed' || rfq.status === 'cancelled') {
       return NextResponse.json({ error: 'This RFQ is closed and no longer accepting bids' }, { status: 422 });
     }
-    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+    if (isDeadlinePassed(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
 
@@ -100,7 +101,7 @@ export async function PUT(request, { params }) {
     if (rfq.status === 'closed' || rfq.status === 'cancelled') {
       return NextResponse.json({ error: 'This RFQ is closed and no longer accepting bids' }, { status: 422 });
     }
-    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+    if (isDeadlinePassed(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
 

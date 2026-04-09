@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import { useAuth } from '@/hooks/useAuth';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 const STATUS_FILTERS = ['all', 'draft', 'published', 'closed', 'cancelled'];
 
@@ -99,7 +100,7 @@ export default function RFQsPage() {
       render: (val, row) => {
         if (!val) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
         const safeStatus = row.status || '';
-        const isOverdue = new Date(val) < new Date() && !['closed', 'cancelled'].includes(safeStatus);
+        const isOverdue = isDeadlinePassed(val) && !['closed', 'cancelled'].includes(safeStatus);
         return (
           <span style={{ color: isOverdue ? 'var(--accent)' : 'var(--ink)', fontWeight: isOverdue ? 600 : 400 }}>
             {formatDate(val)}{isOverdue && ' ⚠'}

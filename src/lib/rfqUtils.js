@@ -2,10 +2,67 @@
 // Shared RFQ utility functions
 
 import pool from '@/lib/db';
-import { sendRFQClosedEmail } from '@/lib/mailer';
+import {
+  sendRFQClosedEmail,
+  sendRFQDeadlineExtendedEmail,
+  sendRFQDeadlineReminderEmail,
+} from '@/lib/mailer';
+import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline';
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
+const REMINDER_WINDOWS = [12, 6];
+const EFFECTIVE_DEADLINE_SQL_BY_COLUMN = Object.freeze({
+  deadline: `(CASE WHEN TIME(deadline) = '00:00:00' THEN DATE_ADD(DATE(deadline), INTERVAL 1 DAY) ELSE deadline END)`,
+  'r.deadline': `(CASE WHEN TIME(r.deadline) = '00:00:00' THEN DATE_ADD(DATE(r.deadline), INTERVAL 1 DAY) ELSE r.deadline END)`,
+});
+const effectiveDeadlineSql = (column = 'deadline') =>
+  EFFECTIVE_DEADLINE_SQL_BY_COLUMN[column] || EFFECTIVE_DEADLINE_SQL_BY_COLUMN.deadline;
+
+function isInReminderWindow(msUntilDeadline, hoursBefore) {
+  const HOUR = 60 * 60 * 1000;
+  const [firstWindow, secondWindow] = REMINDER_WINDOWS;
+  if (hoursBefore === firstWindow) return msUntilDeadline <= firstWindow * HOUR && msUntilDeadline > secondWindow * HOUR;
+  if (hoursBefore === secondWindow) return msUntilDeadline <= secondWindow * HOUR && msUntilDeadline > 0;
+  return false;
+}
+
+async function getVendorRecipientsForRfq(rfqId) {
+  const [invitedVendors] = await pool.query(
+    `SELECT rv.vendor_id, v.name AS vendor_name, v.email AS vendor_email
+       FROM rfq_vendors rv
+       JOIN vendors v ON v.id = rv.vendor_id
+      WHERE rv.rfq_id = ?`,
+    [rfqId]
+  );
+
+  if (!invitedVendors.length) return [];
+
+  const [userRows] = await pool.query(
+    `SELECT DISTINCT u.vendor_id, u.email
+       FROM users u
+       JOIN rfq_vendors rv ON rv.vendor_id = u.vendor_id
+      WHERE rv.rfq_id = ? AND u.is_active = 1`,
+    [rfqId]
+  );
+
+  const emailMap = new Map(); // vendor_id => Set<string>
+  for (const vendor of invitedVendors) {
+    const emails = new Set();
+    if (vendor.vendor_email) emails.add(vendor.vendor_email);
+    emailMap.set(vendor.vendor_id, emails);
+  }
+  for (const row of userRows) {
+    const emails = emailMap.get(row.vendor_id);
+    if (emails) emails.add(row.email);
+  }
+
+  return invitedVendors.map(vendor => ({
+    vendorId: vendor.vendor_id,
+    vendorName: vendor.vendor_name,
+    emails: Array.from(emailMap.get(vendor.vendor_id) || []).slice(0, MAX_VENDOR_USERS_PER_EMAIL),
+  }));
+}
 
 /**
  * If the RFQ deadline has passed and the status is still 'published',
@@ -20,7 +77,7 @@ export async function autoCloseIfExpired(rfqId, companyId) {
         WHERE id = ? AND company_id = ?
           AND status = 'published'
           AND deadline IS NOT NULL
-          AND deadline < NOW()`,
+          AND ${effectiveDeadlineSql('deadline')} < NOW()`,
       [rfqId, companyId]
     );
 
@@ -64,50 +121,21 @@ export async function sendRFQClosureEmails(rfqId) {
   );
 
   const totalBids = bids.length;
+  const recipients = await getVendorRecipientsForRfq(rfqId);
+  const recipientMap = new Map(recipients.map(r => [r.vendorId, r]));
   const biddedVendorIds = new Set(bids.map(b => b.vendor_id));
-
-  // Collect all relevant vendor IDs upfront (both bidders and invited non-bidders)
-  const [invitedVendors] = await pool.query(
-    `SELECT rv.vendor_id, v.name AS vendor_name
-       FROM rfq_vendors rv
-       JOIN vendors v ON v.id = rv.vendor_id
-      WHERE rv.rfq_id = ?`,
-    [rfqId]
-  );
-
-  // Combine all vendor IDs so we can fetch their users in a single query
-  const nonBidderVendors = invitedVendors.filter(iv => !biddedVendorIds.has(iv.vendor_id));
-  const allVendorIds = [
-    ...bids.map(b => b.vendor_id),
-    ...nonBidderVendors.map(iv => iv.vendor_id),
-  ];
-
-  // Fetch user emails for all vendors in one query, grouped per vendor
-  const vendorUserMap = new Map(); // vendor_id → string[]
-  if (allVendorIds.length) {
-    const placeholders = allVendorIds.map(() => '?').join(', ');
-    const [userRows] = await pool.query(
-      `SELECT u.vendor_id, u.email
-         FROM users u
-        WHERE u.vendor_id IN (${placeholders}) AND u.is_active = 1`,
-      allVendorIds
-    );
-    for (const row of userRows) {
-      if (!vendorUserMap.has(row.vendor_id)) vendorUserMap.set(row.vendor_id, []);
-      const list = vendorUserMap.get(row.vendor_id);
-      if (list.length < MAX_VENDOR_USERS_PER_EMAIL) list.push(row.email);
-    }
-  }
+  const nonBidderVendors = recipients.filter(r => !biddedVendorIds.has(r.vendorId));
 
   // Send ranked emails to vendors who bid
   for (let i = 0; i < bids.length; i++) {
     const bid = bids[i];
-    const emails = vendorUserMap.get(bid.vendor_id) || [];
+    const recipient = recipientMap.get(bid.vendor_id);
+    const emails = recipient?.emails || [];
     if (!emails.length) continue;
     try {
       await sendRFQClosedEmail({
         to:            emails,
-        vendorName:    bid.vendor_name,
+        vendorName:    recipient?.vendorName || bid.vendor_name,
         rfqTitle:      rfq.title,
         rfqReference:  rfq.reference_number || `RFQ-${rfq.id}`,
         rank:          i + 1,
@@ -121,12 +149,12 @@ export async function sendRFQClosureEmails(rfqId) {
 
   // Send emails to invited vendors who did NOT bid
   for (const invited of nonBidderVendors) {
-    const emails = vendorUserMap.get(invited.vendor_id) || [];
+    const emails = invited.emails || [];
     if (!emails.length) continue;
     try {
       await sendRFQClosedEmail({
         to:            emails,
-        vendorName:    invited.vendor_name,
+        vendorName:    invited.vendorName,
         rfqTitle:      rfq.title,
         rfqReference:  rfq.reference_number || `RFQ-${rfq.id}`,
         rank:          null,
@@ -134,7 +162,104 @@ export async function sendRFQClosureEmails(rfqId) {
         dashboardLink: null,
       });
     } catch (err) {
-      console.error(`sendRFQClosureEmails: failed for invited vendor ${invited.vendor_id}:`, err.message);
+      console.error(`sendRFQClosureEmails: failed for invited vendor ${invited.vendorId}:`, err.message);
     }
   }
+}
+
+/**
+ * Notify all invited vendors when a published RFQ deadline is extended.
+ */
+export async function sendRFQDeadlineExtendedEmails(rfqId, oldDeadline, newDeadline) {
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+
+  const [rfqRows] = await pool.query(
+    `SELECT id, title, reference_number FROM rfqs WHERE id = ?`,
+    [rfqId]
+  );
+  if (!rfqRows.length) return;
+  const rfq = rfqRows[0];
+
+  const recipients = await getVendorRecipientsForRfq(rfqId);
+  for (const recipient of recipients) {
+    if (!recipient.emails.length) continue;
+    try {
+      await sendRFQDeadlineExtendedEmail({
+        to: recipient.emails,
+        vendorName: recipient.vendorName,
+        rfqTitle: rfq.title,
+        rfqReference: rfq.reference_number || `RFQ-${rfq.id}`,
+        oldDeadline,
+        newDeadline,
+        dashboardLink: `${BASE_URL}/dashboard/bids/${rfqId}`,
+      });
+    } catch (err) {
+      console.error(`sendRFQDeadlineExtendedEmails: failed for vendor ${recipient.vendorId}:`, err.message);
+    }
+  }
+}
+
+/**
+ * Send due deadline reminder emails (12h and 6h windows) once per vendor+RFQ+deadline.
+ */
+export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = null } = {}) {
+  const filters = [
+    `r.status = 'published'`,
+    'r.deadline IS NOT NULL',
+    `${effectiveDeadlineSql('r.deadline')} > NOW()`,
+  ];
+  const values = [];
+  if (companyId) { filters.push('r.company_id = ?'); values.push(companyId); }
+  if (rfqId) { filters.push('r.id = ?'); values.push(rfqId); }
+
+  const [rfqs] = await pool.query(
+    `SELECT r.id, r.title, r.reference_number, r.deadline
+       FROM rfqs r
+      WHERE ${filters.join(' AND ')}`,
+    values
+  );
+
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
+  const summary = { rfqsChecked: rfqs.length, remindersSent: 0 };
+
+  for (const rfq of rfqs) {
+    const msUntilDeadline = getDeadlineTimeLeftMs(rfq.deadline);
+    if (msUntilDeadline == null || msUntilDeadline <= 0) continue;
+    const deadlineDate = getEffectiveDeadlineDate(rfq.deadline);
+    if (!deadlineDate) continue;
+
+    const recipients = await getVendorRecipientsForRfq(rfq.id);
+    for (const recipient of recipients) {
+      if (!recipient.emails.length) continue;
+
+      for (const hoursBefore of REMINDER_WINDOWS) {
+        if (!isInReminderWindow(msUntilDeadline, hoursBefore)) continue;
+
+        const [ins] = await pool.query(
+          `INSERT IGNORE INTO rfq_deadline_reminder_logs
+             (rfq_id, vendor_id, hours_before, deadline_at)
+           VALUES (?, ?, ?, ?)`,
+          [rfq.id, recipient.vendorId, hoursBefore, deadlineDate]
+        );
+        if (!ins.affectedRows) continue;
+
+        try {
+          await sendRFQDeadlineReminderEmail({
+            to: recipient.emails,
+            vendorName: recipient.vendorName,
+            rfqTitle: rfq.title,
+            rfqReference: rfq.reference_number || `RFQ-${rfq.id}`,
+            hoursBefore,
+            deadline: deadlineDate,
+            dashboardLink: `${BASE_URL}/dashboard/bids/${rfq.id}`,
+          });
+          summary.remindersSent += 1;
+        } catch (err) {
+          console.error(`sendDueRFQDeadlineReminders: failed for vendor ${recipient.vendorId}:`, err.message);
+        }
+      }
+    }
+  }
+
+  return summary;
 }

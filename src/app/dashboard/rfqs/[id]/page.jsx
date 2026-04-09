@@ -9,6 +9,7 @@ import RFQItemsTable from '@/components/rfq/RFQItemsTable';
 import VendorInvitePanel from '@/components/rfq/VendorInvitePanel';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLES } from '@/lib/rbac';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 
@@ -65,6 +66,7 @@ export default function RFQDetailPage({ params }) {
 
   // Status transition
   const [transitioning, setTransitioning] = useState(false);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -130,6 +132,36 @@ export default function RFQDetailPage({ params }) {
       setRfq(json.data.rfq);
     } catch { setError('Network error'); }
     setTransitioning(false);
+  };
+
+  const handleExtendDeadline = async () => {
+    const current = rfq?.deadline ? (() => {
+      const d = new Date(rfq.deadline);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    })() : '';
+    const input = window.prompt('Enter the new RFQ deadline (YYYY-MM-DDTHH:mm)', current);
+    if (!input) return;
+
+    setExtendingDeadline(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/rfqs/${id}/deadline`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deadline: input }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Failed to extend deadline');
+        setExtendingDeadline(false);
+        return;
+      }
+      setRfq(json.data.rfq);
+    } catch {
+      setError('Network error');
+    }
+    setExtendingDeadline(false);
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -223,6 +255,26 @@ export default function RFQDetailPage({ params }) {
         {/* Status transitions */}
         {transitions.length > 0 && canWrite && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+            {rfq.status === 'published' && (
+              <button
+                onClick={handleExtendDeadline}
+                disabled={extendingDeadline}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: 'var(--white)',
+                  color: 'var(--ink)',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline ? .6 : 1,
+                }}
+              >
+                {extendingDeadline ? 'Extending…' : 'Extend Deadline'}
+              </button>
+            )}
             {transitions.map(t => (
               <button
                 key={t.to}
@@ -373,7 +425,7 @@ export default function RFQDetailPage({ params }) {
                 <div>
                   <div className="meta-item-label">Deadline</div>
                   <div className="meta-item-value" style={{
-                    color: rfq.deadline && new Date(rfq.deadline) < new Date() && rfq.status === 'published'
+                    color: isDeadlinePassed(rfq.deadline) && rfq.status === 'published'
                       ? 'var(--accent)' : 'var(--ink)'
                   }}>
                     {formatDate(rfq.deadline)}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { autoCloseIfExpired } from '@/lib/rfqUtils';
+import { autoCloseIfExpired, sendDueRFQDeadlineReminders } from '@/lib/rfqUtils';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -33,6 +33,8 @@ export async function GET(request, { params }) {
 
     // Auto-close if deadline has passed
     await autoCloseIfExpired(rfqId, companyId);
+    // Opportunistic reminder processing (deduplicated)
+    await sendDueRFQDeadlineReminders({ companyId, rfqId });
 
     // Verify invitation
     const [[invite]] = await pool.query(

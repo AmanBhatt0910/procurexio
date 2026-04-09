@@ -2,7 +2,7 @@
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 import { createNotifications } from '@/lib/notifications';
-import { autoCloseIfExpired, sendRFQClosureEmails } from '@/lib/rfqUtils';
+import { autoCloseIfExpired, sendDueRFQDeadlineReminders, sendRFQClosureEmails } from '@/lib/rfqUtils';
 import { logAction, ACTION } from '@/lib/audit';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
@@ -27,6 +27,8 @@ export async function GET(request, { params }) {
   try {
     // Auto-close if deadline has passed
     await autoCloseIfExpired(id, companyId);
+    // Opportunistic reminder processing (deduplicated)
+    await sendDueRFQDeadlineReminders({ companyId, rfqId: id });
 
     // Core RFQ — query() already returns the rows array directly
     const rfqRows = await query(

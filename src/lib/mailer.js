@@ -644,6 +644,137 @@ export async function sendRFQClosedEmail({ to, vendorName, rfqTitle, rfqReferenc
   return data;
 }
 
+function formatDeadlineDateTime(deadline) {
+  if (!deadline) return 'Not specified';
+  return new Date(deadline).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendRFQDeadlineExtendedEmail — notify invited vendors that deadline changed
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendRFQDeadlineExtendedEmail({
+  to,
+  vendorName,
+  rfqTitle,
+  rfqReference,
+  oldDeadline,
+  newDeadline,
+  dashboardLink,
+}) {
+  const year = new Date().getFullYear();
+  const hadPreviousDeadline = !!oldDeadline;
+  const heading = hadPreviousDeadline ? 'RFQ Deadline Extended' : 'RFQ Deadline Updated';
+  const subject = hadPreviousDeadline
+    ? `RFQ deadline extended — ${rfqTitle}`
+    : `RFQ deadline updated — ${rfqTitle}`;
+  const intro = hadPreviousDeadline
+    ? 'The deadline for the following RFQ has been extended.'
+    : 'The deadline for the following RFQ has been updated.';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>RFQ Deadline Extended</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">${heading}</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
+          ${intro}
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0 0 10px;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+            ${hadPreviousDeadline ? `<p style="margin:0 0 4px;font-size:12px;color:#6b6660;">Previous deadline: <strong>${formatDeadlineDateTime(oldDeadline)}</strong></p>` : ''}
+            <p style="margin:0;font-size:12px;color:#0f0e0d;">New deadline: <strong>${formatDeadlineDateTime(newDeadline)}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${dashboardLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">View RFQ</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendRFQDeadlineReminderEmail — notify vendors before deadline (12h / 6h)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendRFQDeadlineReminderEmail({
+  to,
+  vendorName,
+  rfqTitle,
+  rfqReference,
+  hoursBefore,
+  deadline,
+  dashboardLink,
+}) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>RFQ Deadline Reminder</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Deadline Reminder</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
+          This is a reminder that the RFQ deadline is in <strong style="color:#0f0e0d;">${hoursBefore} hours or less</strong>.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0 0 10px;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
+            <p style="margin:0;font-size:12px;color:#0f0e0d;">Deadline: <strong>${formatDeadlineDateTime(deadline)}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${dashboardLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">Open RFQ</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Reminder: ${rfqTitle} deadline in ${hoursBefore} hours`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // sendContractAwardedEmail — notify the winning vendor of their win
 // ─────────────────────────────────────────────────────────────────────────────

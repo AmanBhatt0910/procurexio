@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { createNotifications } from '@/lib/notifications';
 import { sendBidUpdatedEmail } from '@/lib/mailer';
 import { logAction, ACTION } from '@/lib/audit';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -63,7 +64,7 @@ export async function PUT(request, { params }) {
     if (rfq.status === 'closed' || rfq.status === 'cancelled') {
       return NextResponse.json({ error: 'This RFQ is closed — bid amounts can no longer be modified' }, { status: 422 });
     }
-    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+    if (isDeadlinePassed(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
 

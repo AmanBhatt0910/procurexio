@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Badge from '@/components/ui/Badge';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -162,7 +163,7 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {vendorBids.map(b => {
-                  const isPast = b.deadline && new Date() > new Date(b.deadline);
+                  const isPast = isDeadlinePassed(b.deadline);
                   const statusClass = `v-status-${b.bid_status || 'draft'}`;
                   const hasBid = !!b.bid_status;
                   return (
