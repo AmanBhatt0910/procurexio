@@ -1,6 +1,7 @@
 import { query } from '@/lib/db';
 import { requireRole } from '@/lib/rbac';
 import { sendVendorRFQInviteEmail } from '@/lib/mailer';
+import { checkLimit } from '@/lib/subscription';
 
 // ── GET /api/rfqs/[id]/vendors ──────────────────────────────────────────────
 export async function GET(request, { params }) {
@@ -84,6 +85,19 @@ export async function POST(request, { params }) {
         { error: `Cannot invite vendors to a ${rfq.status} RFQ` },
         { status: 422 }
       );
+    }
+
+    // ── Subscription: enforce vendor limit ──────────────────────────────────
+    try {
+      const limitCheck = await checkLimit(companyId, 'vendor');
+      if (!limitCheck.allowed) {
+        return Response.json(
+          { error: 'Limit reached. Upgrade your plan.', limitInfo: { current: limitCheck.current, limit: limitCheck.limit, plan: limitCheck.plan?.name } },
+          { status: 403 }
+        );
+      }
+    } catch (limitErr) {
+      console.error('[POST /api/rfqs/[id]/vendors] subscription checkLimit error:', limitErr.message);
     }
 
     // Validate all vendorIds belong to the company and are active

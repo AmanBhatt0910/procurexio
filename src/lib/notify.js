@@ -8,6 +8,26 @@
  * Each function has a clearly marked stub comment for the email hook.
  */
 
+import pool from '@/lib/db';
+import { checkLimit } from '@/lib/subscription';
+
+/**
+ * Check email/notification limit for a company before inserting.
+ * Returns false (and logs a warning) when the limit has been reached.
+ * Non-fatal — never throws.
+ *
+ * @param {number|string} companyId
+ * @returns {Promise<boolean>} true = allowed, false = limit reached
+ */
+async function isEmailAllowed(companyId) {
+  try {
+    const { allowed } = await checkLimit(companyId, 'email');
+    return allowed;
+  } catch {
+    return true; // Non-fatal — allow on error
+  }
+}
+
 /**
  * Create a single notification for one user.
  *
@@ -15,6 +35,11 @@
  * @param {{ companyId, userId, type, title, body?, link? }} opts
  */
 export async function createNotification(conn, { companyId, userId, type, title, body = null, link = null }) {
+  if (!(await isEmailAllowed(companyId))) {
+    console.warn(`[notify] email limit reached for company ${companyId} — notification skipped`);
+    return;
+  }
+
   await conn.execute(
     `INSERT INTO notifications (company_id, user_id, type, title, body, link)
      VALUES (?, ?, ?, ?, ?, ?)`,
