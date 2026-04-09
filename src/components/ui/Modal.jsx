@@ -5,8 +5,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function Modal({ open, onClose, title, children, width = 480 }) {
-  // Prevent SSR/client hydration mismatch for portals:
-  // server snapshot is always false, client snapshot is always true.
+  // useSyncExternalStore gates portal rendering without effect-driven state:
+  // server snapshot is false, client snapshot is true, subscribe is a no-op.
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,

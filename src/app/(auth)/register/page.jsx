@@ -125,7 +125,7 @@ function RegisterInner() {
   }
 
   // ── Left panel content (varies by mode) ─────────────────────────────────
-  const leftPanelClass = isVendorInvite ? 'panel-left panel-left--vendor' : 'panel-left panel-left--default';
+  const leftPanelClass = `panel-left ${isVendorInvite ? 'panel-left--vendor' : ''}`;
 
   const leftSteps = isVendorInvite
     ? [
@@ -416,10 +416,6 @@ export default function RegisterPage() {
         .panel-left--vendor {
           --left-bg: #0d5c46;
           --left-accent: #34d399;
-        }
-        .panel-left--default {
-          --left-bg: #0f0e0d;
-          --left-accent: #c8501a;
         }
         @media (min-width: 900px) {
           .panel-left {
