@@ -3,6 +3,14 @@ import { requireRole } from '@/lib/rbac';
 import { sendRFQDeadlineExtendedEmails } from '@/lib/rfqUtils';
 import { logAction, ACTION } from '@/lib/audit';
 
+function toMySqlDateTime(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 // PUT /api/rfqs/[id]/deadline — extend published RFQ deadline + notify vendors
 export async function PUT(request, { params }) {
   const companyId = request.headers.get('x-company-id');
@@ -71,8 +79,8 @@ export async function PUT(request, { params }) {
       resourceName: rfq.title,
       changes: {
         field: 'deadline',
-        from: rfq.deadline,
-        to: parsedDeadline.toISOString(),
+        from: toMySqlDateTime(rfq.deadline),
+        to: toMySqlDateTime(parsedDeadline),
       },
       status: 'success',
     });
