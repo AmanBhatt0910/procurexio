@@ -162,8 +162,8 @@ export default function RFQDetailPage({ params }) {
       setError('Please enter a valid deadline date and time');
       return;
     }
-    if (selected <= minAllowed) {
-      setError('New deadline must be greater than 1 minute from now');
+    if (selected < minAllowed) {
+      setError('New deadline must be at least 1 minute in the future');
       return;
     }
 
