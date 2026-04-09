@@ -11,6 +11,7 @@ import BidStepTwo from '@/components/bids/BidStepTwo';
 import BidStepThree from '@/components/bids/BidStepThree';
 import BidStepFour from '@/components/bids/BidStepFour';
 import Modal from '@/components/ui/Modal';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 // Minimum bid reduction required when updating a submitted bid (in currency units)
 const MIN_BID_REDUCTION = 100;
@@ -130,7 +131,7 @@ export default function VendorBidWorkspacePage() {
   const rfqItems = data?.items || [];
 
   const isClosed       = rfq?.status === 'closed' || rfq?.status === 'cancelled';
-  const isPastDeadline = rfq?.deadline && new Date() > new Date(rfq.deadline);
+  const isPastDeadline = isDeadlinePassed(rfq?.deadline);
   const isLocked       = isClosed || isPastDeadline;
   const canEdit        = bid && bid.status === 'draft'     && !isLocked;
   const canUpdate      = bid && bid.status === 'submitted' && !isLocked;

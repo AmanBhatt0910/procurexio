@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { createNotifications } from '@/lib/notifications';
 import { sendBidSubmittedEmail } from '@/lib/mailer';
 import { logAction, ACTION } from '@/lib/audit';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -32,7 +33,7 @@ export async function POST(request, { params }) {
       [rfqId, companyId]
     );
     if (!rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
-    if (rfq.deadline && new Date() > new Date(rfq.deadline)) {
+    if (isDeadlinePassed(rfq.deadline)) {
       return NextResponse.json({ error: 'RFQ deadline has passed' }, { status: 422 });
     }
     if (!['published'].includes(rfq.status)) {

@@ -1,0 +1,38 @@
+// src/lib/deadline.js
+
+/**
+ * Returns an effective deadline date.
+ * If a deadline is date-only (YYYY-MM-DD) or stored at 00:00:00, we treat it
+ * as end-of-day so that the full deadline day remains valid.
+ */
+export function getEffectiveDeadlineDate(deadline) {
+  if (!deadline) return null;
+
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const isDateOnlyString =
+    typeof deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(deadline.trim());
+  const isMidnightTime =
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0;
+
+  if (isDateOnlyString || isMidnightTime) {
+    date.setHours(23, 59, 59, 999);
+  }
+
+  return date;
+}
+
+export function isDeadlinePassed(deadline, now = new Date()) {
+  const effective = getEffectiveDeadlineDate(deadline);
+  return !!effective && now.getTime() > effective.getTime();
+}
+
+export function getDeadlineTimeLeftMs(deadline, now = new Date()) {
+  const effective = getEffectiveDeadlineDate(deadline);
+  if (!effective) return null;
+  return effective.getTime() - now.getTime();
+}

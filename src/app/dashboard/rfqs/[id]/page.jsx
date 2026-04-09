@@ -9,6 +9,7 @@ import RFQItemsTable from '@/components/rfq/RFQItemsTable';
 import VendorInvitePanel from '@/components/rfq/VendorInvitePanel';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLES } from '@/lib/rbac';
+import { isDeadlinePassed } from '@/lib/deadline';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 
@@ -423,10 +424,10 @@ export default function RFQDetailPage({ params }) {
               <div className="meta-grid">
                 <div>
                   <div className="meta-item-label">Deadline</div>
-                  <div className="meta-item-value" style={{
-                    color: rfq.deadline && new Date(rfq.deadline) < new Date() && rfq.status === 'published'
-                      ? 'var(--accent)' : 'var(--ink)'
-                  }}>
+                    <div className="meta-item-value" style={{
+                      color: isDeadlinePassed(rfq.deadline) && rfq.status === 'published'
+                        ? 'var(--accent)' : 'var(--ink)'
+                    }}>
                     {formatDate(rfq.deadline)}
                   </div>
                 </div>

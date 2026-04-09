@@ -7,6 +7,7 @@ import {
   sendRFQDeadlineExtendedEmail,
   sendRFQDeadlineReminderEmail,
 } from '@/lib/mailer';
+import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline';
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
@@ -68,7 +69,12 @@ export async function autoCloseIfExpired(rfqId, companyId) {
         WHERE id = ? AND company_id = ?
           AND status = 'published'
           AND deadline IS NOT NULL
-          AND deadline < NOW()`,
+          AND (
+            CASE
+              WHEN TIME(deadline) = '00:00:00' THEN DATE_ADD(DATE(deadline), INTERVAL 1 DAY)
+              ELSE deadline
+            END
+          ) < NOW()`,
       [rfqId, companyId]
     );
 
@@ -194,7 +200,11 @@ export async function sendRFQDeadlineExtendedEmails(rfqId, oldDeadline, newDeadl
  * Send due deadline reminder emails (12h and 6h windows) once per vendor+RFQ+deadline.
  */
 export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = null } = {}) {
-  const filters = [`r.status = 'published'`, 'r.deadline IS NOT NULL', 'r.deadline > NOW()'];
+  const filters = [
+    `r.status = 'published'`,
+    'r.deadline IS NOT NULL',
+    `(CASE WHEN TIME(r.deadline) = '00:00:00' THEN DATE_ADD(DATE(r.deadline), INTERVAL 1 DAY) ELSE r.deadline END) > NOW()`,
+  ];
   const values = [];
   if (companyId) { filters.push('r.company_id = ?'); values.push(companyId); }
   if (rfqId) { filters.push('r.id = ?'); values.push(rfqId); }
@@ -210,9 +220,10 @@ export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = nu
   const summary = { rfqsChecked: rfqs.length, remindersSent: 0 };
 
   for (const rfq of rfqs) {
-    const deadlineDate = new Date(rfq.deadline);
-    const msUntilDeadline = deadlineDate.getTime() - Date.now();
-    if (msUntilDeadline <= 0) continue;
+    const msUntilDeadline = getDeadlineTimeLeftMs(rfq.deadline);
+    if (msUntilDeadline == null || msUntilDeadline <= 0) continue;
+    const deadlineDate = getEffectiveDeadlineDate(rfq.deadline);
+    if (!deadlineDate) continue;
 
     const recipients = await getVendorRecipientsForRfq(rfq.id);
     for (const recipient of recipients) {

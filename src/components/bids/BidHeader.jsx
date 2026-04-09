@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import { getDeadlineTimeLeftMs } from '@/lib/deadline';
 
 // ── Countdown Timer ────────────────────────────────────────────────────────
 function CountdownTimer({ deadline }) {
@@ -9,7 +10,8 @@ function CountdownTimer({ deadline }) {
   useEffect(() => {
     if (!deadline) return;
     const calc = () => {
-      const diff = new Date(deadline) - new Date();
+      const diff = getDeadlineTimeLeftMs(deadline);
+      if (diff == null) { setTimeLeft({ expired: true }); return; }
       if (diff <= 0) { setTimeLeft({ expired: true }); return; }
       setTimeLeft({
         expired: false,

@@ -7,6 +7,7 @@ import DataTable from '@/components/ui/DataTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import RoleGuard from '@/components/auth/RoleGuard';
+import { getDeadlineTimeLeftMs, isDeadlinePassed } from '@/lib/deadline';
 
 function RedirectToDashboard() {
   const router = useRouter();
@@ -27,7 +28,8 @@ function CountdownTimer({ deadline }) {
   useEffect(() => {
     if (!deadline) return;
     const calc = () => {
-      const diff = new Date(deadline) - new Date();
+      const diff = getDeadlineTimeLeftMs(deadline);
+      if (diff == null) { setTimeLeft({ expired: true }); return; }
       if (diff <= 0) { setTimeLeft({ expired: true }); return; }
       setTimeLeft({
         expired: false,
@@ -146,7 +148,7 @@ export default function VendorBidsPage() {
     [sortedRfqs]
   );
 
-  const isPastDeadline = (deadline) => deadline && new Date() > new Date(deadline);
+  const isPastDeadline = (deadline) => isDeadlinePassed(deadline);
 
   // ✅ All render functions use (val, row) signature — row is always the full
   //    object. Never access properties on val when you need the full row.
