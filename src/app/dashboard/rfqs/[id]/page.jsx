@@ -157,7 +157,7 @@ export default function RFQDetailPage({ params }) {
   const handleExtendDeadline = async () => {
     if (!extendDeadlineInput) return;
     const selected = new Date(extendDeadlineInput);
-    const minAllowed = new Date(Date.now() + ONE_MINUTE_MS);
+    const minAllowed = extendDeadlineMin ? new Date(extendDeadlineMin) : new Date(Date.now() + ONE_MINUTE_MS);
     if (Number.isNaN(selected.getTime())) {
       setError('Please enter a valid deadline date and time');
       return;
@@ -217,6 +217,8 @@ export default function RFQDetailPage({ params }) {
   // ──────────────────────────────────────────────────────────────────────────
 
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
+  const isExtendDeadlineInputValid =
+    !!extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime());
   // RFQ fields are only editable in draft state; once published, only status transitions are allowed
   const isEditable  = rfq && rfq.status === 'draft' && canWrite;
 
@@ -380,7 +382,7 @@ export default function RFQDetailPage({ params }) {
               </button>
               <button
                 onClick={handleExtendDeadline}
-                disabled={extendingDeadline || !extendDeadlineInput}
+                disabled={extendingDeadline || !isExtendDeadlineInputValid}
                 style={{
                   padding: '7px 14px',
                   borderRadius: 'var(--radius)',
@@ -391,7 +393,7 @@ export default function RFQDetailPage({ params }) {
                   fontWeight: 600,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
-                  opacity: extendingDeadline || !extendDeadlineInput ? .6 : 1,
+                  opacity: extendingDeadline || !isExtendDeadlineInputValid ? .6 : 1,
                 }}
               >
                 {extendingDeadline ? 'Extending…' : 'Save Deadline'}
