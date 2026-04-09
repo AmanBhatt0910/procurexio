@@ -669,6 +669,14 @@ export async function sendRFQDeadlineExtendedEmail({
   dashboardLink,
 }) {
   const year = new Date().getFullYear();
+  const hadPreviousDeadline = !!oldDeadline;
+  const heading = hadPreviousDeadline ? 'RFQ Deadline Extended' : 'RFQ Deadline Updated';
+  const subject = hadPreviousDeadline
+    ? `RFQ deadline extended — ${rfqTitle}`
+    : `RFQ deadline updated — ${rfqTitle}`;
+  const intro = hadPreviousDeadline
+    ? 'The deadline for the following RFQ has been extended.'
+    : 'The deadline for the following RFQ has been updated.';
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/><title>RFQ Deadline Extended</title></head>
@@ -678,17 +686,17 @@ export async function sendRFQDeadlineExtendedEmail({
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
       <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
       <tr><td style="padding:36px 36px 28px;">
-        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Deadline Extended</h1>
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">${heading}</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
           Dear <strong style="color:#0f0e0d;">${vendorName}</strong>,<br/>
-          The deadline for the following RFQ has been extended.
+          ${intro}
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
           <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
             <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">RFQ</p>
             <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
             <p style="margin:0 0 10px;font-size:12px;color:#6b6660;">Ref: <strong>${rfqReference}</strong></p>
-            <p style="margin:0 0 4px;font-size:12px;color:#6b6660;">Previous deadline: <strong>${formatDeadlineDateTime(oldDeadline)}</strong></p>
+            ${hadPreviousDeadline ? `<p style="margin:0 0 4px;font-size:12px;color:#6b6660;">Previous deadline: <strong>${formatDeadlineDateTime(oldDeadline)}</strong></p>` : ''}
             <p style="margin:0;font-size:12px;color:#0f0e0d;">New deadline: <strong>${formatDeadlineDateTime(newDeadline)}</strong></p>
           </td></tr>
         </table>
@@ -705,7 +713,7 @@ export async function sendRFQDeadlineExtendedEmail({
   const { data, error } = await getResend().emails.send({
     from: FROM,
     to,
-    subject: `RFQ deadline extended — ${rfqTitle}`,
+    subject,
     html,
   });
   if (error) throw new Error(`Resend error: ${error.message}`);

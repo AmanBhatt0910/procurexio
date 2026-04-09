@@ -19,27 +19,6 @@ function isReminderDue(msUntilDeadline, hoursBefore) {
   return false;
 }
 
-async function ensureReminderLogTable() {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS ${REMINDER_LOG_TABLE} (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      rfq_id BIGINT UNSIGNED NOT NULL,
-      vendor_id BIGINT UNSIGNED NOT NULL,
-      hours_before TINYINT UNSIGNED NOT NULL,
-      deadline_at DATETIME NOT NULL,
-      sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      UNIQUE KEY uq_rfq_vendor_hours_deadline (rfq_id, vendor_id, hours_before, deadline_at),
-      INDEX idx_deadline_reminders_rfq (rfq_id),
-      INDEX idx_deadline_reminders_vendor (vendor_id),
-      CONSTRAINT fk_deadline_reminders_rfq
-        FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE,
-      CONSTRAINT fk_deadline_reminders_vendor
-        FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
-  );
-}
-
 async function getVendorRecipientsForRfq(rfqId) {
   const [invitedVendors] = await pool.query(
     `SELECT rv.vendor_id, v.name AS vendor_name, v.email AS vendor_email
@@ -217,8 +196,6 @@ export async function sendRFQDeadlineExtendedEmails(rfqId, oldDeadline, newDeadl
  * Send due deadline reminder emails (12h and 6h windows) once per vendor+RFQ+deadline.
  */
 export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = null } = {}) {
-  await ensureReminderLogTable();
-
   const filters = [`r.status = 'published'`, 'r.deadline IS NOT NULL', 'r.deadline > NOW()'];
   const values = [];
   if (companyId) { filters.push('r.company_id = ?'); values.push(companyId); }

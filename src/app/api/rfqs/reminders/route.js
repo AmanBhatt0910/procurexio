@@ -11,8 +11,8 @@ export async function POST(request) {
 
   const companyId = request.headers.get('x-company-id');
   const role = request.headers.get('x-user-role');
-  const cronAuthorized = !!cronToken && bearer && bearer === cronToken;
-  const userAuthorized = companyId && requireRole(role, ['company_admin', 'manager']);
+  const cronAuthorized = Boolean(cronToken) && Boolean(bearer) && bearer === cronToken;
+  const userAuthorized = Boolean(companyId) && requireRole(role, ['company_admin', 'manager']);
 
   if (!cronAuthorized && !userAuthorized) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
