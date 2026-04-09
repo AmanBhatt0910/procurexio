@@ -223,13 +223,14 @@ export default function RFQDetailPage({ params }) {
   const transitions = VALID_TRANSITIONS[rfq?.status] || [];
   const isExtendDeadlineInputValid =
     !!extendDeadlineInput && !Number.isNaN(new Date(extendDeadlineInput).getTime());
-  const extendDeadlineHelpText = extendingDeadline
-    ? 'Saving deadline...'
-    : !extendDeadlineInput
-      ? 'Enter a deadline to enable saving.'
-      : !isExtendDeadlineInputValid
-        ? 'Enter a valid date and time.'
-        : 'Ready to save.';
+  let extendDeadlineHelpText = 'Ready to save.';
+  if (extendingDeadline) {
+    extendDeadlineHelpText = 'Saving deadline...';
+  } else if (!extendDeadlineInput) {
+    extendDeadlineHelpText = 'Enter a deadline to enable saving.';
+  } else if (!isExtendDeadlineInputValid) {
+    extendDeadlineHelpText = 'Enter a valid date and time.';
+  }
   // RFQ fields are only editable in draft state; once published, only status transitions are allowed
   const isEditable  = rfq && rfq.status === 'draft' && canWrite;
 
