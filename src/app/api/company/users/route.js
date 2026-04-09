@@ -36,7 +36,7 @@ export async function GET(request) {
     // reject parameterized LIMIT/OFFSET via execute. Values are validated
     // integers above so there is no SQL injection risk.
     const [users] = await pool.query(
-      'SELECT id, name, email, role, created_at FROM users WHERE company_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      'SELECT id, name, email, role, created_at FROM users WHERE company_id = ? ORDER BY FIELD(role, \'company_admin\', \'manager\', \'employee\', \'vendor_user\') ASC, created_at DESC LIMIT ? OFFSET ?',
       [companyId, limit, offset]
     );
     return Response.json({
