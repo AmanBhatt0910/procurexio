@@ -3,6 +3,8 @@ import { requireRole } from '@/lib/rbac';
 import { sendRFQDeadlineExtendedEmails } from '@/lib/rfqUtils';
 import { logAction, ACTION } from '@/lib/audit';
 
+const MIN_DEADLINE_OFFSET_MS = 60 * 1000;
+
 function toMySqlDateTime(value) {
   if (!value) return null;
   const d = new Date(value);
@@ -28,7 +30,7 @@ export async function PUT(request, { params }) {
 
   const parsedDeadline = new Date(body?.deadline);
   const now = new Date();
-  const minValidDeadline = new Date(now.getTime() + 60 * 1000);
+  const minValidDeadline = new Date(now.getTime() + MIN_DEADLINE_OFFSET_MS);
   if (!body?.deadline || Number.isNaN(parsedDeadline.getTime())) {
     return Response.json({ error: 'A valid deadline is required' }, { status: 422 });
   }

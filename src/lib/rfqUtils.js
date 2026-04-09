@@ -11,8 +11,13 @@ import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline'
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
+const REMINDER_WINDOWS = [12, 6];
+const EFFECTIVE_DEADLINE_SQL_BY_COLUMN = Object.freeze({
+  deadline: `(CASE WHEN TIME(deadline) = '00:00:00' THEN DATE_ADD(DATE(deadline), INTERVAL 1 DAY) ELSE deadline END)`,
+  'r.deadline': `(CASE WHEN TIME(r.deadline) = '00:00:00' THEN DATE_ADD(DATE(r.deadline), INTERVAL 1 DAY) ELSE r.deadline END)`,
+});
 const effectiveDeadlineSql = (column = 'deadline') =>
-  `(CASE WHEN TIME(${column}) = '00:00:00' THEN DATE_ADD(DATE(${column}), INTERVAL 1 DAY) ELSE ${column} END)`;
+  EFFECTIVE_DEADLINE_SQL_BY_COLUMN[column] || EFFECTIVE_DEADLINE_SQL_BY_COLUMN.deadline;
 
 function isInReminderWindow(msUntilDeadline, hoursBefore) {
   const HOUR = 60 * 60 * 1000;
@@ -226,7 +231,7 @@ export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = nu
     for (const recipient of recipients) {
       if (!recipient.emails.length) continue;
 
-      for (const hoursBefore of [12, 6]) {
+      for (const hoursBefore of REMINDER_WINDOWS) {
         if (!isInReminderWindow(msUntilDeadline, hoursBefore)) continue;
 
         const [ins] = await pool.query(

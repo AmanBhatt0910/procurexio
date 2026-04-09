@@ -20,7 +20,8 @@ export function getEffectiveDeadlineDate(deadline) {
     date.getMilliseconds() === 0;
 
   if (isDateOnlyString || isMidnightTime) {
-    date.setHours(23, 59, 59, 999);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 1);
   }
 
   return date;
