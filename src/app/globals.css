@@ -1,14 +1,13 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+@import "tailwindcss";
 
-/* ── Dashboard / app-wide design tokens ─────────────────────────────────── */
+/* ── Design tokens ───────────────────────────────────────────────────────── */
 :root {
+  /* App-wide */
   --background: #ffffff;
   --foreground: #171717;
-}
 
-/* ── Marketing / landing page design tokens ──────────────────────────────── */
-:root {
+  /* Marketing / landing page */
   --ink:       #0f0e0d;
   --ink-soft:  #6b6660;
   --ink-faint: #b8b3ae;

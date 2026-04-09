@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { NOTIFICATION_POLL_INTERVAL_MS } from '@/config/constants';
 
 /**
  * @returns {{ unreadCount: number, refresh: () => Promise<void> }}
@@ -36,7 +37,7 @@ export function useNotifications() {
   useEffect(() => {
     mounted.current = true;
     refresh();
-    const interval = setInterval(refresh, 30_000);
+    const interval = setInterval(refresh, NOTIFICATION_POLL_INTERVAL_MS);
     return () => {
       clearInterval(interval);
       mounted.current = false;
