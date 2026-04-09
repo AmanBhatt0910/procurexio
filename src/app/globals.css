@@ -239,3 +239,146 @@ ul, ol { list-style: none; }
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Shared auth form controls (AuthInput/AuthButton) ────────────────────── */
+.auth-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-input-label {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: .01em;
+}
+
+.auth-input-required {
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+.auth-input-container {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  transition: border-color .15s, box-shadow .15s;
+  overflow: hidden;
+}
+
+.auth-input-container:focus-within {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(15,14,13,.06);
+}
+
+.auth-input-container.has-error {
+  border-color: var(--accent);
+}
+
+.auth-input-container.is-disabled {
+  opacity: .6;
+  background: var(--surface);
+  pointer-events: none;
+}
+
+.auth-input-icon {
+  padding: 0 12px 0 14px;
+  color: var(--ink-faint);
+  display: flex;
+}
+
+.auth-input-field {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 13px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .93rem;
+  color: var(--ink);
+  background: transparent;
+}
+
+.auth-input-field::placeholder {
+  color: var(--ink-faint);
+}
+
+.auth-input-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 14px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+}
+
+.auth-input-toggle:hover {
+  color: var(--ink);
+}
+
+.auth-input-error {
+  font-size: .78rem;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.auth-btn {
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .93rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  padding: 13px 24px;
+  transition: background .15s, transform .1s, box-shadow .15s;
+}
+
+.auth-btn--full {
+  width: 100%;
+}
+
+.auth-btn--primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.auth-btn--primary:hover:not(:disabled) {
+  background: #1e1c1a;
+  box-shadow: 0 4px 16px rgba(15,14,13,.18);
+  transform: translateY(-1px);
+}
+
+.auth-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-btn--loading {
+  opacity: .75;
+  cursor: not-allowed;
+}
+
+.auth-btn:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.auth-btn-spinner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-btn-spinner {
+  width: 16px;
+  height: 16px;
+  animation: authSpin .7s linear infinite;
+}
+
+@keyframes authSpin {
+  to { transform: rotate(360deg); }
+}

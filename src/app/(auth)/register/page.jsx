@@ -10,8 +10,11 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams }    from 'next/navigation';
 import Link                              from 'next/link';
-import AuthInput                         from '@/components/auth/AuthInput';
-import AuthButton                        from '@/components/auth/AuthButton';
+import { AuthButton, AuthInput }         from '@/components/auth';
+import RegisterContextBadge              from '@/components/auth/register/RegisterContextBadge';
+import RegisterInviteError               from '@/components/auth/register/RegisterInviteError';
+import RegisterInviteLoading             from '@/components/auth/register/RegisterInviteLoading';
+import RegisterVendorPill                from '@/components/auth/register/RegisterVendorPill';
 
 // ─── Inner component — uses useSearchParams ────────────────────────────────
 function RegisterInner() {
@@ -113,74 +116,16 @@ function RegisterInner() {
 
   // ── Loading spinner ──────────────────────────────────────────────────────
   if (inviteLoading) {
-    return (
-      <div style={{
-        minHeight: '100dvh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: '#faf9f7', fontFamily: "'DM Sans', sans-serif", gap: 16,
-      }}>
-        <svg style={{ animation: 'spin .7s linear infinite' }}
-          width="28" height="28" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="#e4e0db" strokeWidth="2.5"/>
-          <path d="M12 2a10 10 0 0 1 10 10" stroke="#0f0e0d" strokeWidth="2.5" strokeLinecap="round"/>
-        </svg>
-        <p style={{ fontSize: '.88rem', color: '#6b6660', margin: 0 }}>Validating invitation…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
+    return <RegisterInviteLoading />;
   }
 
   // ── Invalid / expired token ──────────────────────────────────────────────
   if (isInvite && inviteError) {
-    return (
-      <div style={{
-        minHeight: '100dvh', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', background: '#faf9f7',
-        fontFamily: "'DM Sans', sans-serif", padding: '24px 16px',
-      }}>
-        <div style={{
-          textAlign: 'center', background: '#fff', border: '1px solid #e4e0db',
-          borderRadius: 14, padding: '48px 40px', maxWidth: 400, width: '100%',
-        }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%', background: '#fff5f2',
-            border: '1px solid #f5c4b5', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto 20px',
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-              stroke="#c8501a" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <h2 style={{
-            fontFamily: "'Syne', sans-serif", fontSize: '1.2rem',
-            fontWeight: 700, color: '#0f0e0d', margin: '0 0 8px',
-          }}>
-            Invitation invalid
-          </h2>
-          <p style={{ fontSize: '.88rem', color: '#6b6660', margin: '0 0 6px', lineHeight: 1.6 }}>
-            {inviteError}
-          </p>
-          <p style={{ fontSize: '.82rem', color: '#b8b3ae', margin: '0 0 28px' }}>
-            Please ask your admin to resend the invitation.
-          </p>
-          <Link href="/login" style={{
-            display: 'inline-block', padding: '11px 24px',
-            background: '#0f0e0d', color: '#fff', borderRadius: 10,
-            fontSize: '.88rem', fontWeight: 500, textDecoration: 'none',
-          }}>
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    );
+    return <RegisterInviteError inviteError={inviteError} />;
   }
 
   // ── Left panel content (varies by mode) ─────────────────────────────────
-  const leftBg          = isVendorInvite ? '#0d5c46' : '#0f0e0d';
-  const leftAccent      = isVendorInvite ? '#34d399' : '#c8501a';
+  const leftPanelClass = isVendorInvite ? 'panel-left panel-left--vendor' : 'panel-left panel-left--default';
 
   const leftSteps = isVendorInvite
     ? [
@@ -212,70 +157,12 @@ function RegisterInner() {
     ? 'Set your name and password to activate your account and start collaborating with your team.'
     : 'Create your company account, invite vendors, and start running RFQs today.';
 
-  // ── Context badge shown under "Accept your invitation" heading ───────────
-  const ContextBadge = () => {
-    if (!isInvite) return null;
-
-    if (isVendorInvite) {
-      return (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 10,
-          padding: '12px 14px', background: '#f0fdf4',
-          border: '1px solid #bbf7d0', borderRadius: 10,
-          fontSize: '.84rem', color: '#374151',
-        }}>
-          {/* Vendor icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="#059669" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          <div>
-            <div style={{ fontWeight: 600, color: '#065f46', marginBottom: 2 }}>
-              Vendor Portal Invitation
-            </div>
-            <div>
-              Joining as the vendor contact for{' '}
-              <strong style={{ color: '#0f0e0d' }}>{inviteData?.vendorName}</strong>
-              {' '}—{' '}invited by{' '}
-              <strong style={{ color: '#0f0e0d' }}>{inviteData?.companyName}</strong>.
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Team invite badge (original)
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 14px', background: '#faf9f7',
-        border: '1px solid #e4e0db', borderRadius: 10,
-        fontSize: '.84rem', color: '#4b4845',
-      }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-          stroke="#6b6660" strokeWidth="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        <span>
-          Joining{' '}
-          <strong style={{ color: '#0f0e0d' }}>{inviteData?.companyName}</strong>
-          {' '}as{' '}
-          <strong style={{ color: '#0f0e0d' }}>
-            {inviteData?.role?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-          </strong>
-        </span>
-      </div>
-    );
-  };
-
   // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <div className="page">
 
       {/* Left panel */}
-      <div className="panel-left" style={{ '--left-bg': leftBg, '--left-accent': leftAccent }}>
+      <div className={leftPanelClass}>
         <div className="panel-left-grid" />
 
         <div className="panel-top">
@@ -293,20 +180,9 @@ function RegisterInner() {
 
         <div className="panel-bottom">
           {/* Vendor-invite label pill */}
-          {isVendorInvite && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'rgba(52,211,153,.15)', border: '1px solid rgba(52,211,153,.3)',
-              borderRadius: 20, padding: '4px 12px', marginBottom: 20,
-              fontSize: '.75rem', fontWeight: 600, color: '#6ee7b7',
-              letterSpacing: '.05em', textTransform: 'uppercase',
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
-              Vendor Portal
-            </div>
-          )}
+          <RegisterVendorPill show={isVendorInvite} />
           <h2 className="panel-tagline">{leftTagline}</h2>
-          <p className="panel-sub" style={{ marginTop: 12, marginBottom: 40 }}>{leftSub}</p>
+          <p className="panel-sub panel-sub--spaced">{leftSub}</p>
           <div className="steps">
             {leftSteps.map((s, i) => (
               <div className={`step ${i === 0 ? 'active' : ''}`} key={s.n}>
@@ -341,8 +217,8 @@ function RegisterInner() {
               <h1 className="form-title">
                 {isVendorInvite ? 'Set up your vendor account' : 'Accept your invitation'}
               </h1>
-              <div style={{ marginTop: 12 }}>
-                <ContextBadge />
+              <div className="form-context-badge-wrap">
+                <RegisterContextBadge isInvite={isInvite} isVendorInvite={isVendorInvite} inviteData={inviteData} />
               </div>
             </>
           ) : (
@@ -529,11 +405,21 @@ export default function RegisterPage() {
         /* ── Left panel ── */
         .panel-left {
           flex: 1;
-          background: var(--left-bg, #0f0e0d);
+          --left-bg: #0f0e0d;
+          --left-accent: #c8501a;
+          background: var(--left-bg);
           display: none;
           position: relative;
           overflow: hidden;
           transition: background .3s;
+        }
+        .panel-left--vendor {
+          --left-bg: #0d5c46;
+          --left-accent: #34d399;
+        }
+        .panel-left--default {
+          --left-bg: #0f0e0d;
+          --left-accent: #c8501a;
         }
         @media (min-width: 900px) {
           .panel-left {
@@ -596,6 +482,29 @@ export default function RegisterPage() {
         }
         .panel-tagline em { font-style: normal; color: var(--left-accent, #c8501a); }
         .panel-sub { color: rgba(255,255,255,.4); font-size: .88rem; line-height: 1.6; }
+        .panel-sub--spaced { margin-top: 12px; margin-bottom: 40px; }
+        .register-vendor-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(52,211,153,.15);
+          border: 1px solid rgba(52,211,153,.3);
+          border-radius: 20px;
+          padding: 4px 12px;
+          margin-bottom: 20px;
+          font-size: .75rem;
+          font-weight: 600;
+          color: #6ee7b7;
+          letter-spacing: .05em;
+          text-transform: uppercase;
+        }
+        .register-vendor-pill-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #34d399;
+          display: inline-block;
+        }
 
         /* ── Right panel ── */
         .panel-right {
@@ -628,6 +537,7 @@ export default function RegisterPage() {
           letter-spacing: -.03em; color: var(--ink); margin-bottom: 0;
         }
         .form-subtitle { color: var(--ink-soft); font-size: .92rem; line-height: 1.5; margin-top: 6px; }
+        .form-context-badge-wrap { margin-top: 12px; }
 
         .form-section {
           font-size: .72rem; font-weight: 600; letter-spacing: .08em;
@@ -637,53 +547,6 @@ export default function RegisterPage() {
 
         .auth-form { display: flex; flex-direction: column; gap: 18px; }
         .form-divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-        /* AuthInput component styles */
-        .auth-input-wrapper { display: flex; flex-direction: column; gap: 5px; }
-        .auth-input-label { font-size: .79rem; font-weight: 500; color: var(--ink); letter-spacing: .01em; }
-        .auth-input-required { color: var(--accent); margin-left: 2px; }
-        .auth-input-container {
-          display: flex; align-items: center;
-          border: 1.5px solid var(--border); border-radius: var(--radius);
-          background: var(--white); transition: border-color .15s, box-shadow .15s; overflow: hidden;
-        }
-        .auth-input-container:focus-within {
-          border-color: var(--ink); box-shadow: 0 0 0 3px rgba(15,14,13,.06);
-        }
-        .auth-input-container.has-error { border-color: var(--accent); }
-        .auth-input-container.is-disabled { opacity: .6; background: var(--surface); pointer-events: none; }
-        .auth-input-icon { padding: 0 12px 0 14px; color: var(--ink-faint); display: flex; }
-        .auth-input-field {
-          flex: 1; border: none; outline: none; padding: 12px 14px;
-          font-family: 'DM Sans', sans-serif; font-size: .92rem;
-          color: var(--ink); background: transparent;
-        }
-        .auth-input-field::placeholder { color: var(--ink-faint); }
-        .auth-input-toggle {
-          background: none; border: none; cursor: pointer;
-          padding: 0 14px; color: var(--ink-soft);
-          display: flex; align-items: center; transition: color .15s;
-        }
-        .auth-input-toggle:hover { color: var(--ink); }
-        .auth-input-error { font-size: .77rem; color: var(--accent); margin-top: 2px; }
-
-        /* Button */
-        .auth-btn {
-          border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
-          font-size: .93rem; font-weight: 500; border-radius: var(--radius);
-          padding: 13px 24px; transition: background .15s, transform .1s, box-shadow .15s;
-        }
-        .auth-btn--full { width: 100%; }
-        .auth-btn--primary { background: var(--ink); color: #fff; }
-        .auth-btn--primary:hover:not(:disabled) {
-          background: #1e1c1a; box-shadow: 0 4px 16px rgba(15,14,13,.18); transform: translateY(-1px);
-        }
-        .auth-btn--primary:active:not(:disabled) { transform: translateY(0); }
-        .auth-btn--loading { opacity: .75; cursor: not-allowed; }
-        .auth-btn:disabled { cursor: not-allowed; opacity: .55; }
-        .auth-btn-spinner-wrap { display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .auth-btn-spinner { width: 16px; height: 16px; animation: spin .7s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         .form-error {
           background: #fff5f2; border: 1px solid #f5c4b5; border-radius: var(--radius);
@@ -707,17 +570,118 @@ export default function RegisterPage() {
         .terms-text { font-size: .82rem; color: var(--ink-soft); line-height: 1.5; }
         .terms-text a { color: var(--ink); text-decoration: underline; }
         .terms-text a:hover { color: var(--accent); }
-        .terms-error { margin-top: 0; }
+        .terms-error { margin-top: 0; font-size: .77rem; }
 
         .form-footer { margin-top: 28px; text-align: center; font-size: .85rem; color: var(--ink-soft); }
         .form-footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
         .form-footer a:hover { text-decoration: underline; }
 
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
+        .panel-right { animation: authFadeUp .4s ease both; }
+
+        @keyframes registerSpin { to { transform: rotate(360deg); } }
+        .register-invite-loading {
+          min-height: 100dvh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: var(--surface);
+          font-family: 'DM Sans', sans-serif;
+          gap: 16px;
         }
-        .panel-right { animation: fadeUp .4s ease both; }
+        .register-invite-loading-spinner { animation: registerSpin .7s linear infinite; }
+        .register-invite-loading-text { font-size: .88rem; color: var(--ink-soft); margin: 0; }
+
+        .register-invite-error-page {
+          min-height: 100dvh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--surface);
+          font-family: 'DM Sans', sans-serif;
+          padding: 24px 16px;
+        }
+        .register-invite-error-card {
+          text-align: center;
+          background: #fff;
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 48px 40px;
+          max-width: 400px;
+          width: 100%;
+        }
+        .register-invite-error-icon-wrap {
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          background: #fff5f2;
+          border: 1px solid #f5c4b5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+        }
+        .register-invite-error-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: var(--ink);
+          margin: 0 0 8px;
+        }
+        .register-invite-error-message {
+          font-size: .88rem;
+          color: var(--ink-soft);
+          margin: 0 0 6px;
+          line-height: 1.6;
+        }
+        .register-invite-error-help {
+          font-size: .82rem;
+          color: var(--ink-faint);
+          margin: 0 0 28px;
+        }
+        .register-invite-error-link {
+          display: inline-block;
+          padding: 11px 24px;
+          background: var(--ink);
+          color: #fff;
+          border-radius: 10px;
+          font-size: .88rem;
+          font-weight: 500;
+          text-decoration: none;
+        }
+
+        .register-context-badge {
+          border-radius: 10px;
+          font-size: .84rem;
+        }
+        .register-context-badge--vendor {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 12px 14px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #374151;
+        }
+        .register-context-badge-icon {
+          flex-shrink: 0;
+          margin-top: 1px;
+        }
+        .register-context-badge-title {
+          font-weight: 600;
+          color: #065f46;
+          margin-bottom: 2px;
+        }
+        .register-context-badge--team {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          color: #4b4845;
+        }
+        .register-context-badge-strong { color: var(--ink); }
       `}</style>
 
       <Suspense>
