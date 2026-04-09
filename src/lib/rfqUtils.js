@@ -21,8 +21,9 @@ const effectiveDeadlineSql = (column = 'deadline') =>
 
 function isInReminderWindow(msUntilDeadline, hoursBefore) {
   const HOUR = 60 * 60 * 1000;
-  if (hoursBefore === 12) return msUntilDeadline <= 12 * HOUR && msUntilDeadline > 6 * HOUR;
-  if (hoursBefore === 6)  return msUntilDeadline <= 6 * HOUR && msUntilDeadline > 0;
+  const [firstWindow, secondWindow] = REMINDER_WINDOWS;
+  if (hoursBefore === firstWindow) return msUntilDeadline <= firstWindow * HOUR && msUntilDeadline > secondWindow * HOUR;
+  if (hoursBefore === secondWindow) return msUntilDeadline <= secondWindow * HOUR && msUntilDeadline > 0;
   return false;
 }
 

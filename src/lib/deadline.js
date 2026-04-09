@@ -1,4 +1,5 @@
 // src/lib/deadline.js
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Returns an effective deadline date.
@@ -12,7 +13,7 @@ export function getEffectiveDeadlineDate(deadline) {
   if (Number.isNaN(date.getTime())) return null;
 
   const isDateOnlyString =
-    typeof deadline === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(deadline.trim());
+    typeof deadline === 'string' && DATE_ONLY_PATTERN.test(deadline.trim());
   const isMidnightTime =
     date.getHours() === 0 &&
     date.getMinutes() === 0 &&
