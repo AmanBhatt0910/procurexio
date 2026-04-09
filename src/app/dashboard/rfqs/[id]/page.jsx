@@ -156,6 +156,13 @@ export default function RFQDetailPage({ params }) {
 
   const handleExtendDeadline = async () => {
     if (!extendDeadlineInput) return;
+    const selected = new Date(extendDeadlineInput);
+    const minAllowed = new Date(Date.now() + ONE_MINUTE_MS);
+    if (Number.isNaN(selected.getTime()) || selected <= minAllowed) {
+      setError('New deadline must be at least 1 minute in the future');
+      return;
+    }
+
     setExtendingDeadline(true);
     setError('');
     try {
@@ -177,6 +184,11 @@ export default function RFQDetailPage({ params }) {
       setError('Network error');
     }
     setExtendingDeadline(false);
+  };
+
+  const handleCancelExtendDeadline = () => {
+    setShowExtendDeadlineBox(false);
+    setExtendDeadlineInput('');
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -345,10 +357,7 @@ export default function RFQDetailPage({ params }) {
             />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
-                onClick={() => {
-                  setShowExtendDeadlineBox(false);
-                  setExtendDeadlineInput('');
-                }}
+                onClick={handleCancelExtendDeadline}
                 disabled={extendingDeadline}
                 style={{
                   padding: '7px 14px',
