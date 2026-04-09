@@ -47,12 +47,18 @@ export default function VendorBidWorkspacePage() {
   // Step navigation (1-4); synced from workflowStep after data loads
   const [substep, setSubstep] = useState(1);
 
+  const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || value === '') return 0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const normalizeBidItems = (items = []) =>
     items.map((item) => ({
       rfq_item_id: item.rfq_item_id,
-      unit_price: parseFloat(item.unit_price) || 0,
-      quantity: parseFloat(item.quantity) || 0,
-      tax_rate: parseFloat(item.tax_rate) || 0,
+      unit_price: toFiniteNumber(item.unit_price),
+      quantity: toFiniteNumber(item.quantity),
+      tax_rate: toFiniteNumber(item.tax_rate),
       notes: item.notes || '',
     }));
 

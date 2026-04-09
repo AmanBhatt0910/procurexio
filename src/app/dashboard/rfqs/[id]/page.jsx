@@ -8,6 +8,7 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import RFQItemsTable from '@/components/rfq/RFQItemsTable';
 import VendorInvitePanel from '@/components/rfq/VendorInvitePanel';
 import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/lib/rbac';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 
@@ -45,10 +46,10 @@ export default function RFQDetailPage({ params }) {
   const { user } = useAuth();
   const router   = useRouter();
 
-  const canWrite = user && ['company_admin', 'manager'].includes(user.role);
-  const canViewBids = user && ['company_admin', 'manager', 'employee'].includes(user.role);
-  const canAward = user && ['company_admin', 'manager', 'super_admin'].includes(user.role);
-  const canOpenAwardPage = user && ['company_admin', 'manager', 'employee', 'super_admin'].includes(user.role);
+  const canWrite = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER].includes(user.role);
+  const canViewBids = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE].includes(user.role);
+  const canAward = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.SUPER_ADMIN].includes(user.role);
+  const canOpenAwardPage = user && [ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN].includes(user.role);
 
   const [rfq, setRfq]           = useState(null);
   const [items, setItems]       = useState([]);

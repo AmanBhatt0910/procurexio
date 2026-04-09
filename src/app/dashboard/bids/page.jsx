@@ -80,7 +80,7 @@ function CountdownTimer({ deadline }) {
 }
 
 const PAGE_LIMIT = 20;
-const normalizeTime = (v) => {
+const getValidTimestamp = (v) => {
   if (!v) return 0;
   const t = new Date(v).getTime();
   return Number.isNaN(t) ? 0 : t;
@@ -125,14 +125,14 @@ export default function VendorBidsPage() {
       if (aStatus !== bStatus) return aStatus - bStatus;
 
       if (a?.rfq_status === 'published' && b?.rfq_status === 'published') {
-        return normalizeTime(a.deadline) - normalizeTime(b.deadline);
+        return getValidTimestamp(a.deadline) - getValidTimestamp(b.deadline);
       }
 
       if (a?.rfq_status === 'closed' && b?.rfq_status === 'closed') {
-        return normalizeTime(b.updated_at || b.created_at) - normalizeTime(a.updated_at || a.created_at);
+        return getValidTimestamp(b.updated_at || b.created_at) - getValidTimestamp(a.updated_at || a.created_at);
       }
 
-      return normalizeTime(b.created_at) - normalizeTime(a.created_at);
+      return getValidTimestamp(b.created_at) - getValidTimestamp(a.created_at);
     });
     return list;
   }, [rfqs]);
