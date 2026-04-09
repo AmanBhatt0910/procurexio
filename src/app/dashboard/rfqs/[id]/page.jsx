@@ -171,6 +171,7 @@ export default function RFQDetailPage({ params }) {
       }
       setRfq(json.data.rfq);
       setShowExtendDeadlineBox(false);
+      setExtendDeadlineInput('');
     } catch {
       setError('Network error');
     }
