@@ -65,6 +65,7 @@ export default function RFQDetailPage({ params }) {
 
   // Status transition
   const [transitioning, setTransitioning] = useState(false);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -130,6 +131,32 @@ export default function RFQDetailPage({ params }) {
       setRfq(json.data.rfq);
     } catch { setError('Network error'); }
     setTransitioning(false);
+  };
+
+  const handleExtendDeadline = async () => {
+    const current = rfq?.deadline ? new Date(rfq.deadline).toISOString().slice(0, 16) : '';
+    const input = window.prompt('Enter the new RFQ deadline (YYYY-MM-DDTHH:mm)', current);
+    if (!input) return;
+
+    setExtendingDeadline(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/rfqs/${id}/deadline`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deadline: input }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Failed to extend deadline');
+        setExtendingDeadline(false);
+        return;
+      }
+      setRfq(json.data.rfq);
+    } catch {
+      setError('Network error');
+    }
+    setExtendingDeadline(false);
   };
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -223,6 +250,26 @@ export default function RFQDetailPage({ params }) {
         {/* Status transitions */}
         {transitions.length > 0 && canWrite && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+            {rfq.status === 'published' && (
+              <button
+                onClick={handleExtendDeadline}
+                disabled={extendingDeadline}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius)',
+                  fontSize: '.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  background: 'var(--white)',
+                  color: 'var(--ink)',
+                  fontFamily: 'inherit',
+                  opacity: extendingDeadline ? .6 : 1,
+                }}
+              >
+                {extendingDeadline ? 'Extending…' : 'Extend Deadline'}
+              </button>
+            )}
             {transitions.map(t => (
               <button
                 key={t.to}
