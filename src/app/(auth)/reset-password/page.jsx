@@ -1,26 +1,25 @@
-// src/app/(auth)/reset-password/page.jsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const router       = useRouter();
-  const token        = searchParams.get('token') || '';
+  const router = useRouter();
+  const token = searchParams.get('token') || '';
 
-  const [password, setPassword]         = useState('');
-  const [confirm, setConfirm]           = useState('');
-  const [loading, setLoading]           = useState(false);
-  const [validating, setValidating]     = useState(true);
-  const [tokenValid, setTokenValid]     = useState(false);
-  const [tokenError, setTokenError]     = useState('');
-  const [error, setError]               = useState('');
-  const [success, setSuccess]           = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [tokenError, setTokenError] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Validate token on mount
   useEffect(() => {
     if (!token) {
       setTokenError('No reset token found. Please request a new password reset link.');
@@ -30,7 +29,7 @@ function ResetPasswordForm() {
 
     fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
-      .then(data => {
+      .then((data) => {
         if (data.valid) {
           setTokenValid(true);
         } else {
@@ -58,10 +57,10 @@ function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const res  = await fetch('/api/auth/reset-password', {
-        method:  'POST',
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -69,7 +68,6 @@ function ResetPasswordForm() {
         return;
       }
       setSuccess(true);
-      // Redirect to login after 3 seconds
       setTimeout(() => router.push('/login'), 3000);
     } catch {
       setError('Network error. Please check your connection.');
@@ -81,139 +79,8 @@ function ResetPasswordForm() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-          --ink:      #0f0e0d;
-          --ink-soft: #6b6660;
-          --ink-faint:#b8b3ae;
-          --surface:  #faf9f7;
-          --white:    #ffffff;
-          --accent:   #c8501a;
-          --accent-h: #a83e12;
-          --border:   #e4e0db;
-          --radius:   10px;
-          --shadow:   0 1px 3px rgba(15,14,13,.06), 0 8px 32px rgba(15,14,13,.08);
-        }
-
-        body {
-          font-family: 'DM Sans', sans-serif;
-          background: var(--surface);
-          color: var(--ink);
-          min-height: 100dvh;
-          display: flex;
-        }
-
-        .page {
-          display: flex;
-          width: 100%;
-          min-height: 100dvh;
-        }
-
-        .panel-left {
-          flex: 1;
-          background: var(--ink);
-          display: none;
-          position: relative;
-          overflow: hidden;
-        }
-        @media (min-width: 900px) { .panel-left { display: flex; align-items: flex-end; padding: 52px; } }
-
-        .panel-left::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse 60% 50% at 20% 80%, rgba(200,80,26,.18) 0%, transparent 70%),
-            radial-gradient(ellipse 40% 60% at 80% 20%, rgba(200,80,26,.10) 0%, transparent 60%);
-        }
-
-        .panel-left-grid {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
-          background-size: 48px 48px;
-        }
-
-        .panel-left-content { position: relative; z-index: 1; }
-
-        .panel-tagline {
-          font-family: 'Syne', sans-serif;
-          font-size: clamp(2rem, 3.5vw, 3rem);
-          font-weight: 700;
-          color: #fff;
-          line-height: 1.15;
-          letter-spacing: -.02em;
-          margin-bottom: 20px;
-        }
-
-        .panel-tagline em { font-style: normal; color: var(--accent); }
-
-        .panel-sub {
-          color: rgba(255,255,255,.45);
-          font-size: .95rem;
-          font-weight: 300;
-          max-width: 320px;
-          line-height: 1.7;
-        }
-
-        .panel-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(255,255,255,.08);
-          border: 1px solid rgba(255,255,255,.12);
-          border-radius: 100px;
-          padding: 6px 14px;
-          font-size: .78rem;
-          color: rgba(255,255,255,.6);
-          margin-bottom: 32px;
-          letter-spacing: .04em;
-          text-transform: uppercase;
-        }
-        .panel-badge span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; display: inline-block; }
-
-        .panel-right {
-          width: 100%;
-          max-width: 480px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          padding: 48px 40px;
-        }
-        @media (min-width: 900px) { .panel-right { flex: none; width: 480px; margin: 0; } }
-        @media (max-width: 480px) { .panel-right { padding: 40px 24px; } }
-
-        .logo {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 56px;
-          text-decoration: none;
-        }
-        .logo-mark {
-          width: 34px; height: 34px;
-          background: var(--ink);
-          border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .logo-mark svg { color: #fff; }
-        .logo-name {
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 1.1rem;
-          color: var(--ink);
-          letter-spacing: -.01em;
-        }
-        .logo-name span { color: var(--accent); }
-
-        .form-header { margin-bottom: 36px; }
-        .form-title {
+        .auth-form-header { margin-bottom: 36px; }
+        .auth-form-title {
           font-family: 'Syne', sans-serif;
           font-size: 1.75rem;
           font-weight: 700;
@@ -221,18 +88,16 @@ function ResetPasswordForm() {
           color: var(--ink);
           margin-bottom: 8px;
         }
-        .form-subtitle { color: var(--ink-soft); font-size: .93rem; line-height: 1.5; }
-
+        .auth-form-subtitle { color: var(--ink-soft); font-size: .93rem; line-height: 1.5; }
         .auth-form { display: flex; flex-direction: column; gap: 20px; }
-
-        .field { display: flex; flex-direction: column; gap: 6px; }
-        .field-label {
+        .auth-field { display: flex; flex-direction: column; gap: 6px; }
+        .auth-field-label {
           font-size: .8rem;
           font-weight: 500;
           color: var(--ink);
           letter-spacing: .01em;
         }
-        .field-input-wrap {
+        .auth-field-input-wrap {
           display: flex;
           align-items: center;
           border: 1.5px solid var(--border);
@@ -241,11 +106,11 @@ function ResetPasswordForm() {
           transition: border-color .15s, box-shadow .15s;
           overflow: hidden;
         }
-        .field-input-wrap:focus-within {
+        .auth-field-input-wrap:focus-within {
           border-color: var(--ink);
           box-shadow: 0 0 0 3px rgba(15,14,13,.06);
         }
-        .field-input {
+        .auth-field-input {
           flex: 1;
           border: none;
           outline: none;
@@ -255,8 +120,8 @@ function ResetPasswordForm() {
           color: var(--ink);
           background: transparent;
         }
-        .field-input::placeholder { color: var(--ink-faint); }
-        .field-toggle {
+        .auth-field-input::placeholder { color: var(--ink-faint); }
+        .auth-field-toggle {
           background: none;
           border: none;
           cursor: pointer;
@@ -265,10 +130,10 @@ function ResetPasswordForm() {
           display: flex;
           align-items: center;
         }
-        .field-toggle:hover { color: var(--ink-soft); }
-
+        .auth-field-toggle:hover { color: var(--ink-soft); }
         .auth-btn {
-          border: none; cursor: pointer;
+          border: none;
+          cursor: pointer;
           font-family: 'DM Sans', sans-serif;
           font-size: .93rem;
           font-weight: 500;
@@ -284,8 +149,7 @@ function ResetPasswordForm() {
           transform: translateY(-1px);
         }
         .auth-btn:disabled { cursor: not-allowed; opacity: .55; }
-
-        .form-error {
+        .auth-form-error {
           background: #fff5f2;
           border: 1px solid #f5c4b5;
           border-radius: var(--radius);
@@ -296,8 +160,7 @@ function ResetPasswordForm() {
           align-items: flex-start;
           gap: 8px;
         }
-
-        .form-warning {
+        .auth-form-warning {
           background: #fffbeb;
           border: 1px solid #fde68a;
           border-radius: var(--radius);
@@ -306,208 +169,176 @@ function ResetPasswordForm() {
           color: #92400e;
           text-align: center;
         }
-
-        .form-success {
+        .auth-form-success {
           background: #f0fdf4;
           border: 1px solid #bbf7d0;
           border-radius: var(--radius);
           padding: 20px;
           text-align: center;
         }
-        .form-success-icon { font-size: 2rem; margin-bottom: 10px; }
-        .form-success-title {
+        .auth-form-success-icon { font-size: 2rem; margin-bottom: 10px; }
+        .auth-form-success-title {
           font-family: 'Syne', sans-serif;
           font-size: 1.05rem;
           font-weight: 700;
           color: #166534;
           margin-bottom: 6px;
         }
-        .form-success-sub { font-size: .88rem; color: #166534; line-height: 1.5; }
-
-        .validating {
+        .auth-form-success-sub { font-size: .88rem; color: #166534; line-height: 1.5; }
+        .auth-validating {
           text-align: center;
           padding: 40px 0;
           color: var(--ink-soft);
           font-size: .93rem;
         }
-
-        .form-footer {
+        .auth-form-footer {
           margin-top: 32px;
           text-align: center;
           font-size: .85rem;
           color: var(--ink-soft);
         }
-        .form-footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
-        .form-footer a:hover { text-decoration: underline; }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .panel-right { animation: fadeUp .4s ease both; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner {
-          width: 18px; height: 18px;
+        .auth-form-footer a { color: var(--ink); font-weight: 500; text-decoration: none; }
+        .auth-form-footer a:hover { text-decoration: underline; }
+        @keyframes authSpin { to { transform: rotate(360deg); } }
+        .auth-spinner {
+          width: 18px;
+          height: 18px;
           border: 2px solid rgba(255,255,255,.3);
           border-top-color: #fff;
           border-radius: 50%;
-          animation: spin .7s linear infinite;
+          animation: authSpin .7s linear infinite;
           display: inline-block;
           margin-right: 8px;
           vertical-align: middle;
         }
       `}</style>
 
-      <div className="page">
-        {/* Decorative left panel */}
-        <div className="panel-left">
-          <div className="panel-left-grid" />
-          <div className="panel-left-content">
-            <div className="panel-badge"><span />Set new password</div>
-            <h2 className="panel-tagline">
-              Almost there.<br />
-              <em>Choose wisely.</em>
-            </h2>
-            <p className="panel-sub">
-              Pick a strong, unique password to secure your account.
-              We recommend at least 12 characters.
+      <AuthSplitLayout
+        badge="Set new password"
+        tagline={<>Almost there.<br /><em>Choose wisely.</em></>}
+        subtitle="Pick a strong, unique password to secure your account. We recommend at least 12 characters."
+      >
+        <div className="auth-form-header">
+          <h1 className="auth-form-title">Set new password</h1>
+          <p className="auth-form-subtitle">Enter and confirm your new password below.</p>
+        </div>
+
+        {validating ? (
+          <div className="auth-validating">
+            <span className="auth-spinner" />
+            Validating your reset link&hellip;
+          </div>
+        ) : !tokenValid ? (
+          <>
+            <div className="auth-form-warning">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle', flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {tokenError}
+            </div>
+            <div className="auth-form-footer">
+              <Link href="/forgot-password">Request a new reset link</Link>
+              {' · '}
+              <Link href="/login">Back to sign in</Link>
+            </div>
+          </>
+        ) : success ? (
+          <div className="auth-form-success">
+            <div className="auth-form-success-icon">✅</div>
+            <div className="auth-form-success-title">Password updated!</div>
+            <p className="auth-form-success-sub">
+              Your password has been changed successfully.
+              Redirecting you to the sign-in page&hellip;
             </p>
           </div>
-        </div>
-
-        {/* Form panel */}
-        <div className="panel-right">
-          <Link href="/" className="logo">
-            <div className="logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-            <span className="logo-name">Procure<span>xio</span></span>
-          </Link>
-
-          <div className="form-header">
-            <h1 className="form-title">Set new password</h1>
-            <p className="form-subtitle">Enter and confirm your new password below.</p>
-          </div>
-
-          {validating ? (
-            <div className="validating">
-              <span className="spinner" />
-              Validating your reset link&hellip;
-            </div>
-          ) : !tokenValid ? (
-            <>
-              <div className="form-warning">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display:'inline-block', marginRight:'6px', verticalAlign:'middle', flexShrink:0 }}>
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        ) : (
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {error && (
+              <div className="auth-form-error">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
-                {tokenError}
+                {error}
               </div>
-              <div className="form-footer">
-                <Link href="/forgot-password">Request a new reset link</Link>
-                {' · '}
-                <Link href="/login">Back to sign in</Link>
+            )}
+
+            <div className="auth-field">
+              <label className="auth-field-label" htmlFor="password">New password</label>
+              <div className="auth-field-input-wrap">
+                <input
+                  id="password"
+                  className="auth-field-input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  required
+                  autoComplete="new-password"
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  className="auth-field-toggle"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                  )}
+                </button>
               </div>
-            </>
-          ) : success ? (
-            <div className="form-success">
-              <div className="form-success-icon">✅</div>
-              <div className="form-success-title">Password updated!</div>
-              <p className="form-success-sub">
-                Your password has been changed successfully.
-                Redirecting you to the sign-in page&hellip;
-              </p>
             </div>
-          ) : (
-            <form className="auth-form" onSubmit={handleSubmit}>
-              {error && (
-                <div className="form-error">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  {error}
-                </div>
+
+            <div className="auth-field">
+              <label className="auth-field-label" htmlFor="confirm">Confirm new password</label>
+              <div className="auth-field-input-wrap">
+                <input
+                  id="confirm"
+                  className="auth-field-input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirm}
+                  onChange={e => setConfirm(e.target.value)}
+                  placeholder="Repeat your new password"
+                  required
+                  autoComplete="new-password"
+                  minLength={8}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="auth-btn auth-btn--primary"
+              disabled={loading}
+            >
+              {loading ? (
+                <><span className="auth-spinner" />Updating password&hellip;</>
+              ) : (
+                'Set new password'
               )}
+            </button>
+          </form>
+        )}
 
-              <div className="field">
-                <label className="field-label" htmlFor="password">New password</label>
-                <div className="field-input-wrap">
-                  <input
-                    id="password"
-                    className="field-input"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    required
-                    autoComplete="new-password"
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    className="field-toggle"
-                    onClick={() => setShowPassword(v => !v)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="confirm">Confirm new password</label>
-                <div className="field-input-wrap">
-                  <input
-                    id="confirm"
-                    className="field-input"
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirm}
-                    onChange={e => setConfirm(e.target.value)}
-                    placeholder="Repeat your new password"
-                    required
-                    autoComplete="new-password"
-                    minLength={8}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="auth-btn auth-btn--primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <><span className="spinner" />Updating password&hellip;</>
-                ) : (
-                  'Set new password'
-                )}
-              </button>
-            </form>
-          )}
-
-          <div className="form-footer">
-            Remember your password?{' '}
-            <Link href="/login">Back to sign in</Link>
-          </div>
+        <div className="auth-form-footer">
+          Remember your password? <Link href="/login">Back to sign in</Link>
         </div>
-      </div>
+      </AuthSplitLayout>
     </>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', fontFamily: 'sans-serif', color: '#6b6660' }}>
-        Loading&hellip;
-      </div>
-    }>
+    <Suspense
+      fallback={(
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', fontFamily: 'sans-serif', color: '#6b6660' }}>
+          Loading&hellip;
+        </div>
+      )}
+    >
       <ResetPasswordForm />
     </Suspense>
   );
