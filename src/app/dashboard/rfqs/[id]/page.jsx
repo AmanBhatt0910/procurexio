@@ -12,6 +12,7 @@ import { ROLES } from '@/lib/rbac';
 import { isDeadlinePassed } from '@/lib/deadline';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
+const ONE_MINUTE_MS = 60 * 1000;
 
 // Status machine
 const VALID_TRANSITIONS = {
@@ -144,7 +145,7 @@ export default function RFQDetailPage({ params }) {
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })() : '';
     const min = (() => {
-      const d = new Date(Date.now() + 60 * 1000);
+      const d = new Date(Date.now() + ONE_MINUTE_MS);
       const pad = (n) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     })();
@@ -334,7 +335,7 @@ export default function RFQDetailPage({ params }) {
                 width: '100%',
                 padding: '10px 12px',
                 border: '1px solid var(--border)',
-                borderRadius: 8,
+                borderRadius: 'var(--radius)',
                 fontSize: '.86rem',
                 color: 'var(--ink)',
                 background: 'var(--white)',
