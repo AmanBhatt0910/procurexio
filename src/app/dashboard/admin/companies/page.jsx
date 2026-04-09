@@ -13,13 +13,16 @@ function RedirectToDashboard() {
 }
 
 export default function AdminCompaniesPage() {
-  const [companies, setCompanies] = useState([]);
-  const [meta, setMeta]           = useState({ total: 0, page: 1, totalPages: 1 });
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [page, setPage]           = useState(1);
-  const [updating, setUpdating]   = useState(null);
+  const [companies, setCompanies]           = useState([]);
+  const [meta, setMeta]                     = useState({ total: 0, page: 1, totalPages: 1 });
+  const [loading, setLoading]               = useState(true);
+  const [search, setSearch]                 = useState('');
+  const [statusFilter, setStatusFilter]     = useState('');
+  const [page, setPage]                     = useState(1);
+  const [updating, setUpdating]             = useState(null);
+  const [updatingPlan, setUpdatingPlan]     = useState(null);
+  const [planSelections, setPlanSelections] = useState({});
+  const [planMsg, setPlanMsg]               = useState({});
 
   const fetchCompanies = useCallback(async (p = 1) => {
     setLoading(true);
@@ -32,6 +35,10 @@ export default function AdminCompaniesPage() {
       if (res.ok) {
         setCompanies(data.data);
         setMeta(data.meta);
+        // Pre-populate plan selections from current company plan
+        const selections = {};
+        data.data.forEach(c => { selections[c.id] = c.plan || 'free'; });
+        setPlanSelections(prev => ({ ...selections, ...prev }));
       }
     } finally {
       setLoading(false);
@@ -55,6 +62,34 @@ export default function AdminCompaniesPage() {
       }
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handlePlanChange(companyId) {
+    const plan_name = planSelections[companyId];
+    if (!plan_name) return;
+    setUpdatingPlan(companyId);
+    setPlanMsg(prev => ({ ...prev, [companyId]: '' }));
+    try {
+      const res  = await fetch('/api/admin/subscriptions', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ company_id: companyId, plan_name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCompanies(prev =>
+          prev.map(c => c.id === companyId ? { ...c, plan: plan_name } : c)
+        );
+        setPlanMsg(prev => ({ ...prev, [companyId]: 'Saved' }));
+        setTimeout(() => setPlanMsg(prev => ({ ...prev, [companyId]: '' })), 2500);
+      } else {
+        setPlanMsg(prev => ({ ...prev, [companyId]: data.error || 'Error' }));
+      }
+    } catch {
+      setPlanMsg(prev => ({ ...prev, [companyId]: 'Network error' }));
+    } finally {
+      setUpdatingPlan(null);
     }
   }
 
@@ -193,6 +228,28 @@ export default function AdminCompaniesPage() {
             background: #fff7ed;
           }
           .action-btn--deactivate:hover { background: #ffedd5; }
+          .action-btn--plan {
+            color: #1e40af;
+            border-color: #bfdbfe;
+            background: #eff6ff;
+            white-space: nowrap;
+          }
+          .action-btn--plan:hover { background: #dbeafe; }
+
+          .plan-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+          .plan-select {
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: .78rem;
+            background: var(--white);
+            color: var(--ink);
+            outline: none;
+            cursor: pointer;
+          }
+          .plan-msg { font-size: .72rem; color: #166534; }
+          .plan-msg--error { color: #9a3412; }
 
           .pagination {
             display: flex; align-items: center; justify-content: center;
@@ -240,113 +297,137 @@ export default function AdminCompaniesPage() {
         </div>
 
         <form className="filter-bar" onSubmit={handleSearch}>
-            <input
-              className="filter-input"
-              placeholder="Search by name or email…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-            </select>
-            <button type="submit" className="filter-btn">Search</button>
-          </form>
+          <input
+            className="filter-input"
+            placeholder="Search by name or email…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select
+            className="filter-select"
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
+          </select>
+          <button type="submit" className="filter-btn">Search</button>
+        </form>
 
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Plan</th>
-                  <th>Status</th>
-                  <th>Stats</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j}>
-                          <div className="skel" style={{ height: 14, width: j === 0 ? '80%' : '60%' }} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : companies.length === 0 ? (
-                  <tr><td colSpan={6} className="empty-state">No companies found.</td></tr>
-                ) : (
-                  companies.map(c => (
-                    <tr key={c.id}>
-                      <td>
-                        <div className="company-cell">
-                          <div className="company-avatar">{c.name?.charAt(0).toUpperCase()}</div>
-                          <div>
-                            <div className="company-name">{c.name}</div>
-                            <div className="company-email">{c.email}</div>
-                          </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Stats</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j}>
+                        <div className="skel" style={{ height: 14, width: j === 0 ? '80%' : '60%' }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : companies.length === 0 ? (
+                <tr><td colSpan={6} className="empty-state">No companies found.</td></tr>
+              ) : (
+                companies.map(c => (
+                  <tr key={c.id}>
+                    <td>
+                      <div className="company-cell">
+                        <div className="company-avatar">{c.name?.charAt(0).toUpperCase()}</div>
+                        <div>
+                          <div className="company-name">{c.name}</div>
+                          <div className="company-email">{c.email}</div>
                         </div>
-                      </td>
-                      <td><Badge variant={c.plan}>{c.plan ?? '—'}</Badge></td>
-                      <td><Badge variant={c.status}>{c.status ?? 'active'}</Badge></td>
-                      <td>
-                        <div className="stat-row">
-                          <span className="stat-chip">👥 {c.user_count ?? 0} users</span>
-                          <span className="stat-chip">📋 {c.rfq_count ?? 0} RFQs</span>
-                          <span className="stat-chip">⭐ {c.bid_count ?? 0} bids</span>
-                        </div>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', color: 'var(--ink-faint)', fontSize: '.78rem' }}>
-                        {c.created_at
-                          ? new Date(c.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : '—'}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          {c.status !== 'active' && (
-                            <button
-                              className="action-btn action-btn--activate"
-                              disabled={updating === c.id}
-                              onClick={() => handleStatusChange(c.id, 'active')}
-                            >
-                              {updating === c.id ? '…' : 'Activate'}
-                            </button>
-                          )}
-                          {c.status !== 'inactive' && (
-                            <button
-                              className="action-btn action-btn--deactivate"
-                              disabled={updating === c.id}
-                              onClick={() => handleStatusChange(c.id, 'inactive')}
-                            >
-                              {updating === c.id ? '…' : 'Deactivate'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="plan-cell">
+                        <select
+                          className="plan-select"
+                          value={planSelections[c.id] ?? (c.plan || 'free')}
+                          onChange={e => setPlanSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
+                          disabled={updatingPlan === c.id}
+                        >
+                          <option value="free">Free</option>
+                          <option value="pro">Pro</option>
+                        </select>
+                        <button
+                          className="action-btn action-btn--plan"
+                          disabled={updatingPlan === c.id}
+                          onClick={() => handlePlanChange(c.id)}
+                        >
+                          {updatingPlan === c.id ? '…' : 'Update Plan'}
+                        </button>
+                        {planMsg[c.id] && (
+                          <span className={planMsg[c.id] === 'Saved' ? 'plan-msg' : 'plan-msg plan-msg--error'}>
+                            {planMsg[c.id]}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td><Badge variant={c.status}>{c.status ?? 'active'}</Badge></td>
+                    <td>
+                      <div className="stat-row">
+                        <span className="stat-chip">👥 {c.user_count ?? 0} users</span>
+                        <span className="stat-chip">📋 {c.rfq_count ?? 0} RFQs</span>
+                        <span className="stat-chip">⭐ {c.bid_count ?? 0} bids</span>
+                      </div>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--ink-faint)', fontSize: '.78rem' }}>
+                      {c.created_at
+                        ? new Date(c.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '-'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {c.status !== 'active' && (
+                          <button
+                            className="action-btn action-btn--activate"
+                            disabled={updating === c.id}
+                            onClick={() => handleStatusChange(c.id, 'active')}
+                          >
+                            {updating === c.id ? '…' : 'Activate'}
+                          </button>
+                        )}
+                        {c.status !== 'inactive' && (
+                          <button
+                            className="action-btn action-btn--deactivate"
+                            disabled={updating === c.id}
+                            onClick={() => handleStatusChange(c.id, 'inactive')}
+                          >
+                            {updating === c.id ? '…' : 'Deactivate'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {!loading && meta.totalPages > 1 && (
+          <div className="pagination">
+            <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+            <span>Page {page} of {meta.totalPages} ({meta.total} total)</span>
+            <button className="page-btn" disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
           </div>
-
-          {!loading && meta.totalPages > 1 && (
-            <div className="pagination">
-              <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
-              <span>Page {page} of {meta.totalPages} ({meta.total} total)</span>
-              <button className="page-btn" disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
-            </div>
-          )}
-        </RoleGuard>
+        )}
+      </RoleGuard>
     </DashboardLayout>
   );
 }

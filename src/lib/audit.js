@@ -174,4 +174,7 @@ export const ACTION = {
   GOOGLE_ACCOUNT_LINKED:    'google_account_linked',
   GOOGLE_ACCOUNT_UNLINKED:  'google_account_unlinked',
   GOOGLE_AUTO_LINKED:       'google_auto_linked',
+
+  // Subscriptions
+  SUBSCRIPTION_PLAN_CHANGED: 'subscription_plan_changed',
 };

@@ -6,6 +6,7 @@ import { sendInviteEmail,
 import crypto                  from 'crypto';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
+import { checkLimit } from '@/lib/subscription';
 
 const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];
@@ -59,6 +60,21 @@ export async function POST(request) {
       );
       if (!vRows.length) {
         return Response.json({ error: 'Vendor not found' }, { status: 404 });
+      }
+    }
+
+    // 1b. Subscription: enforce user limit for non-vendor team members
+    if (TEAM_ROLES.includes(inviteRole)) {
+      try {
+        const limitCheck = await checkLimit(companyId, 'user');
+        if (!limitCheck.allowed) {
+          return Response.json(
+            { error: 'Limit reached. Upgrade your plan.', limitInfo: { current: limitCheck.current, limit: limitCheck.limit, plan: limitCheck.plan?.name } },
+            { status: 403 }
+          );
+        }
+      } catch (limitErr) {
+        console.error('[POST /api/company/invite] subscription checkLimit error:', limitErr.message);
       }
     }
 

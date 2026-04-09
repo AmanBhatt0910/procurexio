@@ -2,6 +2,7 @@
 import { query, queryRaw, getConnection } from '@/lib/db';
 import { requirePermission, PERMISSIONS } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
+import { checkLimit } from '@/lib/subscription';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -107,6 +108,20 @@ export async function POST(request) {
 
   const { title, description, deadline, budget, currency, items } = body;
   if (!title?.trim()) return Response.json({ error: 'Title is required' }, { status: 422 });
+
+  // ── Subscription: enforce RFQ limit ────────────────────────────────────────
+  try {
+    const limitCheck = await checkLimit(companyId, 'rfq');
+    if (!limitCheck.allowed) {
+      return Response.json(
+        { error: 'Limit reached. Upgrade your plan.', limitInfo: { current: limitCheck.current, limit: limitCheck.limit, plan: limitCheck.plan?.name } },
+        { status: 403 }
+      );
+    }
+  } catch (limitErr) {
+    // Non-fatal — never block RFQ creation due to subscription system error
+    console.error('[POST /api/rfqs] subscription checkLimit error:', limitErr.message);
+  }
 
   const conn = await getConnection();
   try {

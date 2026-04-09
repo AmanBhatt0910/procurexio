@@ -1085,3 +1085,76 @@ function buildPasswordResetTokenHtml({ name, resetUrl, appName }) {
 </body>
 </html>`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendPlanChangeEmail — notify company admin when their subscription plan changes
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendPlanChangeEmail({ to, adminName, companyName, oldPlan, newPlan, changedBy }) {
+  const year        = new Date().getFullYear();
+  const isUpgrade   = newPlan === 'pro';
+  const actionLabel = isUpgrade ? 'upgraded' : 'downgraded';
+  const iconEmoji   = isUpgrade ? '🚀' : '📦';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Subscription Plan ${actionLabel}</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      <tr>
+        <td style="background:#1a1a1a;padding:28px 36px;">
+          <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-.5px;">${APP_NAME}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:36px;">
+          <p style="margin:0 0 8px;font-size:24px;">${iconEmoji}</p>
+          <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#1a1a1a;letter-spacing:-.3px;">
+            Your plan has been ${actionLabel}
+          </h1>
+          <p style="margin:0 0 24px;font-size:14px;color:#5a5550;line-height:1.6;">
+            Hi ${adminName || 'there'},<br/><br/>
+            The subscription plan for <strong>${companyName}</strong> has been
+            <strong>${actionLabel}</strong> by ${changedBy || 'a platform administrator'}.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f8f6;border-radius:8px;border:1px solid #e5e3df;margin-bottom:24px;">
+            <tr>
+              <td style="padding:16px 20px;border-bottom:1px solid #e5e3df;">
+                <span style="font-size:12px;color:#9a9590;text-transform:uppercase;letter-spacing:.06em;">Previous Plan</span>
+                <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1a1a1a;text-transform:capitalize;">${oldPlan || '—'}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 20px;">
+                <span style="font-size:12px;color:#9a9590;text-transform:uppercase;letter-spacing:.06em;">New Plan</span>
+                <p style="margin:4px 0 0;font-size:15px;font-weight:700;color:#1a1a1a;text-transform:capitalize;">${newPlan}</p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0;font-size:13px;color:#9a9590;line-height:1.6;">
+            If you have any questions about your plan, please contact support.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#b8b3ae;">&copy; ${year} ${APP_NAME}. All rights reserved.</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from:    FROM,
+    to,
+    subject: `Your ${APP_NAME} plan has been ${actionLabel} to ${newPlan}`,
+    html,
+  });
+
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
