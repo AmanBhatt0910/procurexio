@@ -159,7 +159,7 @@ export default function RFQDetailPage({ params }) {
     const selected = new Date(extendDeadlineInput);
     const minAllowed = new Date(Date.now() + ONE_MINUTE_MS);
     if (Number.isNaN(selected.getTime()) || selected <= minAllowed) {
-      setError('New deadline must be at least 1 minute in the future');
+      setError('New deadline must be more than 1 minute in the future');
       return;
     }
 
@@ -327,7 +327,7 @@ export default function RFQDetailPage({ params }) {
             ))}
           </div>
         )}
-        {showExtendDeadlineBox && rfq.status === 'published' && canWrite && (
+        {showExtendDeadlineBox && (
           <div style={{
             background: 'var(--white)',
             border: '1px solid var(--border)',
