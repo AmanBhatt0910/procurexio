@@ -299,7 +299,7 @@ export default function AdminCompaniesPage() {
         <form className="filter-bar" onSubmit={handleSearch}>
           <input
             className="filter-input"
-            placeholder="Search by name or email..."
+            placeholder="Search by name or email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -369,7 +369,7 @@ export default function AdminCompaniesPage() {
                           disabled={updatingPlan === c.id}
                           onClick={() => handlePlanChange(c.id)}
                         >
-                          {updatingPlan === c.id ? '...' : 'Update Plan'}
+                          {updatingPlan === c.id ? '…' : 'Update Plan'}
                         </button>
                         {planMsg[c.id] && (
                           <span className={planMsg[c.id] === 'Saved' ? 'plan-msg' : 'plan-msg plan-msg--error'}>
@@ -381,9 +381,9 @@ export default function AdminCompaniesPage() {
                     <td><Badge variant={c.status}>{c.status ?? 'active'}</Badge></td>
                     <td>
                       <div className="stat-row">
-                        <span className="stat-chip">&#128101; {c.user_count ?? 0} users</span>
-                        <span className="stat-chip">&#128203; {c.rfq_count ?? 0} RFQs</span>
-                        <span className="stat-chip">&#11088; {c.bid_count ?? 0} bids</span>
+                        <span className="stat-chip">👥 {c.user_count ?? 0} users</span>
+                        <span className="stat-chip">📋 {c.rfq_count ?? 0} RFQs</span>
+                        <span className="stat-chip">⭐ {c.bid_count ?? 0} bids</span>
                       </div>
                     </td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--ink-faint)', fontSize: '.78rem' }}>
@@ -399,7 +399,7 @@ export default function AdminCompaniesPage() {
                             disabled={updating === c.id}
                             onClick={() => handleStatusChange(c.id, 'active')}
                           >
-                            {updating === c.id ? '...' : 'Activate'}
+                            {updating === c.id ? '…' : 'Activate'}
                           </button>
                         )}
                         {c.status !== 'inactive' && (
@@ -408,7 +408,7 @@ export default function AdminCompaniesPage() {
                             disabled={updating === c.id}
                             onClick={() => handleStatusChange(c.id, 'inactive')}
                           >
-                            {updating === c.id ? '...' : 'Deactivate'}
+                            {updating === c.id ? '…' : 'Deactivate'}
                           </button>
                         )}
                       </div>
