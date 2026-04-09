@@ -176,29 +176,29 @@ export async function checkLimit(companyId, metric) {
     // Count current usage from DB
     let current = 0;
     if (metric === 'rfq') {
-      const [[{ cnt }]] = await pool.execute(
+      const [rows] = await pool.execute(
         `SELECT COUNT(*) AS cnt FROM rfqs WHERE company_id = ?`,
         [companyId]
       );
-      current = cnt;
+      current = rows[0]?.cnt ?? 0;
     } else if (metric === 'vendor') {
-      const [[{ cnt }]] = await pool.execute(
+      const [rows] = await pool.execute(
         `SELECT COUNT(*) AS cnt FROM vendors WHERE company_id = ? AND status != 'inactive'`,
         [companyId]
       );
-      current = cnt;
+      current = rows[0]?.cnt ?? 0;
     } else if (metric === 'user') {
-      const [[{ cnt }]] = await pool.execute(
+      const [rows] = await pool.execute(
         `SELECT COUNT(*) AS cnt FROM users WHERE company_id = ? AND role != 'vendor_user'`,
         [companyId]
       );
-      current = cnt;
+      current = rows[0]?.cnt ?? 0;
     } else if (metric === 'email') {
-      const [[{ cnt }]] = await pool.execute(
+      const [rows] = await pool.execute(
         `SELECT COUNT(*) AS cnt FROM notifications WHERE company_id = ?`,
         [companyId]
       );
-      current = cnt;
+      current = rows[0]?.cnt ?? 0;
     }
 
     return { allowed: current < limit, current, limit, plan };
