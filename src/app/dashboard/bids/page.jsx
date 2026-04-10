@@ -9,6 +9,7 @@ import BidGridCard from '@/components/bids/BidGridCard';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import ViewToggle from '@/components/ui/ViewToggle';
 import RoleGuard from '@/components/auth/RoleGuard';
+import { useAuth } from '@/hooks/useAuth';
 import { getDeadlineTimeLeftMs, isDeadlinePassed } from '@/lib/deadline';
 
 function RedirectToDashboard() {
@@ -91,6 +92,7 @@ const getValidTimestamp = (v) => {
 };
 
 export default function VendorBidsPage() {
+  const { user, loading: authLoading } = useAuth();
   const [rfqs, setRfqs]           = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
@@ -294,7 +296,9 @@ export default function VendorBidsPage() {
             title="My Bid Invitations"
             subtitle={`${pagination.total} RFQ${pagination.total !== 1 ? 's' : ''} you have been invited to respond to`}
             action={
-              <ViewToggle view={view} onViewChange={setView} userRole="vendor_user" />
+              !authLoading && user && (
+                <ViewToggle view={view} onViewChange={setView} userRole={user.role} />
+              )
             }
           />
           {error && <div className="error-box">{error}</div>}
@@ -305,8 +309,6 @@ export default function VendorBidsPage() {
           )}
 
           {view === 'grid' ? (
-            /* Grid view — vendor_user role → grid is disabled, so this branch is never
-               reached in practice, but kept for completeness */
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
