@@ -13,7 +13,7 @@ import pool from '@/lib/db';
  */
 export async function getPersonalInfo(userId) {
   const [rows] = await pool.execute(
-    `SELECT id, name, email, role, created_at,
+    `SELECT u.id, u.name, u.email, u.role, u.created_at,
             COALESCE(us.phone_number, '') AS phone_number
      FROM   users u
      LEFT JOIN user_security us ON us.user_id = u.id
