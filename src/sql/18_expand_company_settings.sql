@@ -1,28 +1,70 @@
 -- ================================================================
--- MODULE 18: Expand Company Settings
--- Adds tax_id, registered_address, and phone_number to
--- the existing company_settings table (safe ALTER, idempotent).
+-- MODULE 18: Expand Company Settings (MySQL compatible)
 -- ================================================================
 
--- Add tax_id if not already present
-ALTER TABLE company_settings
-  ADD COLUMN IF NOT EXISTS tax_id              VARCHAR(64)   DEFAULT NULL
-    COMMENT 'Tax / GST / VAT identification number';
+-- tax_id
+SET @col_exists = (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'company_settings'
+    AND COLUMN_NAME = 'tax_id'
+);
 
--- Add registered_address if not already present
-ALTER TABLE company_settings
-  ADD COLUMN IF NOT EXISTS registered_address  VARCHAR(500)  DEFAULT NULL
-    COMMENT 'Official registered business address';
+SET @sql = IF(@col_exists = 0,
+  'ALTER TABLE company_settings ADD COLUMN tax_id VARCHAR(64) DEFAULT NULL COMMENT ''Tax / GST / VAT identification number'';',
+  'SELECT "tax_id already exists";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Add phone_number if not already present
-ALTER TABLE company_settings
-  ADD COLUMN IF NOT EXISTS phone_number        VARCHAR(32)   DEFAULT NULL
-    COMMENT 'Company contact phone number';
 
--- Extend website/social fields (future-proofing)
-ALTER TABLE company_settings
-  ADD COLUMN IF NOT EXISTS website_url         VARCHAR(512)  DEFAULT NULL
-    COMMENT 'Company website URL';
+-- registered_address
+SET @col_exists = (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'company_settings'
+    AND COLUMN_NAME = 'registered_address'
+);
 
--- Ensure updated_at exists (it already does in schema 1, but safe to confirm)
--- No-op if column already present; MySQL silently skips duplicate ADD COLUMN IF NOT EXISTS.
+SET @sql = IF(@col_exists = 0,
+  'ALTER TABLE company_settings ADD COLUMN registered_address VARCHAR(500) DEFAULT NULL COMMENT ''Official registered business address'';',
+  'SELECT "registered_address already exists";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+-- phone_number
+SET @col_exists = (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'company_settings'
+    AND COLUMN_NAME = 'phone_number'
+);
+
+SET @sql = IF(@col_exists = 0,
+  'ALTER TABLE company_settings ADD COLUMN phone_number VARCHAR(32) DEFAULT NULL COMMENT ''Company contact phone number'';',
+  'SELECT "phone_number already exists";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+-- website_url
+SET @col_exists = (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'company_settings'
+    AND COLUMN_NAME = 'website_url'
+);
+
+SET @sql = IF(@col_exists = 0,
+  'ALTER TABLE company_settings ADD COLUMN website_url VARCHAR(512) DEFAULT NULL COMMENT ''Company website URL'';',
+  'SELECT "website_url already exists";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
