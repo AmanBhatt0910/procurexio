@@ -5,7 +5,9 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
+import BidGridCard from '@/components/bids/BidGridCard';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import ViewToggle from '@/components/ui/ViewToggle';
 import RoleGuard from '@/components/auth/RoleGuard';
 import { getDeadlineTimeLeftMs, isDeadlinePassed } from '@/lib/deadline';
 
@@ -95,6 +97,7 @@ export default function VendorBidsPage() {
   const [companyCurrency, setCompanyCurrency] = useState('USD');
   const [page, setPage]           = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [view, setView]           = useState('list');
   const router = useRouter();
 
   const fetchRfqs = useCallback(async (p = 1) => {
@@ -263,6 +266,7 @@ export default function VendorBidsPage() {
             display: flex; align-items: center; gap: 8px;
             margin-top: 20px; justify-content: center;
           }
+          @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
           .section-wrap { margin-bottom: 20px; }
           .section-title {
             display: flex; align-items: center; gap: 8px;
@@ -289,6 +293,9 @@ export default function VendorBidsPage() {
           <PageHeader
             title="My Bid Invitations"
             subtitle={`${pagination.total} RFQ${pagination.total !== 1 ? 's' : ''} you have been invited to respond to`}
+            action={
+              <ViewToggle view={view} onViewChange={setView} userRole="vendor_user" />
+            }
           />
           {error && <div className="error-box">{error}</div>}
           {!loading && rfqs.length === 0 && !error && (
@@ -296,31 +303,62 @@ export default function VendorBidsPage() {
               You haven&apos;t been invited to any open RFQs yet. Check back later.
             </div>
           )}
-          <div className="section-wrap">
-            <div className="section-title">
-              Published RFQs
-              <span className="section-count">{publishedRfqs.length}</span>
-            </div>
-            <DataTable
-              columns={columns}
-              rows={publishedRfqs}
-              loading={loading}
-              emptyMessage="No published RFQ invitations found"
-            />
-          </div>
 
-          <div className="section-wrap">
-            <div className="section-title">
-              Closed RFQs
-              <span className="section-count">{closedRfqs.length}</span>
+          {view === 'grid' ? (
+            /* Grid view — vendor_user role → grid is disabled, so this branch is never
+               reached in practice, but kept for completeness */
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 16,
+            }}>
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} style={{
+                      height: 180, borderRadius: 'var(--radius)',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      animation: 'pulse 1.5s infinite',
+                    }} />
+                  ))
+                : sortedRfqs.map(rfq => (
+                    <BidGridCard
+                      key={rfq.id}
+                      rfq={rfq}
+                      companyCurrency={companyCurrency}
+                      onClick={() => router.push(`/dashboard/bids/${rfq.id}`)}
+                    />
+                  ))
+              }
             </div>
-            <DataTable
-              columns={columns}
-              rows={closedRfqs}
-              loading={loading}
-              emptyMessage="No closed RFQs yet"
-            />
-          </div>
+          ) : (
+            <>
+              <div className="section-wrap">
+                <div className="section-title">
+                  Published RFQs
+                  <span className="section-count">{publishedRfqs.length}</span>
+                </div>
+                <DataTable
+                  columns={columns}
+                  rows={publishedRfqs}
+                  loading={loading}
+                  emptyMessage="No published RFQ invitations found"
+                />
+              </div>
+
+              <div className="section-wrap">
+                <div className="section-title">
+                  Closed RFQs
+                  <span className="section-count">{closedRfqs.length}</span>
+                </div>
+                <DataTable
+                  columns={columns}
+                  rows={closedRfqs}
+                  loading={loading}
+                  emptyMessage="No closed RFQs yet"
+                />
+              </div>
+            </>
+          )}
 
           {pagination.pages > 1 && (
             <div className="pagination">

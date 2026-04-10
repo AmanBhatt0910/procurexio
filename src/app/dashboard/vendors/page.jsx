@@ -9,6 +9,8 @@ import DataTable from '@/components/ui/DataTable';
 import Modal from '@/components/ui/Modal';
 import VendorStatusBadge from '@/components/vendors/VendorStatusBadge';
 import VendorCategoryTag from '@/components/vendors/VendorCategoryTag';
+import VendorGridCard from '@/components/vendors/VendorGridCard';
+import ViewToggle from '@/components/ui/ViewToggle';
 import { useAuth } from '@/hooks/useAuth';
 
 const STATUSES = ['active', 'inactive', 'pending'];
@@ -36,6 +38,7 @@ export default function VendorsPage() {
 
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating,     setDeactivating]     = useState(false);
+  const [view,             setView]             = useState('list');
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -225,7 +228,7 @@ export default function VendorsPage() {
     <DashboardLayout pageTitle="Vendors">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap');
-        .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
         .filter-input {
           height: 36px; padding: 0 12px; border: 1px solid var(--border);
           border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: .84rem;
@@ -234,6 +237,7 @@ export default function VendorsPage() {
         }
         .filter-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(15,14,13,.06); }
         .filter-input--search { width: 220px; }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
         .pagination { display: flex; align-items: center; gap: 8px; margin-top: 20px; justify-content: flex-end; }
         .page-btn {
           height: 32px; min-width: 32px; padding: 0 10px; border: 1px solid var(--border);
@@ -290,14 +294,50 @@ export default function VendorsPage() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        <div style={{ marginLeft: 'auto' }}>
+          {!authLoading && user && (
+            <ViewToggle view={view} onViewChange={setView} userRole={user.role} />
+          )}
+        </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        rows={vendors}
-        loading={loading}
-        emptyMessage="No vendors found. Add your first vendor to get started."
-      />
+      {view === 'grid' ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 16,
+        }}>
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{
+                  height: 160, borderRadius: 'var(--radius)',
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  animation: 'pulse 1.5s infinite',
+                }} />
+              ))
+            : vendors.length === 0
+              ? <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px 0', color: 'var(--ink-faint)', fontFamily: 'DM Sans, sans-serif' }}>
+                  No vendors found. Add your first vendor to get started.
+                </div>
+              : vendors.map(vendor => (
+                  <VendorGridCard
+                    key={vendor.id}
+                    vendor={vendor}
+                    canWrite={canWrite}
+                    onView={(id) => router.push(`/dashboard/vendors/${id}`)}
+                    onDeactivate={setDeactivateTarget}
+                  />
+                ))
+          }
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={vendors}
+          loading={loading}
+          emptyMessage="No vendors found. Add your first vendor to get started."
+        />
+      )}
 
       {pagination.pages > 1 && (
         <div className="pagination">
