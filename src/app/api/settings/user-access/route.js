@@ -3,7 +3,7 @@
 // PUT /api/settings/user-access — change a user's role (company_admin / super_admin only)
 
 import { NextResponse } from 'next/server';
-import { getCompanyUsers, updateUserRole } from '@/lib/settingsService';
+import { getCompanyUsers, getUserInCompany, updateUserRole } from '@/lib/settingsService';
 import { logAction, ACTION } from '@/lib/audit';
 
 const ADMIN_ROLES   = ['super_admin', 'company_admin'];
@@ -80,11 +80,22 @@ export async function PUT(request) {
   }
 
   try {
+    // Prevent changing the role of a Company Admin
+    const targetUser = await getUserInCompany(Number(target_user_id), Number(companyId));
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found in your company.' }, { status: 404 });
+    }
+    if (targetUser.role === 'company_admin') {
+      return NextResponse.json(
+        { error: 'The role of a Company Admin cannot be changed from this panel.' },
+        { status: 403 }
+      );
+    }
+
     const updated = await updateUserRole(Number(target_user_id), Number(companyId), new_role);
     if (!updated) {
       return NextResponse.json({ error: 'User not found in your company.' }, { status: 404 });
     }
-
     await logAction(request, {
       userId:       Number(userId),
       userEmail,

@@ -422,6 +422,18 @@ export async function getCompanyUsers(companyId) {
 }
 
 /**
+ * Fetch a single user within a company (id, name, email, role).
+ * Returns null if user is not found in the company.
+ */
+export async function getUserInCompany(targetUserId, companyId) {
+  const [rows] = await pool.execute(
+    `SELECT id, name, email, role FROM users WHERE id = ? AND company_id = ? LIMIT 1`,
+    [targetUserId, companyId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
  * Change the role of a user within a company.
  * Restricted: only company_admin can change roles, and only for users in their company.
  */
