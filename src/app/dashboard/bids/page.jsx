@@ -195,10 +195,10 @@ export default function VendorBidsPage() {
     {
       key: 'time_remaining',
       label: 'Time Remaining',
-      render: (val, row) => {
+      render: (_val, row) => {
         const isClosedStatus = row?.rfq_status === 'closed' || row?.rfq_status === 'cancelled';
         if (isClosedStatus) return <span style={{ color: 'var(--ink-faint)', fontSize: '.82rem' }}>—</span>;
-        return <CountdownTimer deadline={val} />;
+        return <CountdownTimer deadline={row?.deadline} />;
       },
     },
     {
