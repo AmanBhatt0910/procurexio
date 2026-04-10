@@ -6,7 +6,8 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:superadmin": "node scripts/seed-superadmin.js"
   },
   "dependencies": {
     "@fontsource/syne": "^5.2.7",

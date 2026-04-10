@@ -3,6 +3,9 @@
 // Centralized input validation utilities for Procurexio.
 // Use these helpers in API route handlers before touching the database.
 
+import { ALLOWED_CURRENCIES } from '@/config/currencies';
+import { PASSWORD_MIN_LENGTH } from '@/config/constants';
+
 // ── Regex constants ──────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,16 +24,9 @@ export const MAX_LENGTHS = {
   password:    1024, // bcrypt hard limit is 72 bytes; reject absurdly long inputs
 };
 
-// ── Currency allowlist ───────────────────────────────────────────────────────
-
-export const ALLOWED_CURRENCIES = new Set([
-  'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'NZD', 'CHF', 'JPY', 'CNY', 'HKD',
-  'SGD', 'INR', 'BRL', 'MXN', 'ZAR', 'AED', 'SAR', 'SEK', 'NOK', 'DKK',
-  'PLN', 'CZK', 'HUF', 'TRY', 'RUB', 'KRW', 'IDR', 'MYR', 'THB', 'PHP',
-  'PKR', 'BDT', 'EGP', 'NGN', 'KES', 'GHS', 'MAD', 'DZD', 'TND', 'QAR',
-  'KWD', 'BHD', 'OMR', 'JOD', 'LBP', 'ILS', 'UAH', 'VND', 'TWD', 'CLP',
-  'COP', 'PEN', 'ARS', 'UYU', 'PYG', 'BOB', 'VEF', 'CRC', 'GTQ', 'HNL',
-]);
+// Re-export for backward compat — callers that imported ALLOWED_CURRENCIES
+// from this module continue to work.
+export { ALLOWED_CURRENCIES };
 
 // ── Validation helpers ───────────────────────────────────────────────────────
 
@@ -53,7 +49,7 @@ export function validateEmail(value) {
  * @param {number} [minLength=8]
  * @returns {string|null}
  */
-export function validatePassword(value, minLength = 8) {
+export function validatePassword(value, minLength = PASSWORD_MIN_LENGTH) {
   if (!value || typeof value !== 'string')  return 'Password is required.';
   if (value.length < minLength)             return `Password must be at least ${minLength} characters.`;
   if (value.length > MAX_LENGTHS.password)  return 'Password is too long.';

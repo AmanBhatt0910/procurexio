@@ -19,6 +19,7 @@ import { query, getConnection }                      from '@/lib/db';
 import { hashPassword }                              from '@/lib/password';
 import { signToken, buildAuthCookie }                from '@/lib/jwt';
 import { sendWelcomeEmail }                          from '@/lib/mailer';
+import { PASSWORD_MIN_LENGTH }                       from '@/config/constants';
 
 export async function POST(request) {
   try {
@@ -43,13 +44,12 @@ async function handleInviteRegister(body, request) {
   const errors = {};
   if (!name?.trim())  errors.name     = 'Your full name is required.';
   if (!password)      errors.password = 'Password is required.';
-  if (password && password.length < 8)
-    errors.password = 'Password must be at least 8 characters.';
+  if (password && password.length < PASSWORD_MIN_LENGTH)
+    errors.password = `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
 
   if (Object.keys(errors).length) {
     return NextResponse.json({ errors }, { status: 422 });
   }
-
   const pool = (await import('@/lib/db')).default;
 
   const [rows] = await pool.query(
@@ -173,8 +173,8 @@ async function handleCompanyRegister(body, request) {
     if (!name?.trim())        errors.name        = 'Your full name is required.';
     if (!email?.trim())       errors.email       = 'Email is required.';
     if (!password)            errors.password    = 'Password is required.';
-    if (password && password.length < 8)
-      errors.password = 'Password must be at least 8 characters.';
+    if (password && password.length < PASSWORD_MIN_LENGTH)
+      errors.password = `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
 
     if (Object.keys(errors).length) {
       return NextResponse.json({ errors }, { status: 422 });

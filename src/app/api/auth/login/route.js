@@ -9,9 +9,7 @@ import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime
 import { validateEmail } from '@/lib/validation';
 import { normalizeRole } from '@/lib/roleNormalizer';
 
-// Max failed attempts before account lock, and lock duration in minutes
-const MAX_FAILED_ATTEMPTS  = 5;
-const LOCK_DURATION_MINUTES = 30;
+import { MAX_FAILED_ATTEMPTS, LOCK_DURATION_MINUTES } from '@/config/constants';
 
 export async function POST(request) {
   const ip = getRequestIP(request);

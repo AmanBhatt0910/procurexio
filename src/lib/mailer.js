@@ -3,6 +3,7 @@
 // Set RESEND_API_KEY and INVITE_FROM_EMAIL in your .env.local
 
 import { Resend } from 'resend';
+import { INVITATION_EXPIRY_DAYS, PASSWORD_RESET_EXPIRY_HOURS } from '@/config/constants';
 
 // Lazy initialization — avoids build-time errors when RESEND_API_KEY is absent
 let _resend = null;
@@ -139,7 +140,7 @@ function buildTeamInviteHtml({ inviteUrl, companyName, invitedBy, formattedRole,
                 </tr>
               </table>
               <p style="margin:24px 0 0;font-size:13px;color:#9d9894;">
-                This invitation expires in <strong>7 days</strong>. If you weren't expecting this, you can safely ignore it.
+                This invitation expires in <strong>${INVITATION_EXPIRY_DAYS} days</strong>. If you weren't expecting this, you can safely ignore it.
               </p>
             </td>
           </tr>
@@ -243,7 +244,7 @@ function buildVendorInviteHtml({ inviteUrl, vendorName, companyName, invitedBy, 
                 </tr>
               </table>
               <p style="margin:24px 0 0;font-size:13px;color:#9d9894;text-align:center;">
-                This invitation expires in <strong>7 days</strong>.<br/>
+                This invitation expires in <strong>${INVITATION_EXPIRY_DAYS} days</strong>.<br/>
                 If ${vendorName} wasn't expecting this, this email can be safely ignored.
               </p>
             </td>
@@ -1049,7 +1050,7 @@ function buildPasswordResetTokenHtml({ name, resetUrl, appName }) {
               </h1>
               <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
                 Hi <strong style="color:#0f0e0d;">${name}</strong>, we received a request to reset your password.
-                Click the button below to choose a new password. This link expires in <strong>24 hours</strong>.
+                Click the button below to choose a new password. This link expires in <strong>${PASSWORD_RESET_EXPIRY_HOURS} hours</strong>.
               </p>
               <table cellpadding="0" cellspacing="0">
                 <tr>

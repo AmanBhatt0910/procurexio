@@ -1,6 +1,7 @@
 // src/lib/jwt.js
 
 import { SignJWT, jwtVerify } from 'jose';
+import { INVITATION_EXPIRY_SECONDS } from '@/config/constants';
 
 /**
  * Using 'jose' instead of 'jsonwebtoken'.
@@ -100,7 +101,7 @@ export function buildAuthCookie(token, options = {}) {
     `auth_token=${token}`,
     'HttpOnly',
     'Path=/',
-    `Max-Age=${7 * 24 * 60 * 60}`,
+    `Max-Age=${INVITATION_EXPIRY_SECONDS}`,
     isSecure ? 'Secure' : '',
     'SameSite=Lax',
   ]
