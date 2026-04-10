@@ -7,6 +7,8 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
+import RFQGridCard from '@/components/rfq/RFQGridCard';
+import ViewToggle from '@/components/ui/ViewToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { isDeadlinePassed } from '@/lib/deadline';
 
@@ -48,6 +50,7 @@ export default function RFQsPage() {
   const [status,     setStatus]     = useState('all');
   const [page,       setPage]       = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [view,       setView]       = useState('list');
 
   const handleStatusChange = (s) => { setStatus(s); setPage(1); };
   const handleSearchChange = (e)  => { setSearch(e.target.value); setPage(1); };
@@ -194,6 +197,7 @@ export default function RFQsPage() {
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
         .rfq-page { animation: fadeUp .35s ease both; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
         .filter-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border);
           background: transparent; font-family: 'DM Sans', sans-serif; font-size: .78rem;
           font-weight: 500; cursor: pointer; color: var(--ink-soft); transition: all .15s; }
@@ -219,7 +223,7 @@ export default function RFQsPage() {
               {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
             </button>
           ))}
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
             <input
               value={search}
               onChange={handleSearchChange}
@@ -230,17 +234,49 @@ export default function RFQsPage() {
                 color: 'var(--ink)', background: 'var(--white)', outline: 'none', width: 220,
               }}
             />
+            {!authLoading && user && (
+              <ViewToggle view={view} onViewChange={setView} userRole={user.role} />
+            )}
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          rows={rfqs}
-          loading={loading}
-          emptyMessage="No RFQs found. Create your first one."
-          onRowClick={(row) => router.push(`/dashboard/rfqs/${row.id}`)}
-          rowClassName="rfq-row"
-        />
+        {view === 'grid' ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 16,
+          }}>
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} style={{
+                    height: 180, borderRadius: 'var(--radius)',
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    animation: 'pulse 1.5s infinite',
+                  }} />
+                ))
+              : rfqs.length === 0
+                ? <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px 0', color: 'var(--ink-faint)', fontFamily: 'DM Sans, sans-serif' }}>
+                    No RFQs found. Create your first one.
+                  </div>
+                : rfqs.map(rfq => (
+                    <RFQGridCard
+                      key={rfq.id}
+                      rfq={rfq}
+                      onClick={() => router.push(`/dashboard/rfqs/${rfq.id}`)}
+                    />
+                  ))
+            }
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rfqs}
+            loading={loading}
+            emptyMessage="No RFQs found. Create your first one."
+            onRowClick={(row) => router.push(`/dashboard/rfqs/${row.id}`)}
+            rowClassName="rfq-row"
+          />
+        )}
 
         {pagination.pages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24, alignItems: 'center' }}>

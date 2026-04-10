@@ -6,7 +6,10 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable from '@/components/ui/DataTable';
 import AwardStatusBadge from '@/components/award/AwardStatusBadge';
+import ContractGridCard from '@/components/award/ContractGridCard';
+import ViewToggle from '@/components/ui/ViewToggle';
 import RoleGuard from '@/components/auth/RoleGuard';
+import { useAuth } from '@/hooks/useAuth';
 
 function RedirectToDashboard() {
   const router = useRouter();
@@ -25,11 +28,13 @@ function fmtDate(ts) {
 
 export default function ContractsPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [meta, setMeta] = useState({ total: 0, pages: 1 });
   const [page, setPage] = useState(1);
+  const [view, setView] = useState('list');
 
   useEffect(() => {
     fetchContracts();
@@ -119,6 +124,7 @@ export default function ContractsPage() {
           }
           .contracts-page { max-width: 1080px; margin: 0 auto; padding: 32px 24px; animation: fadeUp .35s ease both; }
           @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+          @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }
           .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
           .filter-select {
             padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px;
@@ -157,15 +163,49 @@ export default function ContractsPage() {
               <option value="active">Active</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <div style={{ marginLeft: 'auto' }}>
+              {!authLoading && user && (
+                <ViewToggle view={view} onViewChange={setView} userRole={user.role} />
+              )}
+            </div>
           </div>
 
-          <DataTable
-            columns={columns}
-            rows={contracts}
-            loading={loading}
-            emptyMessage="No contracts found."
-            onRowClick={row => router.push(`/dashboard/contracts/${row.contractId}`)}
-          />
+          {view === 'grid' ? (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 16,
+            }}>
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} style={{
+                      height: 160, borderRadius: 'var(--radius)',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      animation: 'pulse 1.5s infinite',
+                    }} />
+                  ))
+                : contracts.length === 0
+                  ? <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px 0', color: 'var(--ink-faint)', fontFamily: 'DM Sans, sans-serif' }}>
+                      No contracts found.
+                    </div>
+                  : contracts.map(contract => (
+                      <ContractGridCard
+                        key={contract.contractId}
+                        contract={contract}
+                        onClick={() => router.push(`/dashboard/contracts/${contract.contractId}`)}
+                      />
+                    ))
+              }
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={contracts}
+              loading={loading}
+              emptyMessage="No contracts found."
+              onRowClick={row => router.push(`/dashboard/contracts/${row.contractId}`)}
+            />
+          )}
 
           {meta.pages > 1 && (
             <div className="pager">

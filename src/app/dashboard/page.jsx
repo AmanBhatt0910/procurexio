@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Badge from '@/components/ui/Badge';
+import SubscriptionBadge from '@/components/ui/SubscriptionBadge';
 import { isDeadlinePassed } from '@/lib/deadline';
 
 export default function DashboardPage() {
@@ -412,12 +413,19 @@ export default function DashboardPage() {
           <div className="company-logo-placeholder">
             {company.name?.charAt(0).toUpperCase()}
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div className="company-info-name">{company.name}</div>
             <div className="company-info-meta">
               <span>{company.email}</span>
-              <Badge variant={company.plan}>{company.plan}</Badge>
             </div>
+          </div>
+          <div style={{ flexShrink: 0 }}>
+            <SubscriptionBadge
+              plan={company.plan}
+              size="medium"
+              showUpgrade={company.plan !== 'enterprise'}
+              onUpgrade={() => router.push('/dashboard/company')}
+            />
           </div>
         </div>
       )}
