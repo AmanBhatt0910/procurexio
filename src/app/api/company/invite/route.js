@@ -7,6 +7,7 @@ import crypto                  from 'crypto';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
 import { checkLimit } from '@/lib/subscription';
+import { INVITATION_EXPIRY_MS } from '@/config/constants';
 
 const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];
@@ -103,7 +104,7 @@ export async function POST(request) {
     const [pendingInvite] = await pool.query(pendingQuery, pendingParams);
 
     let token;
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_MS);
 
     if (pendingInvite.length) {
       // Refresh existing invitation

@@ -3,7 +3,7 @@
 // POST /api/auth/forgot-password
 //
 // Generates a cryptographically secure reset token, stores it in the
-// password_reset_tokens table (expires in 24 hours), and emails a reset link.
+// password_reset_tokens table, and emails a reset link.
 //
 // Returns a generic success message regardless of whether the email exists
 // to prevent account enumeration.
@@ -13,6 +13,7 @@ import { sendPasswordResetTokenEmail } from '@/lib/mailer';
 import { generatePasswordResetToken, expiresInHours, toMySQLDatetime } from '@/lib/security';
 import { logAction, ACTION } from '@/lib/audit';
 import { validateEmail } from '@/lib/validation';
+import { PASSWORD_RESET_EXPIRY_HOURS } from '@/config/constants';
 import { logAuthEvent, getRequestIP } from '@/lib/logger';
 
 const GENERIC_OK = {
@@ -56,7 +57,7 @@ export async function POST(request) {
 
     // Generate a new secure token
     const token     = generatePasswordResetToken();
-    const expiresAt = toMySQLDatetime(expiresInHours(24));
+    const expiresAt = toMySQLDatetime(expiresInHours(PASSWORD_RESET_EXPIRY_HOURS));
 
     await query(
       `INSERT INTO password_reset_tokens (user_id, token, expires_at)

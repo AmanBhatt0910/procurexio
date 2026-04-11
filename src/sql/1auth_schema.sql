@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS companies (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name       VARCHAR(255) NOT NULL,
   email      VARCHAR(255),
-  plan       ENUM('free','pro','enterprise') NOT NULL DEFAULT 'free',
+  plan       VARCHAR(50) NOT NULL DEFAULT 'free',
   status     ENUM('active','inactive','pending') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -59,19 +59,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- ================================================================
 -- SEED: Super admin account
--- Change email/password before running in production.
--- Password below = "Admin@1234" (bcrypt hash, cost 12)
--- company_id is intentionally NULL — super_admin is not tenant-scoped.
+-- Do NOT seed credentials here. Run `npm run seed:superadmin` instead,
+-- which reads SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD from .env.
 -- ================================================================
-INSERT IGNORE INTO users (id, company_id, name, email, password, role)
-VALUES (
-  1,
-  NULL,
-  'Super Admin',
-  'admin@procurexio.com',
-  '$2b$12$IpCywGZz9sfADX73cLoAjOkYBqrePR3RAKhuukJwvGjBMngCqBdGO',
-  'super_admin'
-);
 
 
 -- ================================================================
