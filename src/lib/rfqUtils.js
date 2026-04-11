@@ -65,6 +65,61 @@ async function getVendorRecipientsForRfq(rfqId) {
 }
 
 /**
+ * Close all published RFQs whose deadline has passed, across all companies
+ * (or for a single company when companyId is provided).
+ * Designed to be called by a scheduled cron job.
+ * Returns a summary of how many RFQs were closed.
+ */
+export async function autoCloseAllExpired({ companyId = null } = {}) {
+  const filters = [
+    `status = 'published'`,
+    'deadline IS NOT NULL',
+    `${effectiveDeadlineSql('deadline')} < NOW()`,
+  ];
+  const values = [];
+  if (companyId) {
+    filters.push('company_id = ?');
+    values.push(companyId);
+  }
+
+  // Select candidate IDs first, then update only those specific rows.
+  // This avoids any time-window race conditions when identifying which
+  // RFQs were newly closed by this invocation.
+  const [candidates] = await pool.query(
+    `SELECT id FROM rfqs WHERE ${filters.join(' AND ')}`,
+    values
+  );
+
+  if (candidates.length === 0) return { closedCount: 0, emailsSent: 0, emailErrors: 0 };
+
+  const ids = candidates.map(r => r.id);
+  const placeholders = ids.map(() => '?').join(', ');
+
+  const [result] = await pool.query(
+    `UPDATE rfqs SET status = 'closed'
+      WHERE id IN (${placeholders}) AND status = 'published'`,
+    ids
+  );
+
+  const closedCount = result.affectedRows;
+  if (closedCount === 0) return { closedCount: 0, emailsSent: 0, emailErrors: 0 };
+
+  let emailsSent = 0;
+  let emailErrors = 0;
+  for (const id of ids) {
+    try {
+      await sendRFQClosureEmails(id);
+      emailsSent += 1;
+    } catch (emailErr) {
+      emailErrors += 1;
+      console.error(`autoCloseAllExpired: email error for rfq ${id}:`, emailErr);
+    }
+  }
+
+  return { closedCount, emailsSent, emailErrors };
+}
+
+/**
  * If the RFQ deadline has passed and the status is still 'published',
  * automatically transition it to 'closed' and notify vendors.
  * This is a lightweight "check on access" approach that avoids a separate cron job.
