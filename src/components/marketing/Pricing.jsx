@@ -206,7 +206,7 @@ export default function Pricing() {
     },
     {
       tier: 'Pro',
-      price: '5999',
+      price: '1499',
       period: 'mo',
       desc: 'Everything your team needs to run a full procurement operation at scale.',
       features: [
