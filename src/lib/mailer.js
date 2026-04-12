@@ -17,6 +17,28 @@ const APP_NAME  = process.env.NEXT_PUBLIC_APP_NAME  || 'Procurexio';
 const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// buildLogoHeader — reusable email header with company logo
+// bgColor: background color of the header band
+// ─────────────────────────────────────────────────────────────────────────────
+function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
+  const logoUrl = `${BASE_URL}/logo.svg`;
+  return `
+    <tr>
+      <td style="background:${bgColor};padding:22px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td>
+              <img src="${logoUrl}" alt="${APP_NAME}" width="140" height="32"
+                style="display:block;border:0;outline:none;text-decoration:none;" />
+            </td>
+            ${extraContent ? `<td align="right">${extraContent}</td>` : ''}
+          </tr>
+        </table>
+      </td>
+    </tr>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // sendInviteEmail — internal team member invite (company_admin / manager / employee)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendInviteEmail({ to, token, role, companyName, invitedBy }) {
@@ -114,11 +136,7 @@ function buildTeamInviteHtml({ inviteUrl, companyName, invitedBy, formattedRole,
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-          <tr>
-            <td style="background:#0f0e0d;padding:28px 36px;">
-              <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
-            </td>
-          </tr>
+          ${buildLogoHeader()}
           <tr>
             <td style="padding:36px 36px 28px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">
@@ -184,22 +202,7 @@ function buildVendorInviteHtml({ inviteUrl, vendorName, companyName, invitedBy, 
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #c3ddd5;">
-          <tr>
-            <td style="background:#0d5c46;padding:28px 36px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
-                  </td>
-                  <td align="right">
-                    <span style="display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#a7f3d0;letter-spacing:.05em;text-transform:uppercase;">
-                      Vendor Portal
-                    </span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${buildLogoHeader('#0d5c46', '<span style="display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#a7f3d0;letter-spacing:.05em;text-transform:uppercase;">Vendor Portal</span>')}
           <tr>
             <td style="padding:36px 36px 0;text-align:center;">
               <div style="display:inline-block;width:56px;height:56px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;line-height:56px;font-size:28px;">
@@ -295,20 +298,7 @@ function buildWelcomeHtml({ name, companyName, dashboardUrl, vendorsUrl, rfqUrl,
         <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e3df;">
 
           <!-- Header -->
-          <tr>
-            <td style="background:#0f0e0d;padding:0;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:26px 32px;">
-                    <p style="margin:0;font-size:19px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
-                  </td>
-                  <td align="right" style="padding:0 32px 0 0;">
-                    <span style="font-size:22px;letter-spacing:4px;">🎉</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${buildLogoHeader('#0f0e0d', '<span style="font-size:22px;letter-spacing:4px;">🎉</span>')}
 
           <!-- Hero band -->
           <tr>
@@ -513,7 +503,7 @@ export async function sendBidSubmittedEmail({ to, managerName, vendorName, rfqTi
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">New Bid Received</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -559,7 +549,7 @@ export async function sendBidUpdatedEmail({ to, managerName, vendorName, rfqTitl
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">Bid Updated</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -609,7 +599,7 @@ export async function sendRFQClosedEmail({ to, vendorName, rfqTitle, rfqReferenc
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Closed</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -685,7 +675,7 @@ export async function sendRFQDeadlineExtendedEmail({
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">${heading}</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -741,7 +731,7 @@ export async function sendRFQDeadlineReminderEmail({
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">RFQ Deadline Reminder</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -788,7 +778,7 @@ export async function sendContractAwardedEmail({ to, vendorName, rfqTitle, rfqRe
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">🏆 Congratulations — You Won!</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -824,6 +814,54 @@ export async function sendContractAwardedEmail({ to, vendorName, rfqTitle, rfqRe
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// sendStaffContractAwardedEmail — notify company admins/managers when a contract is awarded
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendStaffContractAwardedEmail({ to, staffName, vendorName, rfqTitle, rfqReference, contractReference, dashboardLink }) {
+  const year = new Date().getFullYear();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><title>Contract Awarded</title></head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
+      ${buildLogoHeader()}
+      <tr><td style="padding:36px 36px 28px;">
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">Contract Successfully Awarded</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
+          Hi ${staffName || 'there'},<br/>
+          A contract has been awarded for the following RFQ.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr><td style="background:#faf9f7;border:1px solid #e4e0db;border-radius:8px;padding:18px 20px;">
+            <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#b8b3ae;letter-spacing:.06em;text-transform:uppercase;">Contract Details</p>
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f0e0d;">${rfqTitle}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#6b6660;">RFQ Ref: <strong>${rfqReference}</strong></p>
+            <p style="margin:0 0 4px;font-size:13px;color:#6b6660;">Contract Ref: <strong>${contractReference}</strong></p>
+            <p style="margin:0;font-size:13px;color:#6b6660;">Awarded to: <strong style="color:#0f0e0d;">${vendorName}</strong></p>
+          </td></tr>
+        </table>
+        <a href="${dashboardLink}" style="display:inline-block;background:#c8501a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;">View Contract</a>
+      </td></tr>
+      <tr><td style="background:#f5f4f2;padding:20px 36px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#b8b3ae;">© ${year} ${APP_NAME}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Contract awarded — ${rfqTitle} (${contractReference})`,
+    html,
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // sendBidRejectedEmail — notify losing vendors
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendBidRejectedEmail({ to, vendorName, rfqTitle, rfqReference }) {
@@ -835,7 +873,7 @@ export async function sendBidRejectedEmail({ to, vendorName, rfqTitle, rfqRefere
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr><td style="background:#0f0e0d;padding:28px 36px;"><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</p></td></tr>
+      ${buildLogoHeader()}
       <tr><td style="padding:36px 36px 28px;">
         <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;">Bid Status Update</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#6b6660;line-height:1.6;">
@@ -886,16 +924,7 @@ function buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqRefere
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-          <tr>
-            <td style="background:#0f0e0d;padding:28px 36px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td><p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p></td>
-                  <td align="right"><span style="display:inline-block;background:rgba(200,80,26,.25);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#f5a07a;letter-spacing:.05em;text-transform:uppercase;">RFQ Invitation</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+          ${buildLogoHeader('#0f0e0d', '<span style="display:inline-block;background:rgba(200,80,26,.25);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#f5a07a;letter-spacing:.05em;text-transform:uppercase;">RFQ Invitation</span>')}
           <tr>
             <td style="padding:36px 36px 28px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">You've been invited to bid</h1>
@@ -966,11 +995,7 @@ function buildPasswordResetHtml({ name, tempPassword, loginUrl, appName }) {
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-          <tr>
-            <td style="background:#0f0e0d;padding:28px 36px;">
-              <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
-            </td>
-          </tr>
+          ${buildLogoHeader()}
           <tr>
             <td style="padding:36px 36px 28px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">
@@ -1038,11 +1063,7 @@ function buildPasswordResetTokenHtml({ name, resetUrl, appName }) {
     <tr>
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-          <tr>
-            <td style="background:#0f0e0d;padding:28px 36px;">
-              <p style="margin:0;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${appName}</p>
-            </td>
-          </tr>
+          ${buildLogoHeader()}
           <tr>
             <td style="padding:36px 36px 28px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f0e0d;letter-spacing:-0.4px;">
@@ -1103,11 +1124,7 @@ export async function sendPlanChangeEmail({ to, adminName, companyName, oldPlan,
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:40px 16px;">
   <tr><td align="center">
     <table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e3df;">
-      <tr>
-        <td style="background:#1a1a1a;padding:28px 36px;">
-          <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-.5px;">${APP_NAME}</p>
-        </td>
-      </tr>
+      ${buildLogoHeader('#1a1a1a')}
       <tr>
         <td style="padding:36px;">
           <p style="margin:0 0 8px;font-size:24px;">${iconEmoji}</p>
