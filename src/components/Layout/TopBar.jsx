@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
+import { Menu, Bell, ChevronDown, LogOut } from 'lucide-react';
 
 export default function TopBar({ user, title, onMenuToggle }) {
   const router = useRouter();
@@ -237,9 +238,7 @@ export default function TopBar({ user, title, onMenuToggle }) {
           onClick={onMenuToggle}
           aria-label="Open menu"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
+          <Menu size={16} />
         </button>
 
         <span className="topbar-title">{title}</span>
@@ -252,10 +251,7 @@ export default function TopBar({ user, title, onMenuToggle }) {
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
             title="Notifications"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
+            <Bell size={16} />
             {badgeLabel && (
               <span className="topbar-bell-badge" aria-hidden="true">{badgeLabel}</span>
             )}
@@ -268,9 +264,10 @@ export default function TopBar({ user, title, onMenuToggle }) {
               <div className="topbar-user-name">{user?.name ?? 'User'}</div>
               <div className="topbar-user-role">{user?.role?.replace('_', ' ')}</div>
             </div>
-            <svg className={`topbar-chevron${menuOpen ? ' topbar-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronDown
+              size={12}
+              className={`topbar-chevron${menuOpen ? ' topbar-chevron--open' : ''}`}
+            />
           </button>
 
           {menuOpen && (
@@ -283,9 +280,7 @@ export default function TopBar({ user, title, onMenuToggle }) {
               </div>
               <div className="topbar-menu-divider" />
               <button className="topbar-menu-item topbar-menu-item--danger" onClick={handleLogout}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M5 2H2.5A1.5 1.5 0 0 0 1 3.5v7A1.5 1.5 0 0 0 2.5 12H5M9.5 10l3-3-3-3M13 7H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <LogOut size={14} />
                 Sign out
               </button>
             </div>

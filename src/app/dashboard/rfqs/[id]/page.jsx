@@ -236,7 +236,7 @@ export default function RFQDetailPage({ params }) {
     <DashboardLayout>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
-        .rfq-detail { animation: fadeUp .35s ease both; max-width: 960px; }
+        .rfq-detail { animation: fadeUp .35s ease both; max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
         .field-label { display:block; font-size:.79rem; font-weight:500; color:var(--ink); margin-bottom:6px; }
         .form-input { width:100%; padding:9px 12px; border:1px solid var(--border);

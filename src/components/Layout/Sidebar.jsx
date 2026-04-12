@@ -5,6 +5,11 @@ import { memo, useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
+import {
+  LayoutDashboard, Building2, Users, Briefcase, FileText, Settings,
+  Activity, Bell, User, Store, ClipboardList, FileCheck, Star,
+  ChevronLeft, ChevronRight, X,
+} from 'lucide-react';
 
 // ------------------------------------------------------------------
 // Super Admin navigation (platform-level only)
@@ -14,14 +19,7 @@ const SUPER_ADMIN_NAV = [
     label: 'Dashboard',
     href: '/dashboard/admin',
     exact: true,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    ),
+    icon: <LayoutDashboard size={16} />,
   },
   {
     section: 'Platform',
@@ -29,49 +27,22 @@ const SUPER_ADMIN_NAV = [
       {
         label: 'Companies',
         href: '/dashboard/admin/companies',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="4" width="14" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M1 8h14" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        ),
+        icon: <Building2 size={16} />,
       },
       {
         label: 'Users (Global)',
         href: '/dashboard/admin/users',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Users size={16} />,
       },
       {
         label: 'Vendors Overview',
         href: '/dashboard/admin',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M5 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M1 7h14" stroke="currentColor" strokeWidth="1.4" />
-            <circle cx="5.5" cy="10" r="1" fill="currentColor" />
-          </svg>
-        ),
+        icon: <Briefcase size={16} />,
       },
       {
         label: 'RFQs Analytics',
         href: '/dashboard/rfqs',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <FileText size={16} />,
       },
     ],
   },
@@ -81,22 +52,12 @@ const SUPER_ADMIN_NAV = [
       {
         label: 'Platform Settings',
         href: '/dashboard/admin/settings',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Settings size={16} />,
       },
       {
         label: 'Activity Logs',
         href: '/dashboard/admin/activity-logs',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Activity size={16} />,
       },
     ],
   },
@@ -107,22 +68,12 @@ const SUPER_ADMIN_NAV = [
         label: 'Notifications',
         href: '/dashboard/notifications',
         isNotifications: true,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-        ),
+        icon: <Bell size={16} />,
       },
       {
         label: 'My Settings',
         href: '/dashboard/settings',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M3 14c.8-2.2 2.6-3.5 5-3.5s4.2 1.3 5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <User size={16} />,
       },
     ],
   },
@@ -136,14 +87,7 @@ const NAV_ITEMS = [
     label: 'Overview',
     href: '/dashboard',
     exact: true,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    ),
+    icon: <LayoutDashboard size={16} />,
     allowedRoles: ['company_admin', 'manager', 'employee', 'vendor_user'],
   },
   // Notifications — visible to all non-super_admin roles (super_admin has its own nav)
@@ -151,12 +95,7 @@ const NAV_ITEMS = [
     label: 'Notifications',
     href: '/dashboard/notifications',
     isNotifications: true, // flag so NavLink can render the live badge
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-    ),
+    icon: <Bell size={16} />,
     allowedRoles: ['company_admin', 'manager', 'employee', 'vendor_user'],
   },
   {
@@ -165,26 +104,13 @@ const NAV_ITEMS = [
       {
         label: 'Profile & Settings',
         href: '/dashboard/company',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="8" cy="6" r="2" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M3.5 13c.8-2 2.5-3 4.5-3s3.7 1 4.5 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Building2 size={16} />,
         allowedRoles: ['company_admin'],
       },
       {
         label: 'Users',
         href: '/dashboard/company/users',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="5.5" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="11" cy="5" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M1 13.5c.7-2.2 2.5-3.5 4.5-3.5s3.8 1.3 4.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M11.5 10.5c1.5.4 2.7 1.6 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Users size={16} />,
         allowedRoles: ['company_admin'],
       },
     ],
@@ -193,14 +119,7 @@ const NAV_ITEMS = [
   {
     label: 'Vendors',
     href: '/dashboard/vendors',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M5 3V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M1 7h14" stroke="currentColor" strokeWidth="1.4" />
-        <circle cx="5.5" cy="10" r="1" fill="currentColor" />
-      </svg>
-    ),
+    icon: <Store size={16} />,
     allowedRoles: ['company_admin', 'manager', 'employee'],
   },
   {
@@ -209,35 +128,19 @@ const NAV_ITEMS = [
       {
         label: 'RFQs',
         href: '/dashboard/rfqs',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 5h4M5 8h4M5 11h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="12.5" cy="12.5" r="2.5" fill="currentColor" opacity=".15" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M12.5 11.5v1l.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <ClipboardList size={16} />,
         allowedRoles: ['company_admin', 'manager', 'employee'],
       },
       {
         label: 'Contracts',
         href: '/dashboard/contracts',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <FileCheck size={16} />,
         allowedRoles: ['company_admin', 'manager', 'employee'],
       },
       {
         label: 'Bids',
         href: '/dashboard/bids',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4L8 10.5l-3.6 1.9.7-4L2.2 5.8l4-.6L8 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-          </svg>
-        ),
+        icon: <Star size={16} />,
         allowedRoles: ['vendor_user'],
       },
     ],
@@ -248,12 +151,7 @@ const NAV_ITEMS = [
       {
         label: 'Settings',
         href: '/dashboard/settings',
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        ),
+        icon: <Settings size={16} />,
         allowedRoles: ['company_admin', 'manager', 'employee', 'vendor_user'],
       },
     ],
@@ -477,14 +375,20 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
           flex-shrink: 0;
           width: 16px;
           height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .nav-label {
           opacity: ${collapsed ? 0 : 1};
-          transition: opacity .1s;
-          flex: 1;
+          max-width: ${collapsed ? '0' : '200px'};
+          overflow: hidden;
+          white-space: nowrap;
+          transition: opacity .15s, max-width .15s;
+          flex: ${collapsed ? '0 0 auto' : '1'};
         }
         @media (max-width: 768px) {
-          .nav-label { opacity: 1 !important; }
+          .nav-label { opacity: 1 !important; max-width: 200px !important; flex: 1 !important; }
         }
         .nav-badge {
           font-size: .6rem;
@@ -569,9 +473,7 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
             onClick={onMobileClose}
             aria-label="Close menu"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
+            <X size={12} />
           </button>
         </div>
 
@@ -616,12 +518,7 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
             onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d={collapsed ? 'M4 2l4 4-4 4' : 'M8 2L4 6l4 4'}
-                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-              />
-            </svg>
+            {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
         </div>
       </aside>
