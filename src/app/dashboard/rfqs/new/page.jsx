@@ -301,6 +301,8 @@ export default function NewRFQPage() {
         .new-rfq-page {
           animation: rfqFadeUp .3s ease both;
           max-width: 820px;
+          margin: 0 auto;
+          padding: 32px 24px;
         }
         @keyframes rfqFadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
 
