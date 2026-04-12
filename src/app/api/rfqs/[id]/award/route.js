@@ -129,16 +129,14 @@ export async function POST(request, { params }) {
           link:      `/dashboard/bids/${id}`,
         });
         const dashboardLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/dashboard/bids/${id}`;
-        for (const u of vendorUsers) {
-          sendContractAwardedEmail({
-            to: u.email,
-            vendorName: u.vendor_name,
-            rfqTitle: contract.rfq_title,
-            rfqReference: contract.rfq_reference,
-            contractReference: contract.contract_reference,
-            dashboardLink,
-          }).catch(() => {});
-        }
+        Promise.allSettled(vendorUsers.map(u => sendContractAwardedEmail({
+          to: u.email,
+          vendorName: u.vendor_name,
+          rfqTitle: contract.rfq_title,
+          rfqReference: contract.rfq_reference,
+          contractReference: contract.contract_reference,
+          dashboardLink,
+        })));
       }
 
       // Notify rejected vendors (use DISTINCT to avoid duplicates for vendors with multiple users)
@@ -152,13 +150,13 @@ export async function POST(request, { params }) {
          GROUP BY b.vendor_id, v.name`,
         [id, companyId]
       );
-      for (const rb of rejectedBids) {
-        sendBidRejectedEmail({
+      if (rejectedBids.length) {
+        Promise.allSettled(rejectedBids.map(rb => sendBidRejectedEmail({
           to: rb.vendor_email,
           vendorName: rb.vendor_name,
           rfqTitle: contract.rfq_title,
           rfqReference: contract.rfq_reference,
-        }).catch(() => {});
+        })));
       }
 
       // Notify company managers/admins of the award
@@ -175,17 +173,15 @@ export async function POST(request, { params }) {
           link:  `/dashboard/rfqs/${id}/award`,
         });
         const staffDashboardLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/dashboard/rfqs/${id}/award`;
-        for (const admin of admins) {
-          sendStaffContractAwardedEmail({
-            to: admin.email,
-            staffName: admin.name,
-            vendorName: contract.vendor_name,
-            rfqTitle: contract.rfq_title,
-            rfqReference: contract.rfq_reference,
-            contractReference: contract.contract_reference,
-            dashboardLink: staffDashboardLink,
-          }).catch(() => {});
-        }
+        Promise.allSettled(admins.map(admin => sendStaffContractAwardedEmail({
+          to: admin.email,
+          staffName: admin.name,
+          vendorName: contract.vendor_name,
+          rfqTitle: contract.rfq_title,
+          rfqReference: contract.rfq_reference,
+          contractReference: contract.contract_reference,
+          dashboardLink: staffDashboardLink,
+        })));
       }
     } catch (_) { /* notification errors must not fail the request */ }
 
