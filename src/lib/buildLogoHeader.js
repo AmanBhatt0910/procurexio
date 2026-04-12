@@ -1,3 +1,5 @@
+const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
+
 export default function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
   // LOGO_DATA_URI — the full Procurexio logo (icon + wordmark), transparent background,
   // embedded as base64 so it renders in all email clients without a CDN dependency.
