@@ -81,7 +81,7 @@ export async function GET(request) {
       message: 'OK',
       data: {
         rfqs: rows,
-        pagination: { total, page, pageSize, pages: Math.ceil(total / pageSize) },
+        pagination: { total, page, pageSize, pages: Math.ceil(total / pageSize), totalPages: Math.ceil(total / pageSize) },
       },
     });
   } catch (err) {

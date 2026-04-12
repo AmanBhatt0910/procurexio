@@ -9,7 +9,8 @@ import { Menu, Bell, ChevronDown, LogOut } from 'lucide-react';
 export default function TopBar({ user, title, onMenuToggle }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { unreadCount } = useNotifications();
+  const [bellHover, setBellHover] = useState(false);
+  const { unreadCount, latestNotification } = useNotifications();
 
   const badgeLabel = unreadCount > 99 ? '99+' : unreadCount > 0 ? String(unreadCount) : null;
 
@@ -86,6 +87,10 @@ export default function TopBar({ user, title, onMenuToggle }) {
         }
 
         /* ── Bell button ── */
+        .topbar-bell-wrap {
+          position: relative;
+          flex-shrink: 0;
+        }
         .topbar-bell-btn {
           position: relative;
           background: none;
@@ -99,7 +104,6 @@ export default function TopBar({ user, title, onMenuToggle }) {
           cursor: pointer;
           color: var(--ink-soft);
           transition: background .15s, border-color .15s, color .15s;
-          flex-shrink: 0;
         }
         .topbar-bell-btn:hover {
           background: var(--surface);
@@ -125,6 +129,74 @@ export default function TopBar({ user, title, onMenuToggle }) {
           line-height: 1;
           pointer-events: none;
           border: 2px solid var(--white);
+        }
+
+        /* ── Bell notification preview tooltip ── */
+        .topbar-bell-tooltip {
+          position: absolute;
+          top: calc(100% + 10px);
+          right: 0;
+          width: 260px;
+          background: var(--white);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          padding: 12px 14px;
+          animation: fadeDown .12s ease;
+          z-index: 30;
+        }
+        @keyframes fadeDown {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .topbar-bell-tooltip-title {
+          font-family: 'DM Sans', sans-serif;
+          font-size: .78rem;
+          font-weight: 600;
+          color: var(--ink);
+          margin: 0 0 3px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .topbar-bell-tooltip-body {
+          font-family: 'DM Sans', sans-serif;
+          font-size: .75rem;
+          color: var(--ink-soft);
+          margin: 0 0 8px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .topbar-bell-tooltip-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .topbar-bell-tooltip-time {
+          font-size: .7rem;
+          color: var(--ink-faint);
+          font-family: 'DM Sans', sans-serif;
+        }
+        .topbar-bell-tooltip-link {
+          font-size: .72rem;
+          font-weight: 600;
+          color: var(--accent);
+          font-family: 'DM Sans', sans-serif;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          text-decoration: none;
+        }
+        .topbar-bell-tooltip-link:hover { text-decoration: underline; }
+        .topbar-bell-tooltip-empty {
+          font-family: 'DM Sans', sans-serif;
+          font-size: .78rem;
+          color: var(--ink-faint);
+          text-align: center;
+          padding: 4px 0;
         }
 
         /* ── User button ── */
@@ -199,10 +271,6 @@ export default function TopBar({ user, title, onMenuToggle }) {
           animation: fadeDown .12s ease;
           z-index: 20;
         }
-        @keyframes fadeDown {
-          from { opacity: 0; transform: translateY(-4px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
         .topbar-menu-item {
           display: flex;
           align-items: center;
@@ -245,17 +313,51 @@ export default function TopBar({ user, title, onMenuToggle }) {
 
         <div className="topbar-right">
           {/* Bell / notifications */}
-          <button
-            className="topbar-bell-btn"
-            onClick={() => router.push('/dashboard/notifications')}
-            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
-            title="Notifications"
+          <div
+            className="topbar-bell-wrap"
+            onMouseEnter={() => setBellHover(true)}
+            onMouseLeave={() => setBellHover(false)}
           >
-            <Bell size={16} />
-            {badgeLabel && (
-              <span className="topbar-bell-badge" aria-hidden="true">{badgeLabel}</span>
+            <button
+              className="topbar-bell-btn"
+              onClick={() => router.push('/dashboard/notifications')}
+              aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+              title="Notifications"
+            >
+              <Bell size={16} />
+              {badgeLabel && (
+                <span className="topbar-bell-badge" aria-hidden="true">{badgeLabel}</span>
+              )}
+            </button>
+
+            {bellHover && (
+              <div className="topbar-bell-tooltip" role="status" aria-live="polite">
+                {latestNotification ? (
+                  <>
+                    <p className="topbar-bell-tooltip-title">{latestNotification.title}</p>
+                    {latestNotification.body && (
+                      <p className="topbar-bell-tooltip-body">{latestNotification.body}</p>
+                    )}
+                    <div className="topbar-bell-tooltip-footer">
+                      <span className="topbar-bell-tooltip-time">
+                        {latestNotification.created_at
+                          ? new Date(latestNotification.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          : ''}
+                      </span>
+                      <button
+                        className="topbar-bell-tooltip-link"
+                        onClick={() => router.push('/dashboard/notifications')}
+                      >
+                        View all →
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="topbar-bell-tooltip-empty">No unread notifications</p>
+                )}
+              </div>
             )}
-          </button>
+          </div>
 
           {/* User menu */}
           <button className="topbar-user-btn" onClick={() => setMenuOpen(o => !o)}>

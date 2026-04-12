@@ -98,7 +98,7 @@ export default function VendorBidsPage() {
   const [error, setError]         = useState('');
   const [companyCurrency, setCompanyCurrency] = useState('USD');
   const [page, setPage]           = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [pagination, setPagination] = useState({ total: 0, pages: 1, totalPages: 1 });
   const [view, setView]           = useState('list');
   const router = useRouter();
 
@@ -362,7 +362,7 @@ export default function VendorBidsPage() {
             </>
           )}
 
-          {pagination.pages > 1 && (
+          {(pagination.totalPages || pagination.pages) > 1 && (
             <div className="pagination">
               <button
                 className="page-btn"
@@ -372,11 +372,11 @@ export default function VendorBidsPage() {
                 ← Prev
               </button>
               <span style={{ fontSize: '.84rem', color: 'var(--ink-soft)' }}>
-                Page {page} of {pagination.pages}
+                Page {page} of {pagination.totalPages || pagination.pages}
               </span>
               <button
                 className="page-btn"
-                disabled={page >= pagination.pages}
+                disabled={page >= (pagination.totalPages || pagination.pages)}
                 onClick={() => setPage(p => p + 1)}
               >
                 Next →

@@ -43,7 +43,7 @@ export async function GET(request) {
         data: {
           rfqs: [],
           vendorId: null,
-          pagination: { page, limit, total: 0, pages: 0 },
+          pagination: { page, limit, total: 0, pages: 0, totalPages: 0 },
         },
       });
     }
@@ -102,7 +102,7 @@ export async function GET(request) {
         rfqs: rows,
         vendorId,
         companyCurrency,
-        pagination: { page, limit, total: Number(total), pages: Math.ceil(Number(total) / limit) },
+        pagination: { page, limit, total: Number(total), pages: Math.ceil(Number(total) / limit), totalPages: Math.ceil(Number(total) / limit) },
       },
     });
   } catch (err) {

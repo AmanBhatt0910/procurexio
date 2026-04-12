@@ -32,7 +32,7 @@ export default function ContractsPage() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [meta, setMeta] = useState({ total: 0, pages: 1 });
+  const [meta, setMeta] = useState({ total: 0, pages: 1, totalPages: 1 });
   const [page, setPage] = useState(1);
   const [view, setView] = useState('list');
 
@@ -207,11 +207,11 @@ export default function ContractsPage() {
             />
           )}
 
-          {meta.pages > 1 && (
+          {(meta.totalPages || meta.pages) > 1 && (
             <div className="pager">
               <button className="pager-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Previous</button>
-              <span className="pager-info">Page {page} of {meta.pages}</span>
-              <button className="pager-btn" disabled={page >= meta.pages} onClick={() => setPage(p => p + 1)}>Next →</button>
+              <span className="pager-info">Page {page} of {meta.totalPages || meta.pages}</span>
+              <button className="pager-btn" disabled={page >= (meta.totalPages || meta.pages)} onClick={() => setPage(p => p + 1)}>Next →</button>
             </div>
           )}
         </div>

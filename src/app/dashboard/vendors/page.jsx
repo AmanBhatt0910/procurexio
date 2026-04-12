@@ -28,7 +28,7 @@ export default function VendorsPage() {
   const [vendors,    setVendors]    = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading,    setLoading]    = useState(true);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
+  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1, totalPages: 1 });
   const [toast,      setToast]      = useState(null);
 
   const [search,   setSearch]   = useState('');
@@ -339,12 +339,12 @@ export default function VendorsPage() {
         />
       )}
 
-      {pagination.pages > 1 && (
+      {(pagination.totalPages || pagination.pages) > 1 && (
         <div className="pagination">
           <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
             ← Prev
           </button>
-          {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(p => (
+          {Array.from({ length: pagination.totalPages || pagination.pages }, (_, i) => i + 1).map(p => (
             <button
               key={p}
               className={`page-btn${p === page ? ' page-btn--active' : ''}`}
@@ -353,7 +353,7 @@ export default function VendorsPage() {
               {p}
             </button>
           ))}
-          <button className="page-btn" disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)}>
+          <button className="page-btn" disabled={page >= (pagination.totalPages || pagination.pages)} onClick={() => setPage(p => p + 1)}>
             Next →
           </button>
         </div>

@@ -57,6 +57,6 @@ export async function GET(request) {
 
   return Response.json({
     data: rows,
-    meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    meta: { total, page, limit, pages: Math.ceil(total / limit), totalPages: Math.ceil(total / limit) },
   });
 }

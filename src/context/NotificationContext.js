@@ -8,10 +8,11 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 
-const NotificationContext = createContext({ unreadCount: 0, refresh: () => {} });
+const NotificationContext = createContext({ unreadCount: 0, latestNotification: null, refresh: () => {} });
 
 export function NotificationProvider({ children }) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount]               = useState(0);
+  const [latestNotification, setLatestNotification] = useState(null);
   const mounted = useRef(true);
 
   const fetchCount = useCallback(async () => {
@@ -21,6 +22,7 @@ export function NotificationProvider({ children }) {
       const data = await res.json();
       if (mounted.current) {
         setUnreadCount(data.count ?? 0);
+        setLatestNotification(data.latestNotification ?? null);
       }
     } catch {
       // Network error — silently ignore, keep stale count
@@ -42,7 +44,7 @@ export function NotificationProvider({ children }) {
   }, [fetchCount]);
 
   return (
-    <NotificationContext.Provider value={{ unreadCount, refresh: fetchCount }}>
+    <NotificationContext.Provider value={{ unreadCount, latestNotification, refresh: fetchCount }}>
       {children}
     </NotificationContext.Provider>
   );
