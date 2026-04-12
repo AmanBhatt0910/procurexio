@@ -49,7 +49,7 @@ export default function RFQsPage() {
   const [search,     setSearch]     = useState('');
   const [status,     setStatus]     = useState('all');
   const [page,       setPage]       = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [pagination, setPagination] = useState({ total: 0, pages: 1, totalPages: 1 });
   const [view,       setView]       = useState('list');
 
   const handleStatusChange = (s) => { setStatus(s); setPage(1); };
@@ -278,15 +278,15 @@ export default function RFQsPage() {
           />
         )}
 
-        {pagination.pages > 1 && (
+        {(pagination.totalPages || pagination.pages) > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24, alignItems: 'center' }}>
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={pageBtn}>
               ← Prev
             </button>
             <span style={{ fontSize: '.84rem', color: 'var(--ink-soft)' }}>
-              Page {page} of {pagination.pages} ({pagination.total} total)
+              Page {page} of {pagination.totalPages || pagination.pages} ({pagination.total} total)
             </span>
-            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages} style={pageBtn}>
+            <button onClick={() => setPage(p => Math.min(pagination.totalPages || pagination.pages, p + 1))} disabled={page >= (pagination.totalPages || pagination.pages)} style={pageBtn}>
               Next →
             </button>
           </div>

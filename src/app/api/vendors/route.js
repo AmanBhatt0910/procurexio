@@ -63,7 +63,7 @@ export async function GET(request) {
     return Response.json({
       message: 'OK',
       data: rows,
-      pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+      pagination: { total, page, limit, pages: Math.ceil(total / limit), totalPages: Math.ceil(total / limit) },
     });
   } catch (err) {
     console.error('[GET /api/vendors]', err);
