@@ -21,7 +21,7 @@ const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
 // bgColor: background color of the header band
 // ─────────────────────────────────────────────────────────────────────────────
 function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
-  const logoUrl = `${BASE_URL}/logo.svg`;
+  const logoUrl = `${BASE_URL}/logo.png`;
   return `
     <tr>
       <td style="background:${bgColor};padding:22px 36px;">
