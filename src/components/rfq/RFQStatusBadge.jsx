@@ -1,11 +1,11 @@
-// src/components/rfq/RFQStatusBadge.jsx
 'use client';
+// src/components/rfq/RFQStatusBadge.jsx
 
 const STATUS_CONFIG = {
-  draft:      { label: 'Draft',      bg: '#f0ede8', color: '#6b6660' },
-  published:  { label: 'Published',  bg: '#e8f2ea', color: '#2d7a3a' },
-  closed:     { label: 'Closed',     bg: '#e8edf5', color: '#2a4a8c' },
-  cancelled:  { label: 'Cancelled',  bg: '#fdecea', color: '#c0392b' },
+  draft:     { label: 'Draft',     bg: '#F1EFE8', color: '#5F5E5A', dot: '#888780' },
+  published: { label: 'Published', bg: '#EAF3DE', color: '#3B6D11', dot: '#639922' },
+  closed:    { label: 'Closed',    bg: '#E6F1FB', color: '#185FA5', dot: '#378ADD' },
+  cancelled: { label: 'Cancelled', bg: '#FCEBEB', color: '#A32D2D', dot: '#E24B4A' },
 };
 
 export default function RFQStatusBadge({ status }) {
@@ -14,23 +14,25 @@ export default function RFQStatusBadge({ status }) {
     <span style={{
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '5px',
-      padding: '3px 10px',
-      borderRadius: '20px',
-      fontSize: '.72rem',
+      gap: 5,
+      padding: '3px 9px 3px 7px',
+      borderRadius: 20,
+      fontSize: '.71rem',
       fontWeight: 600,
-      letterSpacing: '.04em',
+      letterSpacing: '.05em',
       textTransform: 'uppercase',
       backgroundColor: cfg.bg,
       color: cfg.color,
       whiteSpace: 'nowrap',
+      fontFamily: "'DM Sans', sans-serif",
     }}>
       <span style={{
-        width: 6,
-        height: 6,
+        width: 5,
+        height: 5,
         borderRadius: '50%',
-        backgroundColor: cfg.color,
+        backgroundColor: cfg.dot,
         flexShrink: 0,
+        display: 'inline-block',
       }} />
       {cfg.label}
     </span>
