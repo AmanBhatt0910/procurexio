@@ -3,6 +3,7 @@
 
 import { memo, useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from '@/context/NotificationContext';
 import {
@@ -253,17 +254,10 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
         .sidebar-logo-mark {
           width: 30px;
           height: 30px;
-          background: var(--accent);
-          border-radius: 8px;
+          flex-shrink: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
-          font-family: 'Syne', sans-serif;
-          font-weight: 800;
-          font-size: .9rem;
-          color: #fff;
-          letter-spacing: -.02em;
         }
         .sidebar-logo-text {
           font-family: 'Syne', sans-serif;
@@ -466,8 +460,17 @@ const Sidebar = memo(function Sidebar({ company, user, mobileOpen, onMobileClose
 
       <aside className={`sidebar${mobileOpen ? ' sidebar--mobile-open' : ''}`}>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-mark">P</div>
-          <span className="sidebar-logo-text">Procurexio</span>
+          <div className="sidebar-logo-mark">
+            <Image
+              src="/logo-dark.png"
+              alt="Procurexio"
+              width={60}
+              height={60}
+              style={{ width: 30, height: 30, objectFit: 'contain' }}
+              priority
+            />
+          </div>
+          <span className="sidebar-logo-text">Procure<span style={{ color: 'var(--accent)' }}>xio</span></span>
           <button
             className="sidebar-mobile-close"
             onClick={onMobileClose}

@@ -12,6 +12,7 @@ import { useRouter, useSearchParams }    from 'next/navigation';
 import Link                              from 'next/link';
 import AuthInput                         from '@/components/auth/AuthInput';
 import AuthButton                        from '@/components/auth/AuthButton';
+import Logo                              from '@/components/Logo';
 
 // ─── Inner component — uses useSearchParams ────────────────────────────────
 function RegisterInner() {
@@ -280,14 +281,7 @@ function RegisterInner() {
 
         <div className="panel-top">
           <Link href="/" className="logo">
-            <div className="logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </div>
-            <span className="logo-name">Procure<span>xio</span></span>
+            <Logo variant="dark" size="lg" />
           </Link>
         </div>
 
@@ -324,14 +318,7 @@ function RegisterInner() {
       {/* Right panel */}
       <div className="panel-right">
         <Link href="/" className="mobile-logo">
-          <div className="mobile-logo-mark">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-          </div>
-          <span className="mobile-logo-name">Procure<span>xio</span></span>
+          <Logo variant="light" size="lg" />
         </Link>
 
         {/* Form header */}
@@ -557,12 +544,6 @@ export default function RegisterPage() {
         .panel-top, .panel-bottom { position: relative; z-index: 1; }
 
         .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo-mark {
-          width: 34px; height: 34px; background: rgba(255,255,255,.1);
-          border: 1px solid rgba(255,255,255,.15); border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .logo-mark svg { color: #fff; }
         .logo-name {
           font-family: 'Syne', sans-serif; font-weight: 700;
           font-size: 1.1rem; color: #fff; letter-spacing: -.01em;
@@ -610,11 +591,6 @@ export default function RegisterPage() {
           display: flex; align-items: center; gap: 10px;
           margin-bottom: 48px; text-decoration: none;
         }
-        .mobile-logo-mark {
-          width: 34px; height: 34px; background: var(--ink);
-          border-radius: 8px; display: flex; align-items: center; justify-content: center;
-        }
-        .mobile-logo-mark svg { color: #fff; }
         .mobile-logo-name {
           font-family: 'Syne', sans-serif; font-weight: 700;
           font-size: 1.1rem; color: var(--ink); letter-spacing: -.01em;

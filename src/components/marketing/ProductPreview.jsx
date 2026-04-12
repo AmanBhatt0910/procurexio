@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function ProductPreview() {
   return (
     <>
@@ -100,13 +102,6 @@ export default function ProductPreview() {
           align-items: center;
           gap: 8px;
         }
-        .mock-sidebar-logo-icon {
-          width: 24px; height: 24px;
-          background: var(--ink);
-          border-radius: 6px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .mock-sidebar-logo-icon svg { color: #fff; }
         .mock-sidebar-logo span { color: var(--accent); }
         .mock-nav-item {
           display: flex;
@@ -345,13 +340,13 @@ export default function ProductPreview() {
               {/* Sidebar */}
               <div className="mock-sidebar">
                 <div className="mock-sidebar-logo">
-                  <div className="mock-sidebar-logo-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
-                    </svg>
-                  </div>
+                  <Image
+                    src="/logo-light.png"
+                    alt="Procurexio"
+                    width={48}
+                    height={48}
+                    style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }}
+                  />
                   Procure<span>xio</span>
                 </div>
                 {[
