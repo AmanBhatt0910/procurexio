@@ -11,7 +11,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 const NotificationContext = createContext({ unreadCount: 0, latestNotification: null, refresh: () => {} });
 
 export function NotificationProvider({ children }) {
-  const [unreadCount, setUnreadCount]               = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [latestNotification, setLatestNotification] = useState(null);
   const mounted = useRef(true);
 

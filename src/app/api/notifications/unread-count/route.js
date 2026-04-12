@@ -17,43 +17,35 @@ export async function GET(request) {
   }
 
   try {
-    let count;
-    let latestNotification = null;
+    let rows;
 
     if (role === 'super_admin' && !companyId) {
-      const [[row]] = await pool.execute(
-        `SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0`,
-        [userId]
-      );
-      count = row.count;
-
-      const [[latest]] = await pool.execute(
-        `SELECT id, type, title, body, link, created_at
+      [rows] = await pool.execute(
+        `SELECT
+           COUNT(*) OVER () AS total_count,
+           id, type, title, body, link, created_at
          FROM notifications
          WHERE user_id = ? AND is_read = 0
          ORDER BY created_at DESC
          LIMIT 1`,
         [userId]
       );
-      latestNotification = latest ?? null;
     } else {
-      const [[row]] = await pool.execute(
-        `SELECT COUNT(*) AS count FROM notifications
-         WHERE user_id = ? AND company_id = ? AND is_read = 0`,
-        [userId, companyId]
-      );
-      count = row.count;
-
-      const [[latest]] = await pool.execute(
-        `SELECT id, type, title, body, link, created_at
+      [rows] = await pool.execute(
+        `SELECT
+           COUNT(*) OVER () AS total_count,
+           id, type, title, body, link, created_at
          FROM notifications
          WHERE user_id = ? AND company_id = ? AND is_read = 0
          ORDER BY created_at DESC
          LIMIT 1`,
         [userId, companyId]
       );
-      latestNotification = latest ?? null;
     }
+
+    const count              = rows.length > 0 ? Number(rows[0].total_count) : 0;
+    const { total_count: _, ...latest } = rows[0] ?? {};
+    const latestNotification = rows.length > 0 ? latest : null;
 
     return Response.json({ count, latestNotification });
   } catch (err) {
