@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 export default function Footer() {
   const links = {
@@ -53,21 +54,6 @@ export default function Footer() {
           text-decoration: none;
           margin-bottom: 16px;
         }
-        .footer-logo-mark {
-          width: 30px; height: 30px;
-          background: var(--ink);
-          border-radius: 7px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .footer-logo-mark svg { color: #fff; }
-        .footer-logo-name {
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 1rem;
-          color: var(--ink);
-          letter-spacing: -.01em;
-        }
-        .footer-logo-name span { color: var(--accent); }
         .footer-tagline {
           font-size: .85rem;
           color: var(--ink-soft);
@@ -159,14 +145,7 @@ export default function Footer() {
           <div className="footer-top">
             <div className="footer-brand">
               <Link href="/" className="footer-logo">
-                <div className="footer-logo-mark">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                    <path d="M2 17l10 5 10-5"/>
-                    <path d="M2 12l10 5 10-5"/>
-                  </svg>
-                </div>
-                <span className="footer-logo-name">Procure<span>xio</span></span>
+                <Logo variant="light" size={30} />
               </Link>
               <p className="footer-tagline">
                 The procurement intelligence platform for modern sourcing teams.

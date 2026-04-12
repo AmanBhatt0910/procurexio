@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -46,23 +47,6 @@ export default function Navbar() {
           text-decoration: none;
           flex-shrink: 0;
         }
-        .nav-logo-mark {
-          width: 32px; height: 32px;
-          background: var(--ink);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .nav-logo-mark svg { color: #fff; }
-        .nav-logo-name {
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 1.05rem;
-          color: var(--ink);
-          letter-spacing: -.01em;
-        }
-        .nav-logo-name span { color: var(--accent); }
 
         .nav-links {
           display: flex;
@@ -196,14 +180,7 @@ export default function Navbar() {
       <header className={`nav-root${scrolled ? ' scrolled' : ''}`}>
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
-            <div className="nav-logo-mark">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5"/>
-                <path d="M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <span className="nav-logo-name">Procure<span>xio</span></span>
+            <Logo variant="light" size={32} />
           </Link>
 
           <nav className="nav-links">
