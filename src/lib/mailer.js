@@ -22,14 +22,44 @@ const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
 // ─────────────────────────────────────────────────────────────────────────────
 function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
   const logoUrl = `${BASE_URL}/logo.png`;
+
   return `
     <tr>
       <td style="background:${bgColor};padding:22px 36px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td>
-              <img src="${logoUrl}" alt="${APP_NAME}" width="140" height="32"
-                style="display:block;border:0;outline:none;text-decoration:none;" />
+              <!--[if mso]>
+                <img src="${logoUrl}" alt="${APP_NAME}" width="140" height="32"
+                  style="display:block;border:0;outline:none;text-decoration:none;" />
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <svg width="140" height="32" viewBox="0 0 420 96"
+                   xmlns="http://www.w3.org/2000/svg"
+                   style="display:block;border:0;outline:none;text-decoration:none;">
+                <!-- Icon -->
+                <g transform="translate(0,10)">
+                  <path d="M20 70 L20 20 L60 0 L100 20 L100 70 L60 90 Z" fill="#e6e1dc"/>
+                  <path d="M60 20 L80 30 L80 60 L60 70 L40 60 L40 30 Z" fill="${bgColor}"/>
+                  <path d="M100 20 L120 10 L120 80 L100 70 Z" fill="#c8501a"/>
+                </g>
+                <!-- Text -->
+                <text x="140" y="58"
+                      font-family="Arial, sans-serif"
+                      font-size="42"
+                      font-weight="600"
+                      fill="#ffffff">
+                  Procure
+                </text>
+                <text x="315" y="58"
+                      font-family="Arial, sans-serif"
+                      font-size="42"
+                      font-weight="600"
+                      fill="#c8501a">
+                  xio
+                </text>
+              </svg>
+              <!--<![endif]-->
             </td>
             ${extraContent ? `<td align="right">${extraContent}</td>` : ''}
           </tr>
