@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
         role = String(payload.role || '');
         companyId = String(payload.companyId || '');
       } catch (err) {
-        console.warn('File route JWT verification failed:', err?.message || err);
+        console.error('File route JWT verification failed:', err?.message || err);
       }
     }
   }
