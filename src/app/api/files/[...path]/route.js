@@ -71,13 +71,11 @@ export async function GET(request, { params }) {
     if (!userRow || String(userRow.company_id) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else if (role === 'super_admin') {
-    // Super admin can access files across companies.
   } else if (['company_admin', 'manager', 'employee'].includes(role)) {
     if (String(companyId) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else {
+  } else if (role !== 'super_admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
