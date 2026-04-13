@@ -1,9 +1,12 @@
 'use client';
+// src/components/bids/BidHeader.jsx
+
 import { useState, useEffect } from 'react';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import { getDeadlineTimeLeftMs } from '@/lib/deadline';
 
-// ── Countdown Timer ────────────────────────────────────────────────────────
+function pad(n) { return String(n).padStart(2, '0'); }
+
 function CountdownTimer({ deadline }) {
   const [timeLeft, setTimeLeft] = useState(null);
 
@@ -11,8 +14,7 @@ function CountdownTimer({ deadline }) {
     if (!deadline) return;
     const calc = () => {
       const diff = getDeadlineTimeLeftMs(deadline);
-      if (diff == null) { setTimeLeft({ expired: true }); return; }
-      if (diff <= 0) { setTimeLeft({ expired: true }); return; }
+      if (diff == null || diff <= 0) { setTimeLeft({ expired: true }); return; }
       setTimeLeft({
         expired: false,
         diff,
@@ -32,120 +34,176 @@ function CountdownTimer({ deadline }) {
   if (timeLeft.expired) {
     return (
       <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        background: '#fdf0eb', border: '1px solid #f5c9b6',
-        borderRadius: 8, padding: '6px 12px',
-        color: '#c8501a', fontWeight: 600, fontSize: '.82rem',
+        display: 'inline-flex', alignItems: 'center', gap: 7,
+        background: '#FCEBEB', border: '1px solid #F7C1C1',
+        borderRadius: 10, padding: '8px 14px',
+        color: '#A32D2D', fontWeight: 600, fontSize: '.82rem',
+        fontFamily: "'DM Sans', sans-serif",
       }}>
-        🔒 Bidding Closed
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.4"/>
+          <path d="M7 4v3.5M7 9.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+        Bidding Closed
       </div>
     );
   }
 
   const isUrgent  = timeLeft.diff < 86400000;
   const isWarning = timeLeft.diff < 3 * 86400000;
-  const bg  = isUrgent  ? '#fdf0eb' : isWarning ? '#fff8e8' : '#e8f5ee';
-  const brd = isUrgent  ? '#f5c9b6' : isWarning ? '#f5dfa0' : '#6ee7b7';
-  const clr = isUrgent  ? '#c8501a' : isWarning ? '#8a6500' : '#1a7a4a';
-  const pad = n => String(n).padStart(2, '0');
+
+  const theme = isUrgent
+    ? { bg: '#FCEBEB', border: '#F7C1C1', color: '#A32D2D', label: 'Closes soon' }
+    : isWarning
+    ? { bg: '#FAEEDA', border: '#FAC775', color: '#633806', label: 'Time remaining' }
+    : { bg: '#EAF3DE', border: '#C0DD97', color: '#3B6D11', label: 'Time remaining' };
 
   return (
     <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 10,
-      background: bg, border: `1px solid ${brd}`,
-      borderRadius: 10, padding: '10px 16px', color: clr,
+      display: 'inline-flex', alignItems: 'center', gap: 12,
+      background: theme.bg, border: `1px solid ${theme.border}`,
+      borderRadius: 12, padding: '10px 16px', color: theme.color,
     }}>
-      <span style={{ fontSize: '1.1rem' }}>{isUrgent ? '⚡' : isWarning ? '⏰' : '🟢'}</span>
       <div>
         <div style={{
-          fontSize: '.68rem', fontWeight: 700, letterSpacing: '.08em',
-          textTransform: 'uppercase', opacity: .8, marginBottom: 2,
+          fontSize: '.67rem', fontWeight: 700, letterSpacing: '.08em',
+          textTransform: 'uppercase', opacity: .7, marginBottom: 3,
+          fontFamily: "'DM Sans', sans-serif",
         }}>
-          Time Remaining
+          {theme.label}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
           {timeLeft.days > 0 && (
             <span>
-              <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-.03em' }}>
                 {timeLeft.days}
               </span>
-              <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>d</span>
+              <span style={{ fontSize: '.68rem', fontWeight: 700, marginLeft: 1, opacity: .7 }}>d</span>
             </span>
           )}
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.hours)}
+          {[
+            [pad(timeLeft.hours), 'h'],
+            [pad(timeLeft.minutes), 'm'],
+            [pad(timeLeft.seconds), 's'],
+          ].map(([val, unit]) => (
+            <span key={unit}>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-.03em' }}>
+                {val}
+              </span>
+              <span style={{ fontSize: '.68rem', fontWeight: 700, marginLeft: 1, opacity: .7 }}>{unit}</span>
             </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>h</span>
-          </span>
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.minutes)}
-            </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>m</span>
-          </span>
-          <span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-.03em' }}>
-              {pad(timeLeft.seconds)}
-            </span>
-            <span style={{ fontSize: '.72rem', fontWeight: 600, marginLeft: 2, opacity: .75 }}>s</span>
-          </span>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// ── BidHeader — RFQ details card with countdown timer ─────────────────────
+function MetaItem({ label, value, accent }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 4,
+      padding: '12px 16px',
+      background: 'var(--surface)',
+      borderRadius: 10,
+      border: '1px solid var(--border)',
+    }}>
+      <span style={{
+        fontSize: '.67rem', fontWeight: 700, letterSpacing: '.08em',
+        textTransform: 'uppercase', color: 'var(--ink-faint)',
+        fontFamily: "'DM Sans', sans-serif",
+      }}>
+        {label}
+      </span>
+      <span style={{
+        fontSize: '.92rem', fontWeight: 600, color: accent ? 'var(--accent)' : 'var(--ink)',
+        fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3,
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export default function BidHeader({ rfq, rfqItems, isPastDeadline }) {
   if (!rfq) return null;
-
   const isClosedStatus = rfq.status === 'closed' || rfq.status === 'cancelled';
 
   return (
-    <div className="rfq-meta-card">
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', flexWrap: 'wrap',
-        gap: 12, marginBottom: 8,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="section-label">RFQ Details</span>
-          <RFQStatusBadge status={rfq.status} />
-        </div>
-        {rfq.deadline && !isClosedStatus && <CountdownTimer deadline={rfq.deadline} />}
-      </div>
+    <>
+      <style>{`
+        .bid-header-card {
+          background: var(--white);
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 22px 24px;
+          margin-bottom: 20px;
+        }
+        .bid-header-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+        .bid-header-meta-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 10px;
+        }
+        @media (max-width: 540px) {
+          .bid-header-card { padding: 18px 16px; }
+          .bid-header-meta-grid { grid-template-columns: 1fr 1fr; }
+        }
+      `}</style>
 
-      {rfq.description && (
-        <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', margin: '0 0 12px' }}>
-          {rfq.description}
-        </p>
-      )}
-
-      <div className="rfq-meta-grid">
-        <div className="meta-item">
-          <label>Deadline</label>
-          <span style={{ color: isPastDeadline ? 'var(--accent)' : 'var(--ink)' }}>
-            {rfq.deadline
-              ? new Date(rfq.deadline).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-              : '—'}
-            {isPastDeadline && ' (Closed)'}
-          </span>
-        </div>
-        {rfq.budget && (
-          <div className="meta-item">
-            <label>Budget</label>
-            <span>
-              {rfq.currency}{' '}
-              {parseFloat(rfq.budget).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+      <div className="bid-header-card">
+        <div className="bid-header-top">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: '.67rem', fontWeight: 700, letterSpacing: '.1em',
+              textTransform: 'uppercase', color: 'var(--ink-faint)',
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              RFQ Overview
             </span>
+            <RFQStatusBadge status={rfq.status} />
           </div>
+          {rfq.deadline && !isClosedStatus && (
+            <CountdownTimer deadline={rfq.deadline} />
+          )}
+        </div>
+
+        {rfq.description && (
+          <p style={{
+            color: 'var(--ink-soft)', fontSize: '.875rem', margin: '0 0 16px',
+            lineHeight: 1.6, fontFamily: "'DM Sans', sans-serif",
+          }}>
+            {rfq.description}
+          </p>
         )}
-        <div className="meta-item">
-          <label>Line Items</label>
-          <span>{rfqItems.length}</span>
+
+        <div className="bid-header-meta-grid">
+          <MetaItem
+            label="Deadline"
+            value={rfq.deadline
+              ? new Date(rfq.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '—'}
+            accent={isPastDeadline}
+          />
+          {rfq.budget && (
+            <MetaItem
+              label="Budget"
+              value={`${rfq.currency || ''} ${parseFloat(rfq.budget).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+            />
+          )}
+          <MetaItem label="Line Items" value={rfqItems.length} />
+          {rfq.reference_number && (
+            <MetaItem label="Reference" value={rfq.reference_number} />
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
