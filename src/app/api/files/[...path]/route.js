@@ -68,6 +68,8 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  let hasFileAccess = false;
+
   // Vendor users can only access their own company's files.
   if (isVendorRole) {
     // Vendor must belong to this company
@@ -78,11 +80,20 @@ export async function GET(request, { params }) {
     if (!userRow || String(userRow.company_id) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    hasFileAccess = true;
   } else if (isBuyerRole) {
     // Buyer-side roles can access files only inside their own company.
     if (String(companyId) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    hasFileAccess = true;
+  } else if (isSuperAdmin) {
+    // Super admin has platform-wide read access.
+    hasFileAccess = true;
+  }
+
+  if (!hasFileAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Verify the attachment exists in DB (source of truth — prevents serving arbitrary files)
