@@ -60,9 +60,16 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Invalid file path structure' }, { status: 400 });
   }
 
-  // Vendor users can only access their own company's files
-  // Buyer-side roles can access any file in their company
-  if (role === 'vendor_user') {
+  const isVendorRole = role === 'vendor_user';
+  const isBuyerRole = ['company_admin', 'manager', 'employee'].includes(role);
+  const isSuperAdmin = role === 'super_admin';
+
+  if (!isVendorRole && !isBuyerRole && !isSuperAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Vendor users can only access their own company's files.
+  if (isVendorRole) {
     // Vendor must belong to this company
     const [[userRow]] = await pool.query(
       `SELECT company_id FROM users WHERE id = ? LIMIT 1`,
@@ -71,12 +78,11 @@ export async function GET(request, { params }) {
     if (!userRow || String(userRow.company_id) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else if (['company_admin', 'manager', 'employee'].includes(role)) {
+  } else if (isBuyerRole) {
+    // Buyer-side roles can access files only inside their own company.
     if (String(companyId) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else if (role !== 'super_admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Verify the attachment exists in DB (source of truth — prevents serving arbitrary files)
