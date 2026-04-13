@@ -233,32 +233,62 @@ export default function BidStepTwo({
           color: var(--ink-soft);
           border: 1.5px solid var(--border);
         }
-        .s2-btn--ghost:hover { background: var(--surface); color: var(--ink); border-color: var(--ink-soft); }
+        .s2-btn--ghost:hover:not(:disabled) { 
+          background: var(--surface); 
+          color: var(--ink); 
+          border-color: var(--ink-soft);
+          transform: translateY(-1px);
+        }
+        .s2-btn--ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .s2-btn--outline {
           background: transparent;
           color: var(--ink);
           border: 1.5px solid var(--border);
         }
-        .s2-btn--outline:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .s2-btn--outline:hover:not(:disabled) { 
+          background: var(--ink); 
+          color: #fff; 
+          border-color: var(--ink);
+          transform: translateY(-1px);
+        }
+        .s2-btn--outline:disabled { opacity: 0.5; cursor: not-allowed; }
         .s2-btn--save {
           background: var(--surface);
           color: var(--ink);
           border: 1.5px solid var(--border);
         }
-        .s2-btn--save:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .s2-btn--save:hover:not(:disabled) { 
+          background: var(--ink); 
+          color: #fff; 
+          border-color: var(--ink);
+          transform: translateY(-1px);
+        }
+        .s2-btn--save:disabled { opacity: 0.5; cursor: not-allowed; }
         .s2-btn--primary {
           background: var(--ink);
           color: #fff;
           border: 1.5px solid var(--ink);
+          box-shadow: 0 2px 8px rgba(15,14,13,.1);
         }
-        .s2-btn--primary:hover:not(:disabled) { opacity: .82; }
-        .s2-btn--primary:disabled { opacity: .45; cursor: not-allowed; }
+        .s2-btn--primary:hover:not(:disabled) { 
+          opacity: .88;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(15,14,13,.15);
+        }
+        .s2-btn--primary:disabled { opacity: 0.45; cursor: not-allowed; }
         .s2-btn--warn {
-          background: #FAEEDA;
+          background: #FAC775;
           color: #633806;
           border: 1.5px solid #FAC775;
+          box-shadow: 0 2px 8px rgba(250,199,117,.1);
         }
-        .s2-btn--warn:hover { background: #FAC775; }
+        .s2-btn--warn:hover:not(:disabled) { 
+          background: #F5B75D;
+          border-color: #F5B75D;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(250,199,117,.15);
+        }
+        .s2-btn--warn:disabled { opacity: 0.5; cursor: not-allowed; }
         @media (max-width: 600px) {
           .s2-card-header, .s2-card-body, .s2-card-footer { padding: 16px; }
           .s2-currency-row { gap: 12px; }

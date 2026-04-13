@@ -199,7 +199,13 @@ export default function BidStepFour({
           font-size: .845rem; font-weight: 600; cursor: pointer;
           transition: all .13s;
         }
-        .s4-btn-back:hover { background: var(--surface); color: var(--ink); }
+        .s4-btn-back:hover:not(:disabled) { 
+          background: var(--surface); 
+          color: var(--ink);
+          border-color: var(--ink-soft);
+          transform: translateY(-1px);
+        }
+        .s4-btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
         @media (max-width: 540px) {
           .s4-header, .s4-body, .s4-footer { padding: 16px; }
         }

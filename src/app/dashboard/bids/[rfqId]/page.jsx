@@ -359,13 +359,42 @@ export default function VendorBidWorkspacePage() {
           border: 1.5px solid var(--border) !important;
           border: none;
         }
-        .cm-btn--cancel:hover { background: var(--surface); color: var(--ink); }
-        .cm-btn--submit { background: var(--accent); color: #fff; }
-        .cm-btn--submit:hover:not(:disabled) { background: var(--accent-h); }
-        .cm-btn--update { background: #185FA5; color: #fff; }
-        .cm-btn--update:hover:not(:disabled) { background: #0C447C; }
-        .cm-btn--withdraw { background: #A32D2D; color: #fff; }
-        .cm-btn--withdraw:hover:not(:disabled) { background: #791F1F; }
+        .cm-btn--cancel:hover:not(:disabled) { 
+          background: var(--surface); 
+          color: var(--ink);
+          border: 1.5px solid var(--border);
+          transform: translateY(-1px);
+        }
+        .cm-btn--submit { 
+          background: var(--accent); 
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(200,80,26,.15);
+        }
+        .cm-btn--submit:hover:not(:disabled) { 
+          background: var(--accent-h);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(200,80,26,.2);
+        }
+        .cm-btn--update { 
+          background: #185FA5; 
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(24,95,165,.15);
+        }
+        .cm-btn--update:hover:not(:disabled) { 
+          background: #0C447C;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(24,95,165,.2);
+        }
+        .cm-btn--withdraw { 
+          background: #A32D2D; 
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(163,45,45,.15);
+        }
+        .cm-btn--withdraw:hover:not(:disabled) { 
+          background: #791F1F;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(163,45,45,.2);
+        }
       `}</style>
 
       <DashboardLayout>
