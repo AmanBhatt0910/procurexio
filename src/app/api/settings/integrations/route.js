@@ -10,23 +10,22 @@ import {
   deleteIntegration,
 } from '@/lib/settingsService';
 import { logAction } from '@/lib/audit';
+import { validateUserContext } from '@/lib/authUtils';
 
 const ALLOWED_ROLES = ['super_admin', 'company_admin'];
 
 export async function GET(request) {
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers  
+  const validated = await validateUserContext(request, {
+    requireRole: ALLOWED_ROLES,
+    requireCompanyId: true,
+  });
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
-  if (!ALLOWED_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  if (!companyId) {
-    return NextResponse.json({ error: 'No company context.' }, { status: 400 });
-  }
+
+  const { companyId } = validated;
 
   try {
     const data = await getIntegrations(Number(companyId));
@@ -38,20 +37,17 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
-  const userEmail = request.headers.get('x-user-email') || null;
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ALLOWED_ROLES,
+    requireCompanyId: true,
+  });
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
-  if (!ALLOWED_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  if (!companyId) {
-    return NextResponse.json({ error: 'No company context.' }, { status: 400 });
-  }
+
+  const { userId, companyId, email: userEmail } = validated;
 
   let body;
   try {

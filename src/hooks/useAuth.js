@@ -2,6 +2,7 @@
 // src/hooks/useAuth.js
 
 import { useState, useEffect, useCallback } from 'react';
+import { AUTH_ENDPOINTS } from '@/config/api';
 
 // Module-level cache: survives component unmount/remount within the same browser
 // session. Cleared on 401 so stale data is never shown after logout.
@@ -16,7 +17,7 @@ export function useAuth() {
 
   const fetchSession = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' });
+      const res = await fetch(AUTH_ENDPOINTS.ME, { credentials: 'include', cache: 'no-store' });
 
       if (res.ok) {
         const data = await res.json();
@@ -46,7 +47,7 @@ export function useAuth() {
   const login = useCallback(async (email, password) => {
     setError(null);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(AUTH_ENDPOINTS.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -73,7 +74,7 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch(AUTH_ENDPOINTS.LOGOUT, { method: 'POST', credentials: 'include' });
     _cachedUser = null;
     _cacheReady = true;
     setUser(null);

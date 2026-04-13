@@ -1,16 +1,25 @@
 // src/app/api/contracts/route.js
 import db from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin', 'company_admin', 'manager', 'employee'],
+    requireCompanyId: true,
+  });
 
-  if (!['super_admin','company_admin','manager','employee'].includes(role)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  if (!validated.ok) {
+    return Response.json(
+      { error: validated.error },
+      { status: validated.status }
+    );
   }
 
+  const { companyId, role } = validated;
+
   // super_admin without a company context cannot use this tenant-scoped endpoint
-  if (!companyId) {
+  if (role === 'super_admin' && !companyId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

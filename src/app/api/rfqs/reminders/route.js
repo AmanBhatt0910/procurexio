@@ -1,9 +1,10 @@
 import { sendDueRFQDeadlineReminders } from '@/lib/rfqUtils';
-import { requireRole } from '@/lib/rbac';
+import { requireUserContext } from '@/lib/authUtils';
+import { safeCompare } from '@/lib/security';
 
 /**
  * GET /api/rfqs/reminders
- * Vercel Cron handler — called automatically every 6 hours.
+ * Vercel Cron handler — called automatically every 6 hours (HTTPS only).
  * Vercel sends Authorization: Bearer <CRON_SECRET> automatically.
  * Sends 12-hour and 6-hour deadline reminder emails to all invited vendors.
  */
@@ -12,7 +13,8 @@ export async function GET(request) {
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
   const cronSecret = process.env.CRON_SECRET || '';
 
-  if (!cronSecret || bearer !== cronSecret) {
+  // CRITICAL: Use constant-time comparison to prevent timing attacks
+  if (!cronSecret || !safeCompare(bearer, cronSecret)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -26,17 +28,29 @@ export async function GET(request) {
 }
 
 // POST /api/rfqs/reminders
-// - Cron mode: Authorization: Bearer <RFQ_REMINDER_CRON_TOKEN>
-// - User mode: company_admin / manager can trigger for their own company
+// - Cron mode: Authorization: Bearer <RFQ_REMINDER_CRON_TOKEN> (HTTPS only)
+// - User mode: company_admin / manager can trigger for their own company (requires JWT)
 export async function POST(request) {
   const authHeader = request.headers.get('authorization') || '';
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
   const cronToken = process.env.RFQ_REMINDER_CRON_TOKEN || '';
 
-  const companyId = request.headers.get('x-company-id');
-  const role = request.headers.get('x-user-role');
-  const cronAuthorized = Boolean(cronToken) && Boolean(bearer) && bearer === cronToken;
-  const userAuthorized = Boolean(companyId) && requireRole(role, ['company_admin', 'manager']) === true;
+  // CRITICAL: Use constant-time comparison
+  const cronAuthorized = Boolean(cronToken) && Boolean(bearer) && safeCompare(bearer, cronToken);
+
+  let userAuthorized = false;
+  let companyId = null;
+
+  // If not authorized via cron token, try user mode with JWT validation
+  if (!cronAuthorized) {
+    try {
+      const validated = await requireUserContext(request, ['company_admin', 'manager'], true);
+      userAuthorized = true;
+      companyId = validated.companyId;
+    } catch {
+      userAuthorized = false;
+    }
+  }
 
   if (!cronAuthorized && !userAuthorized) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
@@ -47,7 +61,8 @@ export async function POST(request) {
 
   try {
     const summary = await sendDueRFQDeadlineReminders({
-      companyId: userAuthorized ? companyId : null,
+      // Only apply company filter for user-mode requests
+      companyId: userAuthorized && !cronAuthorized ? companyId : null,
       rfqId: body.rfqId || null,
     });
     return Response.json({ message: 'Reminder processing complete', data: summary });

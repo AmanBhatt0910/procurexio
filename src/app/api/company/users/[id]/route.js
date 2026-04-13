@@ -2,22 +2,32 @@
 import pool from '@/lib/db';
 import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
+import { validateUserContext } from '@/lib/authUtils';
+import { validateNumericId } from '@/lib/authUtils';
 
 const ALLOWED_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
 
 // PUT /api/company/users/[id] — update role or active status
 export async function PUT(request, { params }) {
-  const companyId = request.headers.get('x-company-id');
-  const actorRole = request.headers.get('x-user-role');
-  const actorId   = request.headers.get('x-user-id');
-  const targetId  = params.id;
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requirePermission: (role) => hasPermission(role, PERMISSIONS.MANAGE_COMPANY),
+    requireCompanyId: true,
+  });
 
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
-  if (!hasPermission(actorRole, PERMISSIONS.MANAGE_COMPANY)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { userId: actorId, companyId } = validated;
+  const { id: rawTargetId } = await params;
+
+  // CRITICAL: Validate URL parameter is numeric
+  const { ok: idOk, value: targetId } = validateNumericId(rawTargetId);
+  if (!idOk) {
+    return Response.json({ error: 'Invalid user ID' }, { status: 400 });
   }
+
   if (String(actorId) === String(targetId)) {
     return Response.json({ error: 'Cannot modify your own account here' }, { status: 400 });
   }

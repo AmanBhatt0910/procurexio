@@ -8,20 +8,26 @@ import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
 import { checkLimit } from '@/lib/subscription';
 import { INVITATION_EXPIRY_MS } from '@/config/constants';
+import { validateUserContext } from '@/lib/authUtils';
 
 const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];
 const ALL_ROLES    = [...TEAM_ROLES, ...VENDOR_ROLES];
 
 export async function POST(request) {
-  const companyId   = request.headers.get('x-company-id');
-  const role        = request.headers.get('x-user-role');
-  const inviterName = request.headers.get('x-user-name') || 'A team member';
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
-  if (!hasPermission(role, PERMISSIONS.MANAGE_COMPANY)) {
+
+  const { companyId, role: inviterRole, email: inviterEmail } = validated;
+  const inviterName = validated.name || 'A team member';
+
+  if (!hasPermission(inviterRole, PERMISSIONS.MANAGE_COMPANY)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 

@@ -1,19 +1,21 @@
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 // Roles that are allowed to see company dashboard stats
 const ALLOWED_ROLES = ['super_admin', 'company_admin', 'manager', 'employee'];
 
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ALLOWED_ROLES,
+    requireCompanyId: true,
+  });
 
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
 
-  if (!ALLOWED_ROLES.includes(role)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const { companyId } = validated;
 
   try {
     // Total vendors

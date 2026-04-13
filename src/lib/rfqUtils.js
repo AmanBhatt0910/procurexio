@@ -2,6 +2,7 @@
 // Shared RFQ utility functions
 
 import pool from '@/lib/db';
+import { BASE_URL } from '@/config/api';
 import {
   sendRFQClosedEmail,
   sendRFQDeadlineExtendedEmail,
@@ -154,7 +155,6 @@ export async function autoCloseIfExpired(rfqId, companyId) {
  * with their bid ranking.
  */
 export async function sendRFQClosureEmails(rfqId) {
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
   // Fetch RFQ details
   const [rfqRows] = await pool.query(
@@ -226,7 +226,6 @@ export async function sendRFQClosureEmails(rfqId) {
  * Notify all invited vendors when a published RFQ deadline is extended.
  */
 export async function sendRFQDeadlineExtendedEmails(rfqId, oldDeadline, newDeadline) {
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 
   const [rfqRows] = await pool.query(
     `SELECT id, title, reference_number FROM rfqs WHERE id = ?`,
@@ -274,7 +273,6 @@ export async function sendDueRFQDeadlineReminders({ companyId = null, rfqId = nu
     values
   );
 
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
   const summary = { rfqsChecked: rfqs.length, remindersSent: 0 };
 
   for (const rfq of rfqs) {

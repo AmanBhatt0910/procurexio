@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
+import { validateNumericId } from '@/lib/authUtils';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(
@@ -11,14 +13,24 @@ async function resolveVendor(userId) {
 
 // GET /api/bids/rfqs/[rfqId]/rank — returns the calling vendor's L-level rank
 export async function GET(request, { params }) {
-  const role   = request.headers.get('x-user-role');
-  const userId = request.headers.get('x-user-id');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['vendor_user'],
+    requireUserId: true,
+  });
 
-  if (role !== 'vendor_user') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
 
-  const { rfqId } = await params;
+  const { userId } = validated;
+  const { rfqId: rawRfqId } = await params;
+
+  // CRITICAL: Validate URL parameter is numeric
+  const { ok: rfqOk, value: rfqId } = validateNumericId(rawRfqId);
+  if (!rfqOk) {
+    return NextResponse.json({ error: 'Invalid RFQ ID' }, { status: 400 });
+  }
 
   try {
     const userInfo = await resolveVendor(userId);

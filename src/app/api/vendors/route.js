@@ -2,15 +2,25 @@
 import { query, queryRaw, getConnection } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
+import { validateUserContext } from '@/lib/authUtils';
 
 // ─── GET /api/vendors ────────────────────────────────────────────
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!hasPermission(role, PERMISSIONS.VIEW_VENDORS))
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
+
+  // RBAC: Check permission
+  if (!hasPermission(role, PERMISSIONS.VIEW_VENDORS)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const status   = searchParams.get('status')   || '';
@@ -73,10 +83,17 @@ export async function GET(request) {
 
 // ─── POST /api/vendors ───────────────────────────────────────────
 export async function POST(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
+
   if (!hasPermission(role, PERMISSIONS.MANAGE_VENDORS))
     return Response.json({ error: 'Forbidden' }, { status: 403 });
 

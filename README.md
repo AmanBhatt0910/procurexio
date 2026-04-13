@@ -104,46 +104,52 @@ npm install
 
 ### 2. Configure environment variables
 
-Create a `.env.local` file at the project root:
+Create a `.env.local` file at the project root using `.env.example` as a template:
 
-```env
-# ── Database ──────────────────────────────────────────────────────
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=procurement_db
-
-# ── JWT / Auth ────────────────────────────────────────────────────
-JWT_SECRET=your-very-secret-key-min-32-chars
-JWT_EXPIRES_IN=7d
-
-# ── Cookie ────────────────────────────────────────────────────────
-# Set to "false" for plain HTTP deployments, "true" to force Secure
-# COOKIE_SECURE=false
-
-# ── Email (Resend) ────────────────────────────────────────────────
-RESEND_API_KEY=re_...
-INVITE_FROM_EMAIL=no-reply@procurexio.com
-
-# ── App ───────────────────────────────────────────────────────────
-NEXT_PUBLIC_APP_NAME=Procurexio
-NEXT_PUBLIC_BASE_URL=http://localhost:3001
-
-# ── Google OAuth (optional — enables "Login with Google") ─────────
-# 1. Go to https://console.cloud.google.com/
-# 2. Create a project (or select an existing one)
-# 3. Enable the "Google+ API" or "Google Identity" service
-# 4. Navigate to APIs & Services → Credentials → Create OAuth 2.0 Client ID
-# 5. Application type: Web application
-# 6. Add an Authorized Redirect URI:
-#      http://localhost:3001/api/auth/google/callback  (development)
-#      https://yourdomain.com/api/auth/google/callback (production)
-# 7. Copy the Client ID and Client Secret below
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+```bash
+cp .env.example .env.local
+# Edit .env.local with your actual values (never commit this file)
 ```
+
+**Required environment variables:**
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `DB_HOST` | string | Database hostname (e.g., `localhost` or RDS endpoint) |
+| `DB_PORT` | number | Database port (default: 3306 for MySQL) |
+| `DB_USER` | string | Database user |
+| `DB_PASSWORD` | string | Database password (use strong password in production) |
+| `DB_NAME` | string | Database name |
+| `JWT_SECRET` | string | Cryptographic key for JWT (min 32 chars, use strong random value) |
+| `RESEND_API_KEY` | string | API key from Resend for email delivery |
+| `INVITE_FROM_EMAIL` | string | Email address for system notifications |
+| `NEXT_PUBLIC_APP_NAME` | string | Application name (public, safe to expose) |
+| `NEXT_PUBLIC_BASE_URL` | string | Application URL (public, for redirects) |
+| `CRON_SECRET` | string | Bearer token for Vercel Cron jobs (strong random value) |
+| `RFQ_CLOSE_CRON_TOKEN` | string | Token for RFQ closure cron (strong random value) |
+| `RFQ_REMINDER_CRON_TOKEN` | string | Token for reminder cron (strong random value) |
+
+**Optional environment variables:**
+
+| Variable | Purpose |
+|----------|---------|
+| `GOOGLE_CLIENT_ID` | Enable "Login with Google" |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | OAuth redirect path |
+| `COOKIE_SECURE` | Force HTTPS cookies (set to "true" in production) |
+| `LOG_LEVEL` | Logging verbosity (debug, info, warn, error) |
+
+**For Google OAuth (Optional):**
+
+1. Go to https://console.cloud.google.com/
+2. Create a project (or select an existing one)
+3. Enable the "Google+ API" or "Google Identity" service
+4. Navigate to APIs & Services → Credentials → Create OAuth 2.0 Client ID
+5. Application type: Web application
+6. Add an Authorized Redirect URI:
+   - Development: `http://localhost:3001/api/auth/google/callback`
+   - Production: `https://yourdomain.com/api/auth/google/callback`
+7. Copy the Client ID and Client Secret to `.env.local`
 
 ### 3. Set up the database
 

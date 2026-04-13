@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { validateCurrency } from '@/lib/validation';
+import { validateUserContext, validateNumericId } from '@/lib/authUtils';
 import { logAction, ACTION } from '@/lib/audit';
 import { isDeadlinePassed } from '@/lib/deadline';
 
@@ -16,9 +17,16 @@ async function resolveVendor(userId) {
 
 // POST /api/bids/rfqs/[rfqId]/bid — create a draft bid
 export async function POST(request, { params }) {
-  const role   = request.headers.get('x-user-role');
-  const userId = request.headers.get('x-user-id');
-  if (role !== 'vendor_user') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const validated = await validateUserContext(request, {
+    requireRole: ['vendor_user'],
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { role, userId } = validated;
 
   const { rfqId } = await params;
 
@@ -84,9 +92,16 @@ export async function POST(request, { params }) {
 
 // PUT /api/bids/rfqs/[rfqId]/bid — update bid header + upsert items
 export async function PUT(request, { params }) {
-  const role   = request.headers.get('x-user-role');
-  const userId = request.headers.get('x-user-id');
-  if (role !== 'vendor_user') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const validated = await validateUserContext(request, {
+    requireRole: ['vendor_user'],
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { role, userId } = validated;
 
   const { rfqId } = await params;
 

@@ -2,11 +2,13 @@
 
 /**
  * src/context/NotificationContext.js
- * Lightweight context that polls /api/notifications/unread-count every 30s.
+ * Lightweight context that polls unread notification count every 30s.
  * Both TopBar and Sidebar consume this — single fetch, no prop-drilling.
  */
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { NOTIFICATION_ENDPOINTS } from '@/config/api';
+import { NOTIFICATION_POLL_INTERVAL } from '@/config/email';
 
 const NotificationContext = createContext({ unreadCount: 0, latestNotification: null, refresh: () => {} });
 
@@ -17,7 +19,7 @@ export function NotificationProvider({ children }) {
 
   const fetchCount = useCallback(async () => {
     try {
-      const res = await fetch('/api/notifications/unread-count');
+      const res = await fetch(NOTIFICATION_ENDPOINTS.UNREAD_COUNT);
       if (!res.ok) return;
       const data = await res.json();
       if (mounted.current) {
@@ -36,7 +38,7 @@ export function NotificationProvider({ children }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCount();
 
-    const interval = setInterval(fetchCount, 30_000);
+    const interval = setInterval(fetchCount, NOTIFICATION_POLL_INTERVAL);
     return () => {
       clearInterval(interval);
       mounted.current = false;

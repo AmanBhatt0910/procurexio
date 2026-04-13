@@ -8,28 +8,34 @@ import { jwtVerify } from 'jose';
 import pool from '@/lib/db';
 
 export async function GET(request, { params }) {
-  let role      = request.headers.get('x-user-role');
-  let userId    = request.headers.get('x-user-id');
-  let companyId = request.headers.get('x-company-id');
-
+  // CRITICAL: Always validate JWT, don't trust headers alone
   // Middleware is skipped for dotted paths (e.g. "/api/files/.../quote.pdf"),
-  // so recover auth context directly from cookie JWT when headers are absent.
-  if (!userId || !role) {
-    const token = request.cookies.get('auth_token')?.value;
-    if (token) {
-      try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        userId = String(payload.userId || '');
-        role = String(payload.role || '');
-        companyId = String(payload.companyId || '');
-      } catch (err) {
-        console.error('File route JWT verification failed:', err?.message || err);
-      }
-    }
+  // so we must explicitly verify JWT here
+
+  const token = request.cookies.get('auth_token')?.value;
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  let decoded;
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    decoded = payload;
+  } catch (err) {
+    console.warn('File route JWT verification failed:', err?.message || err);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // CRITICAL: Extract user context from JWT, not headers
+  const userId    = Number(decoded?.userId || 0);
+  const role      = String(decoded?.role || '');
+  const companyId = decoded?.companyId ? Number(decoded.companyId) : null;
+
+  if (!userId || !role) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { path: pathSegments } = await params;
   if (!pathSegments?.length) {
@@ -53,10 +59,10 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
   }
 
-  const fileCompanyId = parts[0];
+  const fileCompanyId = Number(parts[0]);
 
   // Verify numeric IDs
-  if (!/^\d+$/.test(fileCompanyId) || !/^\d+$/.test(parts[1]) || !/^\d+$/.test(parts[2])) {
+  if (!/^\d+$/.test(parts[0]) || !/^\d+$/.test(parts[1]) || !/^\d+$/.test(parts[2])) {
     return NextResponse.json({ error: 'Invalid file path structure' }, { status: 400 });
   }
 
@@ -68,23 +74,21 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Vendor users can only access their own company's files.
+  // CRITICAL: Validate tenant isolation using JWT company_id
+  // Vendor users can only access their own company's files
   if (isVendorRole) {
-    // Vendor must belong to this company
-    const [[userRow]] = await pool.query(
-      `SELECT company_id FROM users WHERE id = ? LIMIT 1`,
-      [userId]
-    );
-    if (!userRow || String(userRow.company_id) !== fileCompanyId) {
+    // Vendor must belong to this company (from JWT)
+    if (companyId === null || companyId !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   } else if (isBuyerRole) {
-    // Buyer-side roles can access files only inside their own company.
-    if (String(companyId) !== fileCompanyId) {
+    // Buyer-side roles can access files only inside their own company (from JWT)
+    if (companyId === null || companyId !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   } else if (isSuperAdmin) {
-    // Super admin has platform-wide read access.
+    // Super admin has platform-wide read access
+    // But still needs valid JWT
   }
 
   // Verify the attachment exists in DB (source of truth — prevents serving arbitrary files)

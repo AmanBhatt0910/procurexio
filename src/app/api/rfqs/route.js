@@ -3,6 +3,7 @@ import { query, queryRaw, getConnection } from '@/lib/db';
 import { requirePermission, PERMISSIONS } from '@/lib/rbac';
 import { logAction, ACTION } from '@/lib/audit';
 import { checkLimit } from '@/lib/subscription';
+import { validateUserContext } from '@/lib/authUtils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -32,10 +33,16 @@ async function nextReferenceNumber(conn, companyId) {
 // ── GET /api/rfqs ──────────────────────────────────────────────────────────
 
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
 
   try { requirePermission({ role }, [PERMISSIONS.VIEW_RFQ]); }
   catch (e) { return Response.json({ error: e.message }, { status: 403 }); }

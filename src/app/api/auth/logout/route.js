@@ -5,15 +5,28 @@ import { clearAuthCookie } from '@/lib/jwt';
 import pool from '@/lib/db';
 import { logAction, ACTION } from '@/lib/audit';
 import { logAuthEvent, getRequestIP } from '@/lib/logger';
+import { validateUserContext } from '@/lib/authUtils';
 
 /**
  * POST /api/auth/logout
  * Clears the auth cookie, invalidates active sessions, and ends the session.
  */
 export async function POST(request) {
-  const ip     = getRequestIP(request);
-  const userId = request.headers.get('x-user-id');
-  const email  = request.headers.get('x-user-email') || null;
+  const ip = getRequestIP(request);
+  
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    // Even if JWT validation fails, still try to clear the cookie
+    const response = NextResponse.json({ message: 'Logged out' });
+    clearAuthCookie(response);
+    return response;
+  }
+
+  const { userId, email } = validated;
 
   // Invalidate all active sessions for this user in the DB
   if (userId) {

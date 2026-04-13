@@ -1,18 +1,26 @@
 // src/app/api/contracts/[id]/route.js
 import db from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
+import { validateNumericId } from '@/lib/authUtils';
 
 export async function GET(request, { params }) {
-  const { id } = await params;
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin','company_admin','manager','employee'],
+    requireCompanyId: true,
+  });
 
-  if (!['super_admin','company_admin','manager','employee'].includes(role)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
 
-  // super_admin without a company context cannot use this tenant-scoped endpoint
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { companyId } = validated;
+  const { id: rawId } = await params;
+
+  // CRITICAL: Validate URL parameter is numeric
+  const { ok: idOk, value: id } = validateNumericId(rawId);
+  if (!idOk) {
+    return Response.json({ error: 'Invalid contract ID' }, { status: 400 });
   }
 
   const [[contract]] = await db.query(

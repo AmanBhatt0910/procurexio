@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 // GET /api/bids/rfqs — vendor_user: list of RFQs they are invited to
 export async function GET(request) {
-  const role   = request.headers.get('x-user-role');
-  const userId = request.headers.get('x-user-id');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['vendor_user'],
+    requireUserId: true,
+  });
 
-  if (role !== 'vendor_user') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { userId } = validated;
 
   const { searchParams } = new URL(request.url);
   const page   = Math.max(1, parseInt(searchParams.get('page')  || '1'));

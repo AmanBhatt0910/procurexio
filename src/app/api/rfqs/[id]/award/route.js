@@ -1,6 +1,7 @@
 // src/app/api/rfqs/[id]/award/route.js
 import db from '@/lib/db';
 import { canManageRFQ } from '@/lib/rbac';
+import { validateUserContext, validateNumericId } from '@/lib/authUtils';
 import { createNotifications } from '@/lib/notifications';
 import { sendContractAwardedEmail, sendBidRejectedEmail, sendStaffContractAwardedEmail } from '@/lib/mailer';
 import { logAction, ACTION } from '@/lib/audit';
@@ -18,10 +19,20 @@ async function generateContractRef(conn, companyId) {
 
 // POST /api/rfqs/[id]/award
 export async function POST(request, { params }) {
-  const { id } = await params;
-  const companyId = request.headers.get('x-company-id');
-  const userId    = request.headers.get('x-user-id');
-  const role      = request.headers.get('x-user-role');
+  const { id: rawId } = await params;
+  const { ok: idOk, value: id } = validateNumericId(rawId);
+  if (!idOk) return Response.json({ error: 'Invalid RFQ ID' }, { status: 400 });
+
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, userId, role } = validated;
 
   if (!canManageRFQ(role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });

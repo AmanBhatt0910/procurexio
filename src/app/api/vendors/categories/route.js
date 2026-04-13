@@ -1,6 +1,7 @@
 // src/app/api/vendors/categories/route.js
 import { query } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { validateUserContext } from '@/lib/authUtils';
 
 // Preset palette — auto-assigned round-robin on creation
 const PALETTE = [
@@ -16,10 +17,17 @@ const PALETTE = [
 
 // ─── GET /api/vendors/categories ────────────────────────────────
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
+
   if (!hasPermission(role, PERMISSIONS.VIEW_VENDORS))
     return Response.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -41,10 +49,17 @@ export async function GET(request) {
 
 // ─── POST /api/vendors/categories ───────────────────────────────
 export async function POST(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
+
   if (!hasPermission(role, PERMISSIONS.MANAGE_VENDORS))
     return Response.json({ error: 'Forbidden' }, { status: 403 });
 

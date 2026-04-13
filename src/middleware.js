@@ -2,6 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
+import { PUBLIC_AUTH_ENDPOINTS, RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_EXCLUDED_ROUTES, JWT_SECRET, PROTECTED_ROUTES_CONFIG, DEFAULT_POST_LOGIN_REDIRECT, DEFAULT_UNAUTHORIZED_REDIRECT, ERROR_PAGES, PUBLIC_PAGES } from '@/config/middleware';
 
 /**
  * IMPORTANT: This file must live at the PROJECT ROOT (next to package.json).
@@ -72,26 +73,19 @@ function _getIP(request) {
  */
 const RATE_LIMIT_CONFIGS = {
   auth: { max: 10,   windowMs: 60_000 },   // 10   req / min  (auth-sensitive mutations)
-  user: { max: 1000, windowMs: 60_000 },   // 1000 req / min  (per authenticated user)
+  user: { max: RATE_LIMIT_MAX_REQUESTS, windowMs: RATE_LIMIT_WINDOW_MS },   // per authenticated user
   ip:   { max: 60,   windowMs: 60_000 },   // 60   req / min  (unauthenticated fallback)
 };
 
 /** Path prefixes that receive the stricter auth rate limit. */
-const AUTH_RATE_PATHS = [
-  '/api/auth/login',
-  '/api/auth/forgot-password',
-  '/api/auth/register',
-  '/api/auth/invite',
-  '/api/auth/google',      // Google OAuth login, callback, and link endpoints
-  '/api/auth/link-google', // Link-Google redirect endpoint
-];
+const AUTH_RATE_PATHS = PUBLIC_AUTH_ENDPOINTS;
 
 /**
  * Paths excluded from rate limiting entirely.
  * /api/auth/me is a lightweight session check called on every page mount —
  * it must not be throttled by the strict auth limit.
  */
-const RATE_LIMIT_EXCLUDED = ['/api/auth/me'];
+const RATE_LIMIT_EXCLUDED = RATE_LIMIT_EXCLUDED_ROUTES;
 
 /** Build a 429 NextResponse with standard rate-limit headers. */
 function _rateLimitResponse(result, max) {
@@ -139,8 +133,7 @@ async function applyRateLimit(request) {
   const token = request.cookies.get('auth_token')?.value;
   if (token) {
     try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-      const { payload } = await jwtVerify(token, secret);
+      const { payload } = await jwtVerify(token, JWT_SECRET);
       if (payload.userId) {
         const cfg    = RATE_LIMIT_CONFIGS.user;
         const result = _rlCheck(`user:${payload.userId}`, cfg.max, cfg.windowMs);
@@ -163,17 +156,7 @@ async function applyRateLimit(request) {
  * Route protection rules.
  * prefix → { roles: string[] | 'any' }
  */
-const PROTECTED_ROUTES = {
-  '/dashboard/bids':    { roles: ['vendor_user'] },
-  '/dashboard/admin':   { roles: ['super_admin'] },
-  '/dashboard/vendors': { roles: ['super_admin', 'company_admin', 'manager'] },
-  '/dashboard/rfqs':    { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
-  '/dashboard':         { roles: 'any' },
-  '/rfq':               { roles: ['super_admin', 'company_admin', 'manager', 'employee'] },
-  '/vendors':           { roles: ['super_admin', 'company_admin', 'manager'] },
-  '/admin':             { roles: ['super_admin'] },
-  '/vendor-portal':     { roles: ['vendor_user'] },
-};
+const PROTECTED_ROUTES = PROTECTED_ROUTES_CONFIG;
 
 const PUBLIC_PREFIXES = [
   '/login',
@@ -187,7 +170,7 @@ const PUBLIC_PREFIXES = [
 ];
 
 // Routes that are public with exact pathname matching
-const PUBLIC_EXACT = ['/', '/terms', '/privacy', '/contact'];
+const PUBLIC_EXACT = PUBLIC_PAGES;
 
 function isPublic(pathname) {
   if (PUBLIC_EXACT.includes(pathname)) return true;
@@ -283,13 +266,12 @@ export async function middleware(request) {
       const token = request.cookies.get('auth_token')?.value;
       if (token) {
         try {
-          const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-          await jwtVerify(token, secret);
+          await jwtVerify(token, JWT_SECRET);
           // Valid token — send authenticated user away from login page
           const redirectTo =
-            request.nextUrl.searchParams.get('redirect') || '/dashboard';
+            request.nextUrl.searchParams.get('redirect') || DEFAULT_POST_LOGIN_REDIRECT;
           // Only allow relative redirects to prevent open-redirect attacks
-          const safeDest = redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+          const safeDest = redirectTo.startsWith('/') ? redirectTo : DEFAULT_POST_LOGIN_REDIRECT;
           return applySecurityHeaders(
             NextResponse.redirect(new URL(safeDest, request.url))
           );
@@ -315,7 +297,7 @@ export async function middleware(request) {
         { status: 401, headers: { 'Content-Type': 'application/json' } },
       ));
     }
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL(DEFAULT_UNAUTHORIZED_REDIRECT, request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
@@ -323,8 +305,7 @@ export async function middleware(request) {
   // ── 4. Verify JWT using jose (Edge-compatible)
   let decoded;
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, JWT_SECRET);
     decoded = payload;
   } catch {
     // Invalid or expired token
@@ -336,7 +317,7 @@ export async function middleware(request) {
       res.cookies.delete('auth_token');
       return res;
     }
-    const response = applySecurityHeaders(NextResponse.redirect(new URL('/login', request.url)));
+    const response = applySecurityHeaders(NextResponse.redirect(new URL(DEFAULT_UNAUTHORIZED_REDIRECT, request.url)));
     response.cookies.delete('auth_token');
     return response;
   }
@@ -347,7 +328,7 @@ export async function middleware(request) {
     if (routeConfig) {
       const { roles } = routeConfig;
       if (roles !== 'any' && !roles.includes(decoded.role)) {
-        return applySecurityHeaders(NextResponse.redirect(new URL('/403', request.url)));
+        return applySecurityHeaders(NextResponse.redirect(new URL(ERROR_PAGES.FORBIDDEN, request.url)));
       }
     }
   }

@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 // GET /api/admin/stats — platform-level stats for super_admin
 export async function GET(request) {
-  const role = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin'],
+    requireUserId: true,
+  });
 
-  if (role !== 'super_admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
 
   try {

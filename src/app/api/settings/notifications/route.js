@@ -4,12 +4,19 @@
 
 import { NextResponse } from 'next/server';
 import { getNotificationPrefs, updateNotificationPrefs } from '@/lib/settingsService';
+import { validateUserContext } from '@/lib/authUtils';
 
 export async function GET(request) {
-  const userId = request.headers.get('x-user-id');
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { userId } = validated;
 
   try {
     const data = await getNotificationPrefs(Number(userId));
@@ -21,10 +28,16 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  const userId = request.headers.get('x-user-id');
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { userId } = validated;
 
   let body;
   try {

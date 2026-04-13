@@ -4,6 +4,8 @@
 
 import { Resend } from 'resend';
 import { INVITATION_EXPIRY_DAYS, PASSWORD_RESET_EXPIRY_HOURS } from '@/config/constants';
+import { BASE_URL } from '@/config/api';
+import { EMAIL_FROM, APP_NAME } from '@/config/email';
 
 // Lazy initialization — avoids build-time errors when RESEND_API_KEY is absent
 let _resend = null;
@@ -12,9 +14,7 @@ function getResend() {
   return _resend;
 }
 
-const FROM      = process.env.INVITE_FROM_EMAIL || 'Procurexio <no-reply@procurexio.com>';
-const APP_NAME  = process.env.NEXT_PUBLIC_APP_NAME  || 'Procurexio';
-const BASE_URL  = process.env.NEXT_PUBLIC_BASE_URL  || 'http://localhost:3001';
+const FROM = EMAIL_FROM;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // sendInviteEmail — internal team member invite (company_admin / manager / employee)

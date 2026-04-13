@@ -1,22 +1,29 @@
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
+import { validateNumericId } from '@/lib/authUtils';
 
 // PATCH /api/notifications/[id]/read
 // Marks a single notification as read. Must belong to requesting user.
 export async function PATCH(request, { params }) {
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
-  const { id }    = await params;
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireUserId: true,
+  });
 
-  if (!userId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { userId, companyId, role } = validated;
+  const { id: rawId } = await params;
 
   if (!companyId && role !== 'super_admin') {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!id || isNaN(id)) {
+  // CRITICAL: Validate URL parameter is numeric
+  const { ok: idOk, value: id } = validateNumericId(rawId);
+  if (!idOk) {
     return Response.json({ error: 'Invalid notification ID' }, { status: 400 });
   }
 

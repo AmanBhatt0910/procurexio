@@ -1,16 +1,31 @@
 // src/app/api/vendors/[id]/contacts/route.js
 import { query, getConnection } from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { validateUserContext } from '@/lib/authUtils';
+import { validateNumericId } from '@/lib/authUtils';
 
-// ─── GET /api/vendors/[id]/contacts ─────────────────────────────
+// ─── GET /api/vendors/[id]/contacts ──────────────────
 export async function GET(request, { params }) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
-  const { id }    = await params;
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
+  }
+
+  const { companyId, role } = validated;
+  const { id: rawId } = await params;
+
   if (!hasPermission(role, PERMISSIONS.VIEW_VENDORS))
     return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+  // CRITICAL: Validate URL parameter is numeric
+  const { ok: idOk, value: id } = validateNumericId(rawId);
+  if (!idOk) {
+    return Response.json({ error: 'Invalid vendor ID' }, { status: 400 });
+  }
 
   try {
     // Confirm vendor belongs to this company

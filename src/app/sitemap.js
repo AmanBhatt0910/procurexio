@@ -1,7 +1,9 @@
 // src/app/sitemap.js
 
+import { BASE_URL } from '@/config/api';
+
 export default function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://procurexio.com';
+  const baseUrl = BASE_URL;
 
   return [
     {

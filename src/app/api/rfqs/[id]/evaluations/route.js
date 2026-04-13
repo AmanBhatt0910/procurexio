@@ -1,14 +1,22 @@
 // src/app/api/rfqs/[id]/evaluations/route.js
 import db from '@/lib/db';
+import { validateUserContext, validateNumericId } from '@/lib/authUtils';
 
 export async function GET(request, { params }) {
-  const { id } = await params;
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  const { id: rawId } = await params;
+  const { ok: idOk, value: id } = validateNumericId(rawId);
+  if (!idOk) return Response.json({ error: 'Invalid RFQ ID' }, { status: 400 });
 
-  if (!['super_admin', 'company_admin', 'manager', 'employee'].includes(role)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin', 'company_admin', 'manager', 'employee'],
+    requireCompanyId: true,
+  });
+
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { companyId } = validated;
 
   // Verify RFQ belongs to company
   const [rfqs] = await db.query(

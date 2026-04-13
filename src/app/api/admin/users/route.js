@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 // GET /api/admin/users — list all users across all companies for super_admin
 export async function GET(request) {
-  const role = request.headers.get('x-user-role');
-  if (role !== 'super_admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin'],
+    requireUserId: true,
+  });
+
+  if (!validated.ok) {
+    return NextResponse.json(
+      { error: validated.error },
+      { status: validated.status }
+    );
   }
 
   const { searchParams } = new URL(request.url);

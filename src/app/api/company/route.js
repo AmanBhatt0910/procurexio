@@ -1,14 +1,19 @@
 // src/app/api/company/route.js
 import pool from '@/lib/db';
+import { validateUserContext } from '@/lib/authUtils';
 
 // GET /api/company — fetch own company profile
 export async function GET(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { companyId, role } = validated;
 
   // vendor_user should not access company profile details
   if (role === 'vendor_user') {
@@ -38,15 +43,17 @@ export async function GET(request) {
 
 // PUT /api/company — update company profile
 export async function PUT(request) {
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ['super_admin', 'company_admin'],
+    requireCompanyId: true,
+  });
 
-  if (!companyId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: validated.status });
   }
-  if (!['super_admin', 'company_admin'].includes(role)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
+  const { companyId } = validated;
 
   const body = await request.json();
   const { name, email } = body;

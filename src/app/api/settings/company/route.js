@@ -6,27 +6,25 @@ import { NextResponse } from 'next/server';
 import { getCompanySettings, updateCompanySettings } from '@/lib/settingsService';
 import { logAction, ACTION } from '@/lib/audit';
 import { validateCurrency } from '@/lib/validation';
+import { validateUserContext } from '@/lib/authUtils';
 
 const ADMIN_ROLES = ['super_admin', 'company_admin'];
 
 export async function GET(request) {
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireCompanyId: true,
+  });
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
+
+  const { companyId, role } = validated;
 
   // vendor_user has no company context
   if (role === 'vendor_user') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  // super_admin has no companyId — they manage via /dashboard/admin
-  const cid = role === 'super_admin' ? null : companyId;
-  if (!cid) {
-    return NextResponse.json({ error: 'No company associated with this account.' }, { status: 400 });
   }
 
   try {
@@ -42,20 +40,17 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
-  const role      = request.headers.get('x-user-role');
-  const userEmail = request.headers.get('x-user-email') || null;
+  // CRITICAL: Validate against JWT, not headers
+  const validated = await validateUserContext(request, {
+    requireRole: ADMIN_ROLES,
+    requireCompanyId: true,
+  });
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
-  if (!ADMIN_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Forbidden — admins only' }, { status: 403 });
-  }
-  if (!companyId) {
-    return NextResponse.json({ error: 'No company associated with this account.' }, { status: 400 });
-  }
+
+  const { userId, companyId, email: userEmail } = validated;
 
   let body;
   try {
