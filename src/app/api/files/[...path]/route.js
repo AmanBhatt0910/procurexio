@@ -4,12 +4,30 @@
 import { NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import { join, resolve } from 'path';
+import { jwtVerify } from 'jose';
 import pool from '@/lib/db';
 
 export async function GET(request, { params }) {
-  const role      = request.headers.get('x-user-role');
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
+  let role      = request.headers.get('x-user-role');
+  let userId    = request.headers.get('x-user-id');
+  let companyId = request.headers.get('x-company-id');
+
+  // Middleware is skipped for dotted paths (e.g. "/api/files/.../quote.pdf"),
+  // so recover auth context directly from cookie JWT when headers are absent.
+  if (!userId || !role) {
+    const token = request.cookies.get('auth_token')?.value;
+    if (token) {
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        userId = String(payload.userId || '');
+        role = String(payload.role || '');
+        companyId = String(payload.companyId || '');
+      } catch (err) {
+        console.error('File route JWT verification failed:', err?.message || err);
+      }
+    }
+  }
 
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -42,9 +60,16 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Invalid file path structure' }, { status: 400 });
   }
 
-  // Vendor users can only access their own company's files
-  // Buyer-side roles can access any file in their company
-  if (role === 'vendor_user') {
+  const isVendorRole = role === 'vendor_user';
+  const isBuyerRole = ['company_admin', 'manager', 'employee'].includes(role);
+  const isSuperAdmin = role === 'super_admin';
+
+  if (!isVendorRole && !isBuyerRole && !isSuperAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Vendor users can only access their own company's files.
+  if (isVendorRole) {
     // Vendor must belong to this company
     const [[userRow]] = await pool.query(
       `SELECT company_id FROM users WHERE id = ? LIMIT 1`,
@@ -53,12 +78,13 @@ export async function GET(request, { params }) {
     if (!userRow || String(userRow.company_id) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else if (['company_admin', 'manager', 'employee'].includes(role)) {
+  } else if (isBuyerRole) {
+    // Buyer-side roles can access files only inside their own company.
     if (String(companyId) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } else {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  } else if (isSuperAdmin) {
+    // Super admin has platform-wide read access.
   }
 
   // Verify the attachment exists in DB (source of truth — prevents serving arbitrary files)

@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   const role      = request.headers.get('x-user-role');
   const companyId = request.headers.get('x-company-id');
 
-  if (!['company_admin', 'manager', 'employee'].includes(role)) {
+  if (!['super_admin', 'company_admin', 'manager', 'employee'].includes(role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
