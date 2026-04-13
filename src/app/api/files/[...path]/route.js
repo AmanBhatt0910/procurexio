@@ -4,12 +4,30 @@
 import { NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import { join, resolve } from 'path';
+import { jwtVerify } from 'jose';
 import pool from '@/lib/db';
 
 export async function GET(request, { params }) {
-  const role      = request.headers.get('x-user-role');
-  const userId    = request.headers.get('x-user-id');
-  const companyId = request.headers.get('x-company-id');
+  let role      = request.headers.get('x-user-role');
+  let userId    = request.headers.get('x-user-id');
+  let companyId = request.headers.get('x-company-id');
+
+  // Middleware is skipped for dotted paths (e.g. "/api/files/.../quote.pdf"),
+  // so recover auth context directly from cookie JWT when headers are absent.
+  if (!userId || !role) {
+    const token = request.cookies.get('auth_token')?.value;
+    if (token) {
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        userId = String(payload.userId || '');
+        role = String(payload.role || '');
+        companyId = String(payload.companyId || '');
+      } catch {
+        // Keep default values; unauthorized response is handled below.
+      }
+    }
+  }
 
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -53,6 +71,8 @@ export async function GET(request, { params }) {
     if (!userRow || String(userRow.company_id) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+  } else if (role === 'super_admin') {
+    // Super admin can access files across companies.
   } else if (['company_admin', 'manager', 'employee'].includes(role)) {
     if (String(companyId) !== fileCompanyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

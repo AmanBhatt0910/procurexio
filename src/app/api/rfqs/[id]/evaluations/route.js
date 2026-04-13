@@ -1,13 +1,12 @@
 // src/app/api/rfqs/[id]/evaluations/route.js
 import db from '@/lib/db';
-import { canManageRFQ } from '@/lib/rbac';
 
 export async function GET(request, { params }) {
   const { id } = await params;
   const companyId = request.headers.get('x-company-id');
   const role      = request.headers.get('x-user-role');
 
-  if (!canManageRFQ(role)) {
+  if (!['super_admin', 'company_admin', 'manager', 'employee'].includes(role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 

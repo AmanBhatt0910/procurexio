@@ -133,8 +133,8 @@ export default function AwardContractPage({ params }) {
     : Infinity;
 
   return (
-    <RoleGuard roles={[ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN]}>
-      <DashboardLayout>
+    <DashboardLayout>
+      <RoleGuard roles={[ROLES.COMPANY_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.SUPER_ADMIN]}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
@@ -551,7 +551,7 @@ export default function AwardContractPage({ params }) {
             </button>
           </div>
         )}
-      </DashboardLayout>
-    </RoleGuard>
+      </RoleGuard>
+    </DashboardLayout>
   );
 }

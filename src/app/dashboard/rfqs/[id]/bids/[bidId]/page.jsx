@@ -73,7 +73,7 @@ export default function BidDetailPage() {
           --shadow:0 1px 3px rgba(15,14,13,.06),0 8px 32px rgba(15,14,13,.08);
         }
         body { font-family: 'DM Sans', sans-serif; }
-        .bid-detail { max-width: 840px; animation: fadeUp .3s ease both; }
+        .bid-detail { max-width: 840px; margin: 0 auto; animation: fadeUp .3s ease both; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
         .card {
           background: var(--white); border: 1px solid var(--border);
