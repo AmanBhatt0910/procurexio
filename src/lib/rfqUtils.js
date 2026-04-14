@@ -12,7 +12,7 @@ import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline'
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;
-const REMINDER_WINDOWS = [12, 6];
+const REMINDER_WINDOWS = [24, 12, 6];
 const EFFECTIVE_DEADLINE_SQL_BY_COLUMN = Object.freeze({
   deadline: `(CASE WHEN TIME(deadline) = '00:00:00' THEN DATE_ADD(DATE(deadline), INTERVAL 1 DAY) ELSE deadline END)`,
   'r.deadline': `(CASE WHEN TIME(r.deadline) = '00:00:00' THEN DATE_ADD(DATE(r.deadline), INTERVAL 1 DAY) ELSE r.deadline END)`,
@@ -22,10 +22,11 @@ const effectiveDeadlineSql = (column = 'deadline') =>
 
 function isInReminderWindow(msUntilDeadline, hoursBefore) {
   const HOUR = 60 * 60 * 1000;
-  const [firstWindow, secondWindow] = REMINDER_WINDOWS;
-  if (hoursBefore === firstWindow) return msUntilDeadline <= firstWindow * HOUR && msUntilDeadline > secondWindow * HOUR;
-  if (hoursBefore === secondWindow) return msUntilDeadline <= secondWindow * HOUR && msUntilDeadline > 0;
-  return false;
+  const idx = REMINDER_WINDOWS.indexOf(hoursBefore);
+  if (idx === -1) return false;
+  const upper = hoursBefore * HOUR;
+  const lower = idx + 1 < REMINDER_WINDOWS.length ? REMINDER_WINDOWS[idx + 1] * HOUR : 0;
+  return msUntilDeadline <= upper && msUntilDeadline > lower;
 }
 
 async function getVendorRecipientsForRfq(rfqId) {

@@ -721,7 +721,7 @@ export async function sendRFQDeadlineExtendedEmail({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// sendRFQDeadlineReminderEmail — notify vendors before deadline (12h / 6h)
+// sendRFQDeadlineReminderEmail — notify vendors before deadline (24h / 12h / 6h)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendRFQDeadlineReminderEmail({
   to,
