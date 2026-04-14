@@ -7,7 +7,7 @@
  *
  * Scheduled jobs:
  *   - Close expired RFQs  — 0 0 * * *   (daily at midnight UTC)
- *   - Send deadline reminders — "0 *\/6 * * *" (every 6 hours UTC)
+ *   - Send deadline reminders — every 6 hours UTC
  *
  * Both jobs authenticate via Bearer token (CRON_SECRET env var) to match the
  * existing endpoint security model in /api/rfqs/close-expired and
@@ -30,6 +30,13 @@ const CRON_SECRET = process.env.CRON_SECRET  || '';
 
 // Request timeout in milliseconds
 const REQUEST_TIMEOUT_MS = 60_000;
+
+// ── Cron schedules ────────────────────────────────────────────────────────────
+
+/** Daily at midnight UTC */
+const SCHEDULE_CLOSE_EXPIRED = '0 0 * * *';
+/** Every 6 hours UTC */
+const SCHEDULE_REMINDERS     = '0 */6 * * *';
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
@@ -78,7 +85,9 @@ function makeRequest(endpoint) {
     });
 
     req.setTimeout(REQUEST_TIMEOUT_MS, () => {
-      req.destroy(new Error(`Request to ${endpoint} timed out after ${REQUEST_TIMEOUT_MS / 1000}s`));
+      const timeoutError = new Error(`Request to ${endpoint} timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      req.destroy();
+      reject(timeoutError);
     });
 
     req.on('error', reject);
@@ -115,7 +124,7 @@ export function startCronJobs() {
   });
 
   // ── Job 1: Close expired RFQs — daily at midnight UTC ────────────────────
-  cron.schedule('0 0 * * *', async () => {
+  cron.schedule(SCHEDULE_CLOSE_EXPIRED, async () => {
     const ts = new Date().toISOString();
     log.info('cron_run', { job: 'close-expired', ts });
     try {
@@ -127,7 +136,7 @@ export function startCronJobs() {
   }, { timezone: 'UTC' });
 
   // ── Job 2: Send deadline reminders — every 6 hours UTC ───────────────────
-  cron.schedule('0 */6 * * *', async () => {
+  cron.schedule(SCHEDULE_REMINDERS, async () => {
     const ts = new Date().toISOString();
     log.info('cron_run', { job: 'reminders', ts });
     try {
@@ -141,8 +150,8 @@ export function startCronJobs() {
   log.info('cron_started', {
     message: 'Cron jobs registered successfully.',
     jobs: [
-      { name: 'close-expired', schedule: '0 0 * * *',   description: 'Close expired RFQs (daily at midnight UTC)' },
-      { name: 'reminders',     schedule: '0 */6 * * *', description: 'Send deadline reminders (every 6 hours UTC)' },
+      { name: 'close-expired', schedule: SCHEDULE_CLOSE_EXPIRED, description: 'Close expired RFQs (daily at midnight UTC)' },
+      { name: 'reminders',     schedule: SCHEDULE_REMINDERS,     description: 'Send deadline reminders (every 6 hours UTC)' },
     ],
   });
 }
