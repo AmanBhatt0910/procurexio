@@ -81,7 +81,7 @@ Receive invite email → Register → `/dashboard/bids` → Submit bid with line
 | **Styling** | Tailwind CSS + inline CSS-in-JSX |
 | **Database** | MySQL |
 | **Auth** | JWT (HTTP-only cookies) + Google OAuth 2.0 |
-| **Email** | Resend API |
+| **Email** | Nodemailer (SMTP via Hostinger) |
 | **Deployment** | Vercel (recommended) or any Node.js host |
 
 ---
@@ -92,7 +92,7 @@ Receive invite email → Register → `/dashboard/bids` → Submit bid with line
 
 - Node.js 18+
 - MySQL 8.0+
-- A [Resend](https://resend.com) account (for transactional email)
+- An SMTP mailbox (e.g., Hostinger) for transactional email
 
 ### 1. Clone and install
 
@@ -121,7 +121,10 @@ cp .env.example .env.local
 | `DB_PASSWORD` | string | Database password (use strong password in production) |
 | `DB_NAME` | string | Database name |
 | `JWT_SECRET` | string | Cryptographic key for JWT (min 32 chars, use strong random value) |
-| `RESEND_API_KEY` | string | API key from Resend for email delivery |
+| `SMTP_HOST` | string | SMTP server hostname (e.g., smtp.hostinger.com) |
+| `SMTP_PORT` | number | SMTP port — 465 for SSL, 587 for STARTTLS |
+| `SMTP_USER` | string | SMTP auth username (your email address) |
+| `SMTP_PASS` | string | SMTP auth password |
 | `INVITE_FROM_EMAIL` | string | Email address for system notifications |
 | `NEXT_PUBLIC_APP_NAME` | string | Application name (public, safe to expose) |
 | `NEXT_PUBLIC_BASE_URL` | string | Application URL (public, for redirects) |
@@ -217,7 +220,9 @@ Ensure your MySQL instance is accessible and all environment variables are set i
 | `DB_PASSWORD` | ✅ | Database password |
 | `DB_NAME` | ✅ | Database name |
 | `JWT_SECRET` | ✅ | Min 32 chars, keep secret |
-| `RESEND_API_KEY` | ✅ | For invite and reset emails |
+| `SMTP_HOST` | ✅ | SMTP server hostname |
+| `SMTP_USER` | ✅ | SMTP auth username |
+| `SMTP_PASS` | ✅ | SMTP auth password |
 | `NEXT_PUBLIC_BASE_URL` | ✅ | Your production URL |
 | `GOOGLE_CLIENT_ID` | Optional | For Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Optional | For Google OAuth |
