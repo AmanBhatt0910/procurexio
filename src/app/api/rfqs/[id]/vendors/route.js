@@ -151,7 +151,7 @@ export async function POST(request, { params }) {
               rfqTitle:     rfq.title,
               rfqReference: rfq.reference_number,
               deadline:     rfq.deadline,
-              inviteLink:   `${BASE_URL}/dashboard/bids/${id}`,
+              inviteLink:   `${NEXT_PUBLIC_BASE_URL}/dashboard/bids/${id}`,
             });
           } catch (emailErr) {
             console.error(`Failed to send RFQ invite email to vendor ${vendor.id}:`, emailErr);

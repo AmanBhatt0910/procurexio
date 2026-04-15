@@ -22,7 +22,7 @@ export async function GET(request) {
     status:    'ok',
     message:   'Cron scheduler is active',
     timestamp: new Date().toISOString(),
-    baseUrl:   process.env.APP_BASE_URL || 'http://localhost:3001',
+    baseUrl:   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001',
     jobs: [
       {
         name:        'close-expired',

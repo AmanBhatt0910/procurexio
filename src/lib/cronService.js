@@ -25,7 +25,7 @@ import { log } from '@/lib/logger';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
-const BASE_URL    = process.env.APP_BASE_URL || 'http://localhost:3001';
+const BASE_URL    = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001';
 const CRON_SECRET = process.env.CRON_SECRET  || '';
 
 // Request timeout in milliseconds
