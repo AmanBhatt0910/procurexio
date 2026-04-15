@@ -165,7 +165,7 @@ export default function RFQDetailPage({ params }) {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ budget: newBudget > 0 ? newBudget : null }),
-        }).catch(() => {});
+        }).catch((err) => { console.warn('[RFQ budget sync] background update failed:', err); });
       }, 400);
     }
   };
