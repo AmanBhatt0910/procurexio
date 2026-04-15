@@ -3,10 +3,22 @@
 // Centralized email configuration
 // use this to manage all email-related settings from one place
 
-// ── Email Provider Settings ─────────────────────────────────────────────
+// ── SMTP Provider Settings ──────────────────────────────────────────────
 
-/** Email address to send from (e.g., 'Procurexio <no-reply@procurexio.com>') */
-export const EMAIL_FROM = process.env.INVITE_FROM_EMAIL || 'Procurexio <no-reply@procurexio.com>';
+/** SMTP host (e.g., smtp.hostinger.com) */
+export const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
+
+/** SMTP port — 465 for SSL, 587 for TLS */
+export const SMTP_PORT = parseInt(process.env.SMTP_PORT, 10) || 465;
+
+/** SMTP auth username */
+export const SMTP_USER = process.env.SMTP_USER;
+
+/** SMTP auth password */
+export const SMTP_PASS = process.env.SMTP_PASS;
+
+/** Email address to send from (e.g., 'Procurexio <noreply@procurexio.com>') */
+export const EMAIL_FROM = process.env.INVITE_FROM_EMAIL || 'Procurexio <noreply@procurexio.com>';
 
 /** Application name used in emails */
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Procurexio';

@@ -1,17 +1,32 @@
 // src/lib/mailer.js
-// Uses Resend (https://resend.com) — install: npm install resend
-// Set RESEND_API_KEY and INVITE_FROM_EMAIL in your .env.local
+// Uses Nodemailer with SMTP transport (smtp.hostinger.com:465 SSL)
+// Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS in your .env.local
 
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { INVITATION_EXPIRY_DAYS, PASSWORD_RESET_EXPIRY_HOURS } from '@/config/constants';
 import { BASE_URL } from '@/config/api';
 import { EMAIL_FROM, APP_NAME } from '@/config/email';
 
-// Lazy initialization — avoids build-time errors when RESEND_API_KEY is absent
-let _resend = null;
-function getResend() {
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
-  return _resend;
+// Lazy initialization — avoids build-time errors when SMTP credentials are absent
+let _transporter = null;
+function getTransporter() {
+  if (!_transporter) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      throw new Error(
+        'SMTP credentials are not configured. Set SMTP_USER and SMTP_PASS in your environment variables.'
+      );
+    }
+    _transporter = nodemailer.createTransport({
+      host:   process.env.SMTP_HOST || 'smtp.hostinger.com',
+      port:   parseInt(process.env.SMTP_PORT, 10) || 465,
+      secure: true, // SSL on port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return _transporter;
 }
 
 const FROM = EMAIL_FROM;
@@ -27,15 +42,13 @@ export async function sendInviteEmail({ to, token, role, companyName, invitedBy 
 
   const html = buildTeamInviteHtml({ inviteUrl, companyName, invitedBy, formattedRole, appName: APP_NAME });
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `You've been invited to join ${companyName} on ${APP_NAME}`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,15 +59,13 @@ export async function sendPasswordResetTokenEmail({ to, name, token }) {
 
   const html = buildPasswordResetTokenHtml({ name, resetUrl, appName: APP_NAME });
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `Reset your ${APP_NAME} password`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,15 +76,13 @@ export async function sendVendorInviteEmail({ to, token, vendorName, companyName
 
   const html = buildVendorInviteHtml({ inviteUrl, vendorName, companyName, invitedBy, appName: APP_NAME });
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `${companyName} has invited ${vendorName} to join ${APP_NAME}`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,15 +95,13 @@ export async function sendWelcomeEmail({ to, name, companyName }) {
 
   const html = buildWelcomeHtml({ name, companyName, dashboardUrl, vendorsUrl, rfqUrl, appName: APP_NAME });
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `Welcome to ${APP_NAME}, ${name.split(' ')[0]}! Your workspace is ready.`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 export default function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
@@ -489,15 +496,13 @@ function buildWelcomeHtml({ name, companyName, dashboardUrl, vendorsUrl, rfqUrl,
 export async function sendVendorRFQInviteEmail({ to, vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink }) {
   const html = buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink, appName: APP_NAME });
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `${companyName} has invited you to bid on: ${rfqTitle}`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -536,14 +541,13 @@ export async function sendBidSubmittedEmail({ to, managerName, vendorName, rfqTi
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `New bid received on "${rfqTitle}" from ${vendorName}`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -582,14 +586,13 @@ export async function sendBidUpdatedEmail({ to, managerName, vendorName, rfqTitl
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `Bid updated on "${rfqTitle}" by ${vendorName}`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -634,14 +637,13 @@ export async function sendRFQClosedEmail({ to, vendorName, rfqTitle, rfqReferenc
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `RFQ Closed — ${rfqTitle}`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 function formatDeadlineDateTime(deadline) {
@@ -710,14 +712,13 @@ export async function sendRFQDeadlineExtendedEmail({
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -765,14 +766,13 @@ export async function sendRFQDeadlineReminderEmail({
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `Reminder: ${rfqTitle} deadline in ${hoursBefore} hours`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -812,14 +812,13 @@ export async function sendContractAwardedEmail({ to, vendorName, rfqTitle, rfqRe
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `🏆 Contract Awarded — ${rfqTitle}`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -860,14 +859,13 @@ export async function sendStaffContractAwardedEmail({ to, staffName, vendorName,
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `Contract awarded — ${rfqTitle} (${contractReference})`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -906,14 +904,13 @@ export async function sendBidRejectedEmail({ to, vendorName, rfqTitle, rfqRefere
 </table>
 </body></html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from: FROM,
     to,
     subject: `Bid status update for "${rfqTitle}"`,
     html,
   });
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
 
 function buildVendorRFQInviteHtml({ vendorName, companyName, rfqTitle, rfqReference, deadline, inviteLink, appName }) {
@@ -1175,13 +1172,11 @@ export async function sendPlanChangeEmail({ to, adminName, companyName, oldPlan,
 </body>
 </html>`;
 
-  const { data, error } = await getResend().emails.send({
+  const info = await getTransporter().sendMail({
     from:    FROM,
     to,
     subject: `Your ${APP_NAME} plan has been ${actionLabel} to ${newPlan}`,
     html,
   });
-
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  return info;
 }
