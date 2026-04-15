@@ -1,6 +1,6 @@
 // src/app/dashboard/rfqs/[id]/page.jsx
 'use client';
-import { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, useRef, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -25,6 +25,15 @@ const VALID_TRANSITIONS = {
 function formatDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/** Sum qty × target_price across all items. */
+function computeBudgetFromItems(itemsList) {
+  return itemsList.reduce((sum, item) => {
+    const qty   = parseFloat(item.quantity)     || 0;
+    const price = parseFloat(item.target_price) || 0;
+    return sum + qty * price;
+  }, 0);
 }
 
 function SectionCard({ title, children, action }) {
@@ -65,12 +74,25 @@ export default function RFQDetailPage({ params }) {
   const [saving, setSaving]     = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Debounce timer for background budget sync
+  const budgetSyncTimer = useRef(null);
+
   // Status transition
   const [transitioning, setTransitioning] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [showExtendDeadlineBox, setShowExtendDeadlineBox] = useState(false);
   const [extendDeadlineInput, setExtendDeadlineInput] = useState('');
   const [extendDeadlineMin, setExtendDeadlineMin] = useState('');
+
+  // Compute budget from items (same logic as dashboard/rfqs/new)
+  const calculatedBudget = computeBudgetFromItems(items);
+
+  // Memoized currency formatter for the budget fields
+  const activeCurrency = (editing ? editForm.currency : null) || rfq?.currency || 'USD';
+  const budgetFormatter = useMemo(
+    () => new Intl.NumberFormat('en-US', { style: 'currency', currency: activeCurrency, maximumFractionDigits: 2 }),
+    [activeCurrency]
+  );
 
   const nowDateString = useMemo(() => {
     const d = new Date();
@@ -94,12 +116,16 @@ export default function RFQDetailPage({ params }) {
     })();
   }, [id]);
 
+  // Clear any pending budget-sync timer when the component unmounts
+  useEffect(() => {
+    return () => clearTimeout(budgetSyncTimer.current);
+  }, []);
+
   const startEdit = () => {
     setEditForm({
       title:       rfq.title,
       description: rfq.description || '',
       deadline:    rfq.deadline ? new Date(rfq.deadline).toISOString().slice(0, 16) : '',
-      budget:      rfq.budget || '',
       currency:    rfq.currency,
     });
     setEditError('');
@@ -115,7 +141,7 @@ export default function RFQDetailPage({ params }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...editForm,
-          budget:   editForm.budget   || null,
+          budget:   calculatedBudget > 0 ? calculatedBudget : null,
           deadline: editForm.deadline || null,
         }),
       });
@@ -125,6 +151,23 @@ export default function RFQDetailPage({ params }) {
       setEditing(false);
     } catch { setEditError('Network error'); }
     setSaving(false);
+  };
+
+  // Update items state and silently sync the calculated budget to the DB
+  const handleItemsChange = (newItems) => {
+    setItems(newItems);
+    if (rfq?.status === 'draft' && canWrite) {
+      // Debounce rapid changes so only the last update fires the network request
+      clearTimeout(budgetSyncTimer.current);
+      budgetSyncTimer.current = setTimeout(() => {
+        const newBudget = computeBudgetFromItems(newItems);
+        fetch(`/api/rfqs/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ budget: newBudget > 0 ? newBudget : null }),
+        }).catch((err) => { console.warn('[RFQ budget sync] background update failed:', err); });
+      }, 400);
+    }
   };
 
   const handleTransition = async (toStatus) => {
@@ -559,13 +602,15 @@ export default function RFQDetailPage({ params }) {
                   />
                 </div>
                 <div>
-                  <label className="field-label">Budget</label>
+                  <label className="field-label">Budget (auto-calculated)</label>
                   <input
-                    type="number" min="0"
                     className="form-input"
-                    value={editForm.budget}
-                    onChange={e => setEditForm(f => ({ ...f, budget: e.target.value }))}
-                    placeholder="0.00"
+                    value={calculatedBudget > 0
+                      ? budgetFormatter.format(calculatedBudget)
+                      : ''}
+                    readOnly
+                    placeholder="Add items with prices to auto-fill"
+                    style={{ cursor: 'default', background: 'var(--surface)', color: calculatedBudget > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}
                   />
                 </div>
                 <div>
@@ -618,9 +663,11 @@ export default function RFQDetailPage({ params }) {
                 <div>
                   <div className="meta-item-label">Budget</div>
                   <div className="meta-item-value">
-                    {rfq.budget
-                      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: rfq.currency }).format(rfq.budget)
-                      : '—'}
+                    {calculatedBudget > 0
+                      ? budgetFormatter.format(calculatedBudget)
+                      : rfq.budget
+                        ? budgetFormatter.format(rfq.budget)
+                        : '—'}
                   </div>
                 </div>
                 <div>
@@ -651,7 +698,7 @@ export default function RFQDetailPage({ params }) {
             currency={rfq.currency}
             canWrite={isEditable}
             rfqId={id}
-            onItemsChange={setItems}
+            onItemsChange={handleItemsChange}
           />
         </SectionCard>
 

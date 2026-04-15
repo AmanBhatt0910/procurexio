@@ -4,7 +4,7 @@ import { requireRole } from '@/lib/rbac';
 
 // Helper — verify RFQ belongs to tenant and is editable
 async function loadEditableRfq(rfqId, companyId) {
-  const [rows] = await query(
+  const rows = await query(
     `SELECT * FROM rfqs WHERE id = ? AND company_id = ?`,
     [rfqId, companyId]
   );
@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    const [rfqRows] = await query(
+    const rfqRows = await query(
       `SELECT id FROM rfqs WHERE id = ? AND company_id = ?`,
       [id, companyId]
     );
@@ -36,7 +36,7 @@ export async function GET(request, { params }) {
       return Response.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
-    const [items] = await query(
+    const items = await query(
       `SELECT * FROM rfq_items WHERE rfq_id = ? ORDER BY sort_order ASC, id ASC`,
       [id]
     );
@@ -73,19 +73,19 @@ export async function POST(request, { params }) {
 
   try {
     // Determine next sort order
-    const [maxRows] = await query(
+    const maxRows = await query(
       `SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM rfq_items WHERE rfq_id = ?`,
       [id]
     );
     const sortOrder = maxRows[0].max_order + 1;
 
-    const [result] = await query(
+    const result = await query(
       `INSERT INTO rfq_items (rfq_id, company_id, description, quantity, unit, target_price, sort_order)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [id, companyId, description.trim(), quantity || 1, unit || null, target_price || null, sortOrder]
     );
 
-    const [newItem] = await query(`SELECT * FROM rfq_items WHERE id = ?`, [result.insertId]);
+    const newItem = await query(`SELECT * FROM rfq_items WHERE id = ?`, [result.insertId]);
 
     return Response.json(
       { message: 'Item added', data: { item: newItem[0] } },
