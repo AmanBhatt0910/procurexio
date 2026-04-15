@@ -105,7 +105,7 @@ export async function sendWelcomeEmail({ to, name, companyName }) {
 }
 
 export default function buildLogoHeader(bgColor = '#0f0e0d', extraContent = '') {
-  const logoUrl = `${BASE_URL}/logo-126x36.png`; 
+  const logoUrl = `${BASE_URL}/logo.png`; 
   // ⚠️ IMPORTANT: This must be a COMPRESSED image (<50KB, ~250x70px)
 
   return `
