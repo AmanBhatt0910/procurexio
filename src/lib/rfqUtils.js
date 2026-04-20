@@ -138,13 +138,12 @@ export async function autoCloseIfExpired(rfqId, companyId) {
       [rfqId, companyId]
     );
 
-    // Only send notifications if an actual row was updated
+    // Only send notifications if an actual row was updated.
+    // Fire-and-forget so the caller (GET handler) is not blocked by email I/O.
     if (result.affectedRows > 0) {
-      try {
-        await sendRFQClosureEmails(rfqId);
-      } catch (emailErr) {
+      sendRFQClosureEmails(rfqId).catch(emailErr => {
         console.error('autoCloseIfExpired: email error:', emailErr);
-      }
+      });
     }
   } catch (err) {
     console.error('autoCloseIfExpired error:', err);

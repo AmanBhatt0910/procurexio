@@ -31,10 +31,12 @@ export async function GET(request, { params }) {
 
     const { vendor_id: vendorId, company_id: companyId } = userInfo;
 
-    // Auto-close if deadline has passed
+    // Auto-close if deadline has passed (DB update is awaited; emails are fire-and-forget)
     await autoCloseIfExpired(rfqId, companyId);
-    // Opportunistic reminder processing (deduplicated)
-    await sendDueRFQDeadlineReminders({ companyId, rfqId });
+    // Opportunistic reminder processing — fire-and-forget so it never delays the response
+    sendDueRFQDeadlineReminders({ companyId, rfqId }).catch(err =>
+      console.error('sendDueRFQDeadlineReminders error:', err)
+    );
 
     // Verify invitation
     const [[invite]] = await pool.query(

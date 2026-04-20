@@ -25,10 +25,12 @@ export async function GET(request, { params }) {
   if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    // Auto-close if deadline has passed
+    // Auto-close if deadline has passed (DB update is awaited; emails are fire-and-forget)
     await autoCloseIfExpired(id, companyId);
-    // Opportunistic reminder processing (deduplicated)
-    await sendDueRFQDeadlineReminders({ companyId, rfqId: id });
+    // Opportunistic reminder processing — fire-and-forget so it never delays the response
+    sendDueRFQDeadlineReminders({ companyId, rfqId: id }).catch(err =>
+      console.error('sendDueRFQDeadlineReminders error:', err)
+    );
 
     // Core RFQ — query() already returns the rows array directly
     const rfqRows = await query(
