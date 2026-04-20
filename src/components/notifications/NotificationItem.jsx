@@ -1,6 +1,6 @@
 'use client';
 
-import { timeAgo } from '@/lib/timeAgo';
+import { timeAgo } from '@/lib/utils/timeAgo';
 
 const TYPE_ICONS = {
   rfq_published:            '📋',

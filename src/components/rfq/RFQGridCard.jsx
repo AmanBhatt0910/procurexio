@@ -2,7 +2,7 @@
 // src/components/rfq/RFQGridCard.jsx
 
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 function formatDate(d) {
   if (!d) return '—';

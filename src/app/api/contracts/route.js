@@ -1,6 +1,6 @@
 // src/app/api/contracts/route.js
 import db from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 export async function GET(request) {
   // CRITICAL: Validate against JWT, not headers

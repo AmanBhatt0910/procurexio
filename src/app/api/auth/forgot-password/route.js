@@ -9,12 +9,12 @@
 // to prevent account enumeration.
 
 import { query } from '@/lib/db';
-import { sendPasswordResetTokenEmail } from '@/lib/mailer';
-import { generatePasswordResetToken, expiresInHours, toMySQLDatetime } from '@/lib/security';
-import { logAction, ACTION } from '@/lib/audit';
-import { validateEmail } from '@/lib/validation';
+import { sendPasswordResetTokenEmail } from '@/lib/email/mailer';
+import { generatePasswordResetToken, expiresInHours, toMySQLDatetime } from '@/lib/security/security';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validateEmail } from '@/lib/utils/validation';
 import { PASSWORD_RESET_EXPIRY_HOURS } from '@/config/constants';
-import { logAuthEvent, getRequestIP } from '@/lib/logger';
+import { logAuthEvent, getRequestIP } from '@/lib/logging/logger';
 
 const GENERIC_OK = {
   message: 'If that email is registered, a password reset link has been sent to it.',

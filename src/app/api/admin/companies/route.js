@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/admin/companies — list all companies for super_admin
 export async function GET(request) {

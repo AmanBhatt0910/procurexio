@@ -3,9 +3,9 @@
 // PUT /api/settings/user-access — change a user's role (company_admin / super_admin only)
 
 import { NextResponse } from 'next/server';
-import { getCompanyUsers, getUserInCompany, updateUserRole } from '@/lib/settingsService';
-import { logAction, ACTION } from '@/lib/audit';
-import { validateUserContext } from '@/lib/authUtils';
+import { getCompanyUsers, getUserInCompany, updateUserRole } from '@/lib/services/settingsService';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 const ADMIN_ROLES   = ['super_admin', 'company_admin'];
 const ALLOWED_ROLES_ENUM = ['company_admin', 'manager', 'employee', 'vendor_user'];

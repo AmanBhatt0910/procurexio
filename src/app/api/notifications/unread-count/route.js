@@ -1,5 +1,5 @@
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/notifications/unread-count
 // Lightweight — returns { count: N, latestNotification }. Used for badge polling.

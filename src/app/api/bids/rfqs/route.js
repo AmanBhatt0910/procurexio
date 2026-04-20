@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/bids/rfqs — vendor_user: list of RFQs they are invited to
 export async function GET(request) {

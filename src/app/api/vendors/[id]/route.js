@@ -1,7 +1,7 @@
 // src/app/api/vendors/[id]/route.js
 import { query, getConnection } from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 async function getVendor(vendorId, companyId) {
   const rows = await query(

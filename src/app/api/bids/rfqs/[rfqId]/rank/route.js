@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
-import { validateNumericId } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
+import { validateNumericId } from '@/lib/auth/authUtils';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(

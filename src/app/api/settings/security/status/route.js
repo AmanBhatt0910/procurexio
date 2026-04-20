@@ -2,7 +2,7 @@
 // GET /api/settings/security/status — 2FA status, last password change, active sessions
 
 import { NextResponse } from 'next/server';
-import { getSecurityStatus, getActiveSessions } from '@/lib/settingsService';
+import { getSecurityStatus, getActiveSessions } from '@/lib/services/settingsService';
 
 export async function GET(request) {
   const userId = request.headers.get('x-user-id');

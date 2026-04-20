@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { autoCloseIfExpired, sendDueRFQDeadlineReminders } from '@/lib/rfqUtils';
+import { autoCloseIfExpired, sendDueRFQDeadlineReminders } from '@/lib/rfq/rfqUtils';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(

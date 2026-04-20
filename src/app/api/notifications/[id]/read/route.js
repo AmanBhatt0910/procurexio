@@ -1,6 +1,6 @@
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
-import { validateNumericId } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
+import { validateNumericId } from '@/lib/auth/authUtils';
 
 // PATCH /api/notifications/[id]/read
 // Marks a single notification as read. Must belong to requesting user.

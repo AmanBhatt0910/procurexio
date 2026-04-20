@@ -2,8 +2,8 @@
 // GET /api/settings/billing — subscription & billing info (admins only)
 
 import { NextResponse } from 'next/server';
-import { getBillingInfo } from '@/lib/settingsService';
-import { validateUserContext } from '@/lib/authUtils';
+import { getBillingInfo } from '@/lib/services/settingsService';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 const ALLOWED_ROLES = ['super_admin', 'company_admin'];
 

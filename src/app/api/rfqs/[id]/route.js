@@ -1,9 +1,9 @@
 // src/app/api/rfqs/[id]/route.js
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
-import { createNotifications } from '@/lib/notifications';
-import { autoCloseIfExpired, sendDueRFQDeadlineReminders, sendRFQClosureEmails } from '@/lib/rfqUtils';
-import { logAction, ACTION } from '@/lib/audit';
+import { requireRole } from '@/lib/auth/rbac';
+import { createNotifications } from '@/lib/notifications/notifications';
+import { autoCloseIfExpired, sendDueRFQDeadlineReminders, sendRFQClosureEmails } from '@/lib/rfq/rfqUtils';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 // ── Allowed status transitions ──────────────────────────────────────────────
 const TRANSITIONS = {

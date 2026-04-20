@@ -1,6 +1,6 @@
 // src/app/api/vendors/[id]/contacts/[contactId]/route.js
 import { query } from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
 
 // ─── DELETE /api/vendors/[id]/contacts/[contactId] ───────────────
 export async function DELETE(request, { params }) {

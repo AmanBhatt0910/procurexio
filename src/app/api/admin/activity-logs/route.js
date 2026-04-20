@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // Human-readable descriptions for every action type
 const ACTION_DESCRIPTIONS = {

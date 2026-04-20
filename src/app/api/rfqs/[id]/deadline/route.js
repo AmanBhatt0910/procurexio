@@ -1,7 +1,7 @@
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
-import { sendRFQDeadlineExtendedEmails } from '@/lib/rfqUtils';
-import { logAction, ACTION } from '@/lib/audit';
+import { requireRole } from '@/lib/auth/rbac';
+import { sendRFQDeadlineExtendedEmails } from '@/lib/rfq/rfqUtils';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 // Keep at least a short buffer to avoid immediately-expired "future" deadlines.
 const MIN_DEADLINE_OFFSET_MS = 60 * 1000;

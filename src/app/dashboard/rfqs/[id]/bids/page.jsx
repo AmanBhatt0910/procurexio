@@ -7,7 +7,7 @@ import BidComparisonTable from '@/components/bids/BidComparisonTable';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES } from '@/lib/rbac';
+import { ROLES } from '@/lib/auth/rbac';
 
 export default function RFQBidsPage() {
   const { id: rfqId } = useParams();

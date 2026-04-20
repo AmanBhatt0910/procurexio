@@ -3,7 +3,7 @@
 
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 export default function BidGridCard({ rfq, companyCurrency = 'USD', onClick }) {
   const isPast = rfq.deadline ? isDeadlinePassed(rfq.deadline) : false;

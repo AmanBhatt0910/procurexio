@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { autoCloseIfExpired, sendDueRFQDeadlineReminders } from '@/lib/rfqUtils';
+import { autoCloseIfExpired, sendDueRFQDeadlineReminders } from '@/lib/rfq/rfqUtils';
 
 // GET /api/rfqs/[id]/bids — internal: all bids for an RFQ
 export async function GET(request, { params }) {

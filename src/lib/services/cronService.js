@@ -21,7 +21,7 @@
 import cron from 'node-cron';
 import http from 'http';
 import https from 'https';
-import { log } from '@/lib/logger';
+import { log } from '@/lib/logging/logger';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 

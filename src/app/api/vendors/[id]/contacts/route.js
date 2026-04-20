@@ -1,8 +1,8 @@
 // src/app/api/vendors/[id]/contacts/route.js
 import { query, getConnection } from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
-import { validateUserContext } from '@/lib/authUtils';
-import { validateNumericId } from '@/lib/authUtils';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
+import { validateUserContext } from '@/lib/auth/authUtils';
+import { validateNumericId } from '@/lib/auth/authUtils';
 
 // ─── GET /api/vendors/[id]/contacts ──────────────────
 export async function GET(request, { params }) {

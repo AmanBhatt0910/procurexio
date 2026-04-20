@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
-import { getDeadlineTimeLeftMs } from '@/lib/deadline';
+import { getDeadlineTimeLeftMs } from '@/lib/utils/deadline';
 
 function pad(n) { return String(n).padStart(2, '0'); }
 

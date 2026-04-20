@@ -9,7 +9,7 @@ import ContractCard from '@/components/award/ContractCard';
 import BidStatusBadge from '@/components/bids/BidStatusBadge';
 import RoleGuard from '@/components/auth/RoleGuard';
 import {useAuth} from '@/hooks/useAuth';
-import { ROLES } from '@/lib/rbac';
+import { ROLES } from '@/lib/auth/rbac';
 
 function fmt(amount, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);

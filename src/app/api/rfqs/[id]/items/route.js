@@ -1,6 +1,6 @@
 // src/app/api/rfqs/[id]/items/route.js
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
+import { requireRole } from '@/lib/auth/rbac';
 
 // Helper — verify RFQ belongs to tenant and is editable
 async function loadEditableRfq(rfqId, companyId) {

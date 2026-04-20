@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { hasPermission, hasAnyPermission } from '@/lib/rbac';
+import { hasPermission, hasAnyPermission } from '@/lib/auth/rbac';
 
 /**
  * RoleGuard — conditionally renders children based on user role/permissions.

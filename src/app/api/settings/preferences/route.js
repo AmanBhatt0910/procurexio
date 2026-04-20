@@ -3,7 +3,7 @@
 // PUT /api/settings/preferences — update user UI preferences
 
 import { NextResponse } from 'next/server';
-import { getPreferences, updatePreferences } from '@/lib/settingsService';
+import { getPreferences, updatePreferences } from '@/lib/services/settingsService';
 
 const VALID_THEMES = ['light', 'dark', 'system'];
 

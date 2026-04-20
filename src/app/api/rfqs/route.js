@@ -1,9 +1,9 @@
 // src/app/api/rfqs/route.js
 import { query, queryRaw, getConnection } from '@/lib/db';
-import { requirePermission, PERMISSIONS } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
-import { checkLimit } from '@/lib/subscription';
-import { validateUserContext } from '@/lib/authUtils';
+import { requirePermission, PERMISSIONS } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { checkLimit } from '@/lib/services/subscription';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

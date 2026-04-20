@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Badge from '@/components/ui/Badge';
 import SubscriptionBadge from '@/components/ui/SubscriptionBadge';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 export default function DashboardPage() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-import { safeCompare } from '@/lib/security';
+import { safeCompare } from '@/lib/security/security';
 
 /**
  * GET /api/cron/status

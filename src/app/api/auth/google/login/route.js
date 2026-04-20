@@ -16,7 +16,7 @@
 
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { getCookieSecure } from '@/lib/jwt';
+import { getCookieSecure } from '@/lib/auth/jwt';
 
 export async function GET(request) {
   const clientId    = process.env.GOOGLE_CLIENT_ID;

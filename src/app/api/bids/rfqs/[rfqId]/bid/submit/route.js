@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { createNotifications } from '@/lib/notifications';
-import { sendBidSubmittedEmail } from '@/lib/mailer';
-import { logAction, ACTION } from '@/lib/audit';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { createNotifications } from '@/lib/notifications/notifications';
+import { sendBidSubmittedEmail } from '@/lib/email/mailer';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(

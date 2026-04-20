@@ -1,8 +1,8 @@
 // src/app/api/vendors/route.js
 import { query, queryRaw, getConnection } from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
-import { validateUserContext } from '@/lib/authUtils';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // ─── GET /api/vendors ────────────────────────────────────────────
 export async function GET(request) {

@@ -1,6 +1,6 @@
 // src/app/api/rfqs/[id]/items/[itemId]/route.js
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
+import { requireRole } from '@/lib/auth/rbac';
 
 async function loadEditableRfq(rfqId, companyId) {
   const rows = await query(

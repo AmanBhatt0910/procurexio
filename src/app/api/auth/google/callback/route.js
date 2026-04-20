@@ -14,11 +14,11 @@
 
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { signToken, buildAuthCookie, getCookieSecure, verifyToken } from '@/lib/jwt';
-import { logAuthEvent, getRequestIP } from '@/lib/logger';
-import { logAction, ACTION } from '@/lib/audit';
-import { generateSessionToken, expiresInHours, toMySQLDatetime } from '@/lib/security';
-import { normalizeRole } from '@/lib/roleNormalizer';
+import { signToken, buildAuthCookie, getCookieSecure, verifyToken } from '@/lib/auth/jwt';
+import { logAuthEvent, getRequestIP } from '@/lib/logging/logger';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { generateSessionToken, expiresInHours, toMySQLDatetime } from '@/lib/security/security';
+import { normalizeRole } from '@/lib/auth/roleNormalizer';
 
 // ── Google API helpers ────────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { settingsSectionStyles, SettingsSectionHeader, SaveButton, Toast } from './shared';
-import { ALLOWED_CURRENCIES } from '@/lib/validation';
+import { ALLOWED_CURRENCIES } from '@/lib/utils/validation';
 
 const TIMEZONES = [
   'UTC', 'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:00', 'UTC-08:00',

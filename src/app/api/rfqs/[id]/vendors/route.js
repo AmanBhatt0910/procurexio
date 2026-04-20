@@ -1,7 +1,7 @@
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
-import { sendVendorRFQInviteEmail } from '@/lib/mailer';
-import { checkLimit } from '@/lib/subscription';
+import { requireRole } from '@/lib/auth/rbac';
+import { sendVendorRFQInviteEmail } from '@/lib/email/mailer';
+import { checkLimit } from '@/lib/services/subscription';
 
 // ── GET /api/rfqs/[id]/vendors ──────────────────────────────────────────────
 export async function GET(request, { params }) {

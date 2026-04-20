@@ -3,10 +3,10 @@
 // PUT /api/settings/company — update company settings (company_admin / super_admin only)
 
 import { NextResponse } from 'next/server';
-import { getCompanySettings, updateCompanySettings } from '@/lib/settingsService';
-import { logAction, ACTION } from '@/lib/audit';
-import { validateCurrency } from '@/lib/validation';
-import { validateUserContext } from '@/lib/authUtils';
+import { getCompanySettings, updateCompanySettings } from '@/lib/services/settingsService';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validateCurrency } from '@/lib/utils/validation';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 const ADMIN_ROLES = ['super_admin', 'company_admin'];
 

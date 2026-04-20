@@ -1,10 +1,10 @@
 // src/app/api/rfqs/[id]/award/route.js
 import db from '@/lib/db';
-import { canManageRFQ } from '@/lib/rbac';
-import { validateUserContext, validateNumericId } from '@/lib/authUtils';
-import { createNotifications } from '@/lib/notifications';
-import { sendContractAwardedEmail, sendBidRejectedEmail, sendStaffContractAwardedEmail } from '@/lib/mailer';
-import { logAction, ACTION } from '@/lib/audit';
+import { canManageRFQ } from '@/lib/auth/rbac';
+import { validateUserContext, validateNumericId } from '@/lib/auth/authUtils';
+import { createNotifications } from '@/lib/notifications/notifications';
+import { sendContractAwardedEmail, sendBidRejectedEmail, sendStaffContractAwardedEmail } from '@/lib/email/mailer';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 // Helper: generate contract reference
 async function generateContractRef(conn, companyId) {

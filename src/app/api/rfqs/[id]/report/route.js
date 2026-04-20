@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
 
 // GET /api/rfqs/[id]/report — generate (or fetch) RFQ report on demand
 export async function GET(request, { params }) {
