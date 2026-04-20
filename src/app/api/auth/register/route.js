@@ -16,9 +16,9 @@
 
 import { NextResponse }                              from 'next/server';
 import { query, getConnection }                      from '@/lib/db';
-import { hashPassword }                              from '@/lib/password';
-import { signToken, buildAuthCookie }                from '@/lib/jwt';
-import { sendWelcomeEmail }                          from '@/lib/mailer';
+import { hashPassword }                              from '@/lib/auth/password';
+import { signToken, buildAuthCookie }                from '@/lib/auth/jwt';
+import { sendWelcomeEmail }                          from '@/lib/email/mailer';
 import { PASSWORD_MIN_LENGTH }                       from '@/config/constants';
 
 export async function POST(request) {

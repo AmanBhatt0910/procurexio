@@ -9,7 +9,7 @@
  */
 
 import pool from '@/lib/db';
-import { checkLimit } from '@/lib/subscription';
+import { checkLimit } from '@/lib/services/subscription';
 
 /**
  * Check email/notification limit for a company before inserting.

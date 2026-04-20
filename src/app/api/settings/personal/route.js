@@ -3,8 +3,8 @@
 // PUT /api/settings/personal — update editable fields (phone only)
 
 import { NextResponse } from 'next/server';
-import { getPersonalInfo, updatePersonalInfo } from '@/lib/settingsService';
-import { logAction, ACTION } from '@/lib/audit';
+import { getPersonalInfo, updatePersonalInfo } from '@/lib/services/settingsService';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 export async function GET(request) {
   const userId = request.headers.get('x-user-id');

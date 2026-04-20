@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import pool from '@/lib/db';
-import { comparePassword } from '@/lib/password';
-import { signToken, buildAuthCookie, getCookieSecure } from '@/lib/jwt';
-import { logAuthEvent, getRequestIP } from '@/lib/logger';
-import { logAction, ACTION } from '@/lib/audit';
-import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime } from '@/lib/security';
-import { validateEmail } from '@/lib/validation';
-import { normalizeRole } from '@/lib/roleNormalizer';
+import { comparePassword } from '@/lib/auth/password';
+import { signToken, buildAuthCookie, getCookieSecure } from '@/lib/auth/jwt';
+import { logAuthEvent, getRequestIP } from '@/lib/logging/logger';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { generateSessionToken, expiresInHours, expiresInMinutes, toMySQLDatetime } from '@/lib/security/security';
+import { validateEmail } from '@/lib/utils/validation';
+import { normalizeRole } from '@/lib/auth/roleNormalizer';
 
 import { MAX_FAILED_ATTEMPTS, LOCK_DURATION_MINUTES } from '@/config/constants';
 

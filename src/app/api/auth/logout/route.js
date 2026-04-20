@@ -1,11 +1,11 @@
 // src/app/api/auth/logout/route.js
 
 import { NextResponse } from 'next/server';
-import { clearAuthCookie } from '@/lib/jwt';
+import { clearAuthCookie } from '@/lib/auth/jwt';
 import pool from '@/lib/db';
-import { logAction, ACTION } from '@/lib/audit';
-import { logAuthEvent, getRequestIP } from '@/lib/logger';
-import { validateUserContext } from '@/lib/authUtils';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { logAuthEvent, getRequestIP } from '@/lib/logging/logger';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 /**
  * POST /api/auth/logout

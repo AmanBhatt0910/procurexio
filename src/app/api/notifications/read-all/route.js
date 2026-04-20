@@ -1,5 +1,5 @@
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // PATCH /api/notifications/read-all
 // Marks ALL unread notifications as read for the current user.

@@ -1,5 +1,5 @@
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/notifications
 // Paginated notifications for the current user.

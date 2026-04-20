@@ -9,9 +9,9 @@
 //   - Sends an email notification to the company admin
 
 import pool from '@/lib/db';
-import { assignPlanToCompany, getCompanyPlan } from '@/lib/subscription';
-import { logAction, ACTION } from '@/lib/audit';
-import { sendPlanChangeEmail } from '@/lib/mailer';
+import { assignPlanToCompany, getCompanyPlan } from '@/lib/services/subscription';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { sendPlanChangeEmail } from '@/lib/email/mailer';
 
 // GET /api/admin/subscriptions?company_id=X — fetch current plan for a company
 export async function GET(request) {

@@ -1,6 +1,6 @@
 // src/app/api/company/route.js
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/company — fetch own company profile
 export async function GET(request) {

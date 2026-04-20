@@ -8,8 +8,8 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import RFQItemsTable from '@/components/rfq/RFQItemsTable';
 import VendorInvitePanel from '@/components/rfq/VendorInvitePanel';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES } from '@/lib/rbac';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { ROLES } from '@/lib/auth/rbac';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CAD', 'AUD'];
 const ONE_MINUTE_MS = 60 * 1000;

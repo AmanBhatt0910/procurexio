@@ -1,6 +1,6 @@
 // src/app/api/company/users/route.js
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // GET /api/company/users
 export async function GET(request) {

@@ -6,10 +6,10 @@
 // Token must be valid (exists, not expired, not already used).
 
 import { query, getConnection } from '@/lib/db';
-import { hashPassword } from '@/lib/password';
-import { logAction, ACTION } from '@/lib/audit';
-import { validatePassword } from '@/lib/validation';
-import { logAuthEvent, getRequestIP } from '@/lib/logger';
+import { hashPassword } from '@/lib/auth/password';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validatePassword } from '@/lib/utils/validation';
+import { logAuthEvent, getRequestIP } from '@/lib/logging/logger';
 
 export async function POST(request) {
   const ip = getRequestIP(request);

@@ -3,8 +3,8 @@
 // PUT /api/settings/notifications — update notification preferences
 
 import { NextResponse } from 'next/server';
-import { getNotificationPrefs, updateNotificationPrefs } from '@/lib/settingsService';
-import { validateUserContext } from '@/lib/authUtils';
+import { getNotificationPrefs, updateNotificationPrefs } from '@/lib/services/settingsService';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 export async function GET(request) {
   // CRITICAL: Validate against JWT, not headers

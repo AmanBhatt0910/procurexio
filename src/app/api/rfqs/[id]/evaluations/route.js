@@ -1,6 +1,6 @@
 // src/app/api/rfqs/[id]/evaluations/route.js
 import db from '@/lib/db';
-import { validateUserContext, validateNumericId } from '@/lib/authUtils';
+import { validateUserContext, validateNumericId } from '@/lib/auth/authUtils';
 
 export async function GET(request, { params }) {
   const { id: rawId } = await params;

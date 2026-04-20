@@ -7,7 +7,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES } from '@/lib/rbac';
+import { ROLES } from '@/lib/auth/rbac';
 
 // Roles available when inviting a new member (company_admin is excluded — only 1 per company)
 const INVITE_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE];

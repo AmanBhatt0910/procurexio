@@ -3,10 +3,10 @@
 
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { hashPassword, comparePassword } from '@/lib/password';
-import { validatePassword } from '@/lib/validation';
-import { recordPasswordChange } from '@/lib/settingsService';
-import { logAction, ACTION } from '@/lib/audit';
+import { hashPassword, comparePassword } from '@/lib/auth/password';
+import { validatePassword } from '@/lib/utils/validation';
+import { recordPasswordChange } from '@/lib/services/settingsService';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 export async function POST(request) {
   const userId    = request.headers.get('x-user-id');

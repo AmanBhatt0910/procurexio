@@ -1,5 +1,5 @@
 import pool from '@/lib/db';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // Roles that are allowed to see company dashboard stats
 const ALLOWED_ROLES = ['super_admin', 'company_admin', 'manager', 'employee'];

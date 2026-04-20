@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { logAction, ACTION } from '@/lib/audit';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 async function resolveVendor(userId) {
   const [rows] = await pool.query(

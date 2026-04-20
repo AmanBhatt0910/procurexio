@@ -26,6 +26,6 @@ export async function register() {
     return;
   }
 
-  const { startCronJobs } = await import('@/lib/cronService');
+  const { startCronJobs } = await import('@/lib/services/cronService');
   startCronJobs();
 }

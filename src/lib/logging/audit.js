@@ -18,7 +18,7 @@
 //   });
 
 import pool from '@/lib/db';
-import { log, logToFile } from '@/lib/logger';
+import { log, logToFile } from '@/lib/logging/logger';
 
 /**
  * Extract the client IP from a Next.js Request object.

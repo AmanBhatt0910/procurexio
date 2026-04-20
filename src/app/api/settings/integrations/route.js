@@ -8,9 +8,9 @@ import {
   getIntegrations,
   createIntegration,
   deleteIntegration,
-} from '@/lib/settingsService';
-import { logAction } from '@/lib/audit';
-import { validateUserContext } from '@/lib/authUtils';
+} from '@/lib/services/settingsService';
+import { logAction } from '@/lib/logging/audit';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 const ALLOWED_ROLES = ['super_admin', 'company_admin'];
 

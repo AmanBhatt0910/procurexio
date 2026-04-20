@@ -2,13 +2,13 @@
 
 import pool                    from '@/lib/db';
 import { sendInviteEmail,
-         sendVendorInviteEmail } from '@/lib/mailer';
+         sendVendorInviteEmail } from '@/lib/email/mailer';
 import crypto                  from 'crypto';
-import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
-import { checkLimit } from '@/lib/subscription';
+import { ROLES, PERMISSIONS, hasPermission } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { checkLimit } from '@/lib/services/subscription';
 import { INVITATION_EXPIRY_MS } from '@/config/constants';
-import { validateUserContext } from '@/lib/authUtils';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 const TEAM_ROLES   = [ROLES.MANAGER, ROLES.EMPLOYEE];
 const VENDOR_ROLES = [ROLES.VENDOR_USER];

@@ -1,7 +1,7 @@
 // src/app/api/vendors/categories/route.js
 import { query } from '@/lib/db';
-import { hasPermission, PERMISSIONS } from '@/lib/rbac';
-import { validateUserContext } from '@/lib/authUtils';
+import { hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
+import { validateUserContext } from '@/lib/auth/authUtils';
 
 // Preset palette — auto-assigned round-robin on creation
 const PALETTE = [

@@ -10,7 +10,7 @@
 // directly — the same approach used by /api/auth/me.
 
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
+import { verifyToken } from '@/lib/auth/jwt';
 
 export async function GET(request) {
   // Verify the user has an active session

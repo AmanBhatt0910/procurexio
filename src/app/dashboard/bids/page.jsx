@@ -10,7 +10,7 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import ViewToggle from '@/components/ui/ViewToggle';
 import RoleGuard from '@/components/auth/RoleGuard';
 import { useAuth } from '@/hooks/useAuth';
-import { getDeadlineTimeLeftMs, isDeadlinePassed } from '@/lib/deadline';
+import { getDeadlineTimeLeftMs, isDeadlinePassed } from '@/lib/utils/deadline';
 
 function RedirectToDashboard() {
   const router = useRouter();

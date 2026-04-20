@@ -10,7 +10,7 @@ import RFQStatusBadge from '@/components/rfq/RFQStatusBadge';
 import RFQGridCard from '@/components/rfq/RFQGridCard';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useAuth } from '@/hooks/useAuth';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 const STATUS_FILTERS = ['all', 'draft', 'published', 'closed', 'cancelled'];
 

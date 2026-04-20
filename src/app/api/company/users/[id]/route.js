@@ -1,9 +1,9 @@
 // src/app/api/company/users/[id]/route.js
 import pool from '@/lib/db';
-import { ROLES, PERMISSIONS, hasPermission } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
-import { validateUserContext } from '@/lib/authUtils';
-import { validateNumericId } from '@/lib/authUtils';
+import { ROLES, PERMISSIONS, hasPermission } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
+import { validateUserContext } from '@/lib/auth/authUtils';
+import { validateNumericId } from '@/lib/auth/authUtils';
 
 const ALLOWED_ROLES = [ROLES.MANAGER, ROLES.EMPLOYEE, ROLES.VENDOR_USER];
 

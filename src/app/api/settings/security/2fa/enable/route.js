@@ -7,8 +7,8 @@
 // secret, return the QR code URI, and verify the first OTP before committing.
 
 import { NextResponse } from 'next/server';
-import { enable2FA } from '@/lib/settingsService';
-import { logAction, ACTION } from '@/lib/audit';
+import { enable2FA } from '@/lib/services/settingsService';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 export async function POST(request) {
   const userId    = request.headers.get('x-user-id');

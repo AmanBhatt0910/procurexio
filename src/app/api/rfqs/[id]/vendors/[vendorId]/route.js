@@ -1,6 +1,6 @@
 // src/app/api/rfqs/[id]/vendors/[vendorId]/route.js
 import { query } from '@/lib/db';
-import { requireRole } from '@/lib/rbac';
+import { requireRole } from '@/lib/auth/rbac';
 
 // ── DELETE /api/rfqs/[id]/vendors/[vendorId] ───────────────────────────────
 // Only allowed if the vendor hasn't submitted yet

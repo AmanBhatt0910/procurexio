@@ -7,8 +7,8 @@ import {
   sendRFQClosedEmail,
   sendRFQDeadlineExtendedEmail,
   sendRFQDeadlineReminderEmail,
-} from '@/lib/mailer';
-import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/deadline';
+} from '@/lib/email/mailer';
+import { getDeadlineTimeLeftMs, getEffectiveDeadlineDate } from '@/lib/utils/deadline';
 
 // Maximum number of user email addresses fetched per vendor when sending closure emails
 const MAX_VENDOR_USERS_PER_EMAIL = 5;

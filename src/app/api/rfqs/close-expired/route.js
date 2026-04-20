@@ -1,6 +1,6 @@
-import { autoCloseAllExpired } from '@/lib/rfqUtils';
-import { requireUserContext } from '@/lib/authUtils';
-import { safeCompare } from '@/lib/security';
+import { autoCloseAllExpired } from '@/lib/rfq/rfqUtils';
+import { requireUserContext } from '@/lib/auth/authUtils';
+import { safeCompare } from '@/lib/security/security';
 
 /**
  * GET /api/rfqs/close-expired

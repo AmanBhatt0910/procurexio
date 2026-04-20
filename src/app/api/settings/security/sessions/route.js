@@ -4,8 +4,8 @@
 //   Body: { session_id: number|null }  — null/absent → invalidate ALL
 
 import { NextResponse } from 'next/server';
-import { getActiveSessions, invalidateSession } from '@/lib/settingsService';
-import { logAction } from '@/lib/audit';
+import { getActiveSessions, invalidateSession } from '@/lib/services/settingsService';
+import { logAction } from '@/lib/logging/audit';
 
 export async function GET(request) {
   const userId = request.headers.get('x-user-id');

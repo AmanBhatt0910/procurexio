@@ -13,7 +13,7 @@ import BidStepTwo from '@/components/bids/BidStepTwo';
 import BidStepThree from '@/components/bids/BidStepThree';
 import BidStepFour from '@/components/bids/BidStepFour';
 import Modal from '@/components/ui/Modal';
-import { isDeadlinePassed } from '@/lib/deadline';
+import { isDeadlinePassed } from '@/lib/utils/deadline';
 
 const MIN_BID_REDUCTION = 100;
 

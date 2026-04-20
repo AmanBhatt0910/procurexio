@@ -1,7 +1,7 @@
 // src/app/api/rfqs/[id]/bids/[bidId]/evaluate/route.js
 import db from '@/lib/db';
-import { canManageRFQ } from '@/lib/rbac';
-import { logAction, ACTION } from '@/lib/audit';
+import { canManageRFQ } from '@/lib/auth/rbac';
+import { logAction, ACTION } from '@/lib/logging/audit';
 
 export async function POST(request, { params }) {
   const { id, bidId } = await params;

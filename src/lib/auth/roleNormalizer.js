@@ -1,6 +1,6 @@
 // src/lib/roleNormalizer.js
 
-import { ROLES } from '@/lib/rbac';
+import { ROLES } from './rbac';
 
 /**
  * Mapping of known role string variants (lowercased) to canonical role values.

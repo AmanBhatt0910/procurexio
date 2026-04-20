@@ -1,7 +1,7 @@
 'use client';
 // src/components/ui/ViewToggle.jsx
 
-import { ROLES } from '@/lib/rbac';
+import { ROLES } from '@/lib/auth/rbac';
 
 /**
  * ViewToggle — switches between 'list' and 'grid' views.
